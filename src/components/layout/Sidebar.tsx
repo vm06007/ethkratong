@@ -125,16 +125,6 @@ export function Sidebar({ isOpen }: SidebarProps) {
                       <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
                         {template.description}
                       </div>
-                      <div className="flex flex-wrap gap-1 mt-2">
-                        {template.availableActions.map((action) => (
-                          <span
-                            key={action}
-                            className="text-xs bg-gray-200 dark:bg-gray-700 dark:text-gray-300 px-2 py-0.5 rounded"
-                          >
-                            {action}
-                          </span>
-                        ))}
-                      </div>
                     </div>
                   ))}
                 </div>

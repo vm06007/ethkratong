@@ -55,7 +55,7 @@ function ProtocolNode({ data, selected, id }: NodeProps<ProtocolNodeType>) {
                 <Handle
                     type="target"
                     position={Position.Left}
-                    className="!bg-blue-500 !w-3 !h-3"
+                    className="!bg-blue-500 !w-3 !h-3 !z-10"
                 />
             )}
 
@@ -113,7 +113,7 @@ function ProtocolNode({ data, selected, id }: NodeProps<ProtocolNodeType>) {
                 <Handle
                     type="source"
                     position={Position.Right}
-                    className="!bg-green-500 !w-3 !h-3"
+                    className="!bg-green-500 !w-3 !h-3 !z-10"
                 />
             )}
 
