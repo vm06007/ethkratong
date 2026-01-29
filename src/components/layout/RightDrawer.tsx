@@ -11,8 +11,9 @@ import {
   executeBatchedTransaction,
   trackBatchedTransactionStatus,
   sendSingleTransaction,
+  evaluateConditionalNode,
 } from "@/services/batchedExecution";
-import { getAbiFunctions } from "@/services/contractService";
+import { getAbiFunctions, getAbiViewFunctions } from "@/services/contractService";
 import {
   DndContext,
   closestCenter,
@@ -37,6 +38,49 @@ interface RightDrawerProps {
   nodes: Node<ProtocolNodeData>[];
   edges: Edge[];
   onReorderNodes: (newOrder: string[]) => void;
+}
+
+/** Return node IDs reachable from the wallet node (BFS following edges). Nodes not connected to wallet are excluded from execution. */
+function getReachableNodeIds(nodes: Node<ProtocolNodeData>[], edges: Edge[]): Set<string> {
+  const walletNode = nodes.find((n) => n.data.protocol === "wallet");
+  if (!walletNode) return new Set();
+  const adj = new Map<string, string[]>();
+  edges.forEach((e) => {
+    const list = adj.get(e.source) ?? [];
+    list.push(e.target);
+    adj.set(e.source, list);
+  });
+  const reachable = new Set<string>();
+  const queue: string[] = [walletNode.id];
+  while (queue.length > 0) {
+    const id = queue.shift()!;
+    if (reachable.has(id)) continue;
+    reachable.add(id);
+    (adj.get(id) ?? []).forEach((t) => queue.push(t));
+  }
+  return reachable;
+}
+
+/** Return node IDs downstream of a given node (BFS following edges from this node). Used to skip only dependent actions when a condition fails. */
+function getNodesDownstreamOf(nodeId: string, edges: Edge[]): Set<string> {
+  const adj = new Map<string, string[]>();
+  edges.forEach((e) => {
+    const list = adj.get(e.source) ?? [];
+    list.push(e.target);
+    adj.set(e.source, list);
+  });
+  const downstream = new Set<string>();
+  const queue: string[] = [nodeId];
+  while (queue.length > 0) {
+    const id = queue.shift()!;
+    (adj.get(id) ?? []).forEach((t) => {
+      if (!downstream.has(t)) {
+        downstream.add(t);
+        queue.push(t);
+      }
+    });
+  }
+  return downstream;
 }
 
 interface SortableStepProps {
@@ -146,6 +190,29 @@ function SortableStep({ node, isExecuted, isConfigured }: SortableStepProps) {
               ⚠ Set contract address and verify
             </div>
           )
+        ) : node.data.protocol === "conditional" ? (
+          node.data.contractAddress && node.data.conditionalContractVerified && node.data.selectedFunction && node.data.comparisonOperator != null ? (
+            <>
+              <div className="flex justify-between">
+                <span className="font-medium">Contract:</span>
+                <span className="font-mono">
+                  {node.data.contractAddress.slice(0, 6)}...{node.data.contractAddress.slice(-4)}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="font-medium">View:</span>
+                <span>{node.data.selectedFunction}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="font-medium">Condition:</span>
+                <span>{node.data.comparisonOperator} {node.data.compareValue}</span>
+              </div>
+            </>
+          ) : (
+            <div className="text-orange-500 dark:text-orange-400">
+              ⚠ Set contract and condition
+            </div>
+          )
         ) : node.data.action ? (
           <>
             <div className="flex justify-between">
@@ -175,29 +242,29 @@ function SortableStep({ node, isExecuted, isConfigured }: SortableStepProps) {
   );
 }
 
-export function RightDrawer({ isOpen, onClose, nodes, edges: _edges, onReorderNodes }: RightDrawerProps) {
+export function RightDrawer({ isOpen, onClose, nodes, edges, onReorderNodes }: RightDrawerProps) {
   const [isExecuting, setIsExecuting] = useState(false);
   const [executedSteps, setExecutedSteps] = useState<Set<string>>(new Set());
   const [executionError, setExecutionError] = useState<string | null>(null);
+  const [executionSkippedCount, setExecutionSkippedCount] = useState(0);
 
   const activeAccount = useActiveAccount();
   const chainId = useChainId();
   const { supportsBatch, isLoading: isCheckingCapabilities } = useWalletCapabilities();
 
-  // Sort nodes by sequence number for display
+  // Only include nodes that are connected to wallet (reachable from wallet in the graph)
+  const reachableIds = getReachableNodeIds(nodes, edges);
   const sortedNodes = [...nodes]
-    .filter((node) => node.data.sequenceNumber !== undefined && node.data.sequenceNumber > 0)
+    .filter((node) => reachableIds.has(node.id) && node.data.sequenceNumber !== undefined && node.data.sequenceNumber > 0)
     .sort((a, b) => (a.data.sequenceNumber || 0) - (b.data.sequenceNumber || 0));
 
   const hasActions = sortedNodes.length > 0;
 
   // Check if all actions are configured
   const allActionsConfigured = sortedNodes.every((node) => {
-    // For transfer nodes, check asset, amount, and recipient address (action is implicit)
     if (node.data.protocol === "transfer") {
       return !!(node.data.amount && node.data.asset && node.data.recipientAddress);
     }
-    // For custom contract nodes, check contract verified + function + args
     if (node.data.protocol === "custom") {
       if (!node.data.contractAddress || !node.data.customContractVerified || !node.data.selectedFunction) {
         return false;
@@ -206,8 +273,20 @@ export function RightDrawer({ isOpen, onClose, nodes, edges: _edges, onReorderNo
       const fn = fns.find((f) => f.name === node.data.selectedFunction);
       const inputs = fn?.inputs || [];
       const args = node.data.functionArgs || {};
-      const allArgsFilled = inputs.every((inp) => (args[inp.name] ?? "").trim() !== "");
-      return allArgsFilled;
+      return inputs.every((inp) => (args[inp.name] ?? "").trim() !== "");
+    }
+    if (node.data.protocol === "conditional") {
+      if (!node.data.contractAddress || !node.data.conditionalContractVerified || !node.data.selectedFunction) {
+        return false;
+      }
+      if (node.data.comparisonOperator == null || (node.data.compareValue ?? "").trim() === "") {
+        return false;
+      }
+      const fns = node.data.contractAbi ? getAbiViewFunctions(node.data.contractAbi) : [];
+      const fn = fns.find((f) => f.name === node.data.selectedFunction);
+      const inputs = fn?.inputs || [];
+      const args = node.data.functionArgs || {};
+      return inputs.every((inp) => (args[inp.name] ?? "").trim() !== "");
     }
     return !!(node.data.action && node.data.amount);
   });
@@ -242,6 +321,7 @@ export function RightDrawer({ isOpen, onClose, nodes, edges: _edges, onReorderNo
 
     setIsExecuting(true);
     setExecutionError(null);
+    setExecutionSkippedCount(0);
 
     try {
       const effectiveChainId = chainId || 1;
@@ -252,8 +332,23 @@ export function RightDrawer({ isOpen, onClose, nodes, edges: _edges, onReorderNo
         chainId: effectiveChainId,
       });
 
-      // Prepare all calls (transfers + custom contract nodes) in order
-      const calls = await prepareBatchedCalls(sortedNodes, effectiveChainId);
+      // Evaluate conditional nodes; when a condition is false, skip only downstream actions (not the entire flow)
+      const skipSet = new Set<string>();
+      for (const node of sortedNodes) {
+        if (node.data.protocol === "conditional") {
+          const conditionMet = await evaluateConditionalNode(node, effectiveChainId);
+          if (!conditionMet) {
+            const downstream = getNodesDownstreamOf(node.id, edges);
+            downstream.forEach((id) => skipSet.add(id));
+            console.log(`Condition not met for node ${node.id}; skipping ${downstream.size} downstream action(s)`);
+          }
+        }
+      }
+
+      const nodesToExecute = sortedNodes.filter((n) => !skipSet.has(n.id));
+
+      // Prepare calls only for nodes that are not skipped (transfers + custom; conditionals produce no call)
+      const calls = await prepareBatchedCalls(nodesToExecute, effectiveChainId);
 
       if (calls.length === 0) {
         throw new Error("No valid actions to execute");
@@ -275,11 +370,12 @@ export function RightDrawer({ isOpen, onClose, nodes, edges: _edges, onReorderNo
         }
       }
 
-      // Mark all steps as executed
-      sortedNodes.forEach((node) => {
+      // Mark only executed nodes (skipped nodes stay unmarked)
+      nodesToExecute.forEach((node) => {
         setExecutedSteps((prev) => new Set(prev).add(node.id));
       });
       setExecutionError(null);
+      setExecutionSkippedCount(skipSet.size);
       console.log("Execution completed successfully");
     } catch (error: any) {
       console.error("Execution failed:", error);
@@ -354,6 +450,14 @@ export function RightDrawer({ isOpen, onClose, nodes, edges: _edges, onReorderNo
                         const inputs = fn?.inputs || [];
                         const args = node.data.functionArgs || {};
                         isConfigured = hasBase && inputs.every((inp) => (args[inp.name] ?? "").trim() !== "");
+                      } else if (node.data.protocol === "conditional") {
+                        const hasBase = !!(node.data.contractAddress && node.data.conditionalContractVerified && node.data.selectedFunction);
+                        const hasCond = node.data.comparisonOperator != null && (node.data.compareValue ?? "").trim() !== "";
+                        const fns = node.data.contractAbi ? getAbiViewFunctions(node.data.contractAbi) : [];
+                        const fn = fns.find((f) => f.name === node.data.selectedFunction);
+                        const inputs = fn?.inputs || [];
+                        const args = node.data.functionArgs || {};
+                        isConfigured = hasBase && hasCond && inputs.every((inp) => (args[inp.name] ?? "").trim() !== "");
                       } else {
                         isConfigured = !!(node.data.action && node.data.amount);
                       }
@@ -408,6 +512,13 @@ export function RightDrawer({ isOpen, onClose, nodes, edges: _edges, onReorderNo
                 {executionError && (
                   <p className="text-xs text-center text-red-500 dark:text-red-400">
                     {executionError}
+                  </p>
+                )}
+
+                {/* Skipped actions info (condition not met) */}
+                {executionSkippedCount > 0 && !executionError && (
+                  <p className="text-xs text-center text-amber-600 dark:text-amber-400">
+                    Skipped {executionSkippedCount} action(s) (condition not met)
                   </p>
                 )}
 

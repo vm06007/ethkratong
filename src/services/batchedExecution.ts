@@ -1,9 +1,11 @@
 import type { Node } from "@xyflow/react";
 import type { ProtocolNodeData } from "@/types";
 import type { WalletGetCallsStatusResult, WalletSendCallsResult } from "@/types/global";
-import { parseEther, parseUnits, encodeFunctionData, isAddress, toHex, createPublicClient, http } from "viem";
+import { parseEther, parseUnits, encodeFunctionData, isAddress, toHex, createPublicClient, http, type Abi, type Chain } from "viem";
 import { normalize } from "viem/ens";
-import { mainnet } from "viem/chains";
+import { mainnet, arbitrum } from "viem/chains";
+
+const CHAINS: Record<number, Chain> = { 1: mainnet, 42161: arbitrum };
 
 // Token addresses for different chains
 const TOKEN_ADDRESSES = {
@@ -265,6 +267,96 @@ export const prepareTransferCalls = async (
 
   return calls;
 };
+
+/**
+ * Evaluate a conditional logic node: call the view function and compare result to compareValue.
+ * Returns true if the condition is met (proceed to next action), false otherwise.
+ */
+export async function evaluateConditionalNode(
+  node: Node<ProtocolNodeData>,
+  chainId: number
+): Promise<boolean> {
+  const data = node.data;
+  if (data.protocol !== "conditional") {
+    throw new Error("Node is not a conditional logic node");
+  }
+  const { contractAddress, contractAbi, selectedFunction, functionArgs, comparisonOperator, compareValue } = data;
+  if (!contractAddress || !contractAbi || !selectedFunction || comparisonOperator == null || compareValue == null) {
+    throw new Error(`Conditional node ${node.id}: missing contract, function, operator, or compare value`);
+  }
+  const chain = CHAINS[chainId];
+  if (!chain) {
+    throw new Error(`Unsupported chain ${chainId} for conditional`);
+  }
+  const publicClient = createPublicClient({ chain, transport: http() });
+  const fn = (contractAbi as Array<{ type: string; name: string; inputs?: Array<{ name: string; type: string }> }>).find(
+    (item) => item.type === "function" && item.name === selectedFunction
+  );
+  const args = (fn?.inputs ?? []).map((inp) => parseAbiArgValue(inp.type, (functionArgs || {})[inp.name] ?? "0"));
+  const result = await publicClient.readContract({
+    address: contractAddress as `0x${string}`,
+    abi: contractAbi,
+    functionName: selectedFunction,
+    args: args.length > 0 ? args : undefined,
+  });
+  const resultStr = typeof result === "bigint" ? result.toString() : String(result);
+  const cmpStr = String(compareValue).trim();
+  switch (comparisonOperator) {
+    case "gt":
+      return tryNumericCompare(result, cmpStr, (a, b) => a > b) ?? resultStr > cmpStr;
+    case "gte":
+      return tryNumericCompare(result, cmpStr, (a, b) => a >= b) ?? resultStr >= cmpStr;
+    case "lt":
+      return tryNumericCompare(result, cmpStr, (a, b) => a < b) ?? resultStr < cmpStr;
+    case "lte":
+      return tryNumericCompare(result, cmpStr, (a, b) => a <= b) ?? resultStr <= cmpStr;
+    case "ne":
+      return resultStr !== cmpStr;
+    default:
+      return resultStr === cmpStr;
+  }
+}
+
+function tryNumericCompare(
+  result: unknown,
+  compareValue: string,
+  op: (a: bigint, b: bigint) => boolean
+): boolean | null {
+  try {
+    const a = typeof result === "bigint" ? result : BigInt(String(result));
+    const b = BigInt(compareValue);
+    return op(a, b);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Read a view function result for display (e.g. "Current value" on Conditional Logic card).
+ * Returns the result as a string.
+ */
+export async function readContractViewResult(
+  chainId: number,
+  address: string,
+  abi: Abi,
+  functionName: string,
+  functionArgs: Record<string, string> | undefined,
+  inputs: Array<{ name: string; type: string }>
+): Promise<string> {
+  const chain = CHAINS[chainId];
+  if (!chain) {
+    throw new Error(`Unsupported chain ${chainId}`);
+  }
+  const publicClient = createPublicClient({ chain, transport: http() });
+  const args = inputs.map((inp) => parseAbiArgValue(inp.type, (functionArgs || {})[inp.name] ?? "0"));
+  const result = await publicClient.readContract({
+    address: address as `0x${string}`,
+    abi,
+    functionName,
+    args: args.length > 0 ? args : undefined,
+  });
+  return typeof result === "bigint" ? result.toString() : String(result);
+}
 
 /**
  * Execute batched transaction using EIP-5792 wallet_sendCalls

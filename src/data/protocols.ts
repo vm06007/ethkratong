@@ -95,22 +95,29 @@ export const protocolCategories: ProtocolCategory[] = [
     ],
   },
   {
-    name: "Arbitrary Contract",
+    name: "Custom Actions",
     icon: "settings",
     protocols: [
       {
         protocol: "custom",
-        label: "Custom Contract",
+        label: "Arbitrary Contract",
         description: "Interact with any contract address",
         color: "bg-gray-500",
         availableActions: ["deposit", "withdraw"],
       },
       {
         protocol: "transfer",
-        label: "Transfer",
+        label: "Arbitrary Transfer",
         description: "Send tokens to an address",
         color: "bg-teal-500",
         availableActions: ["deposit"],
+      },
+      {
+        protocol: "conditional",
+        label: "Conditional Logic",
+        description: "If view function result meets condition, proceed to next action",
+        color: "bg-amber-500",
+        availableActions: [],
       },
     ],
   },

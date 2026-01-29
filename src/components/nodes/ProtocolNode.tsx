@@ -11,7 +11,16 @@ import { balanceOf, decimals } from "thirdweb/extensions/erc20";
 import { toTokens } from "thirdweb";
 import { useChainId } from "wagmi";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
-import { isContractAddress, fetchContractAbi, getAbiFunctions } from "@/services/contractService";
+import { isContractAddress, fetchContractAbi, getAbiFunctions, getAbiViewFunctions } from "@/services/contractService";
+import { readContractViewResult } from "@/services/batchedExecution";
+
+const COMPARISON_OPTIONS: { value: "gt" | "gte" | "lt" | "lte" | "ne"; label: string }[] = [
+  { value: "gt", label: ">" },
+  { value: "gte", label: ">=" },
+  { value: "lt", label: "<" },
+  { value: "lte", label: "<=" },
+  { value: "ne", label: "≠" },
+];
 
 // Token addresses for balance checking
 const TOKEN_ADDRESSES = {
@@ -46,6 +55,9 @@ function ProtocolNode({ data, selected, id }: NodeProps<ProtocolNodeData>) {
   const [transferBalances, setTransferBalances] = useState<TokenBalance[]>([]);
   const [isVerifyingContract, setIsVerifyingContract] = useState(false);
   const [contractVerifyError, setContractVerifyError] = useState<string | null>(null);
+  const [currentViewValue, setCurrentViewValue] = useState<string | null>(null);
+  const [currentViewLoading, setCurrentViewLoading] = useState(false);
+  const [currentViewError, setCurrentViewError] = useState<string | null>(null);
 
   const template = allProtocols.find((t) => t.protocol === data.protocol);
   const color = template?.color || "bg-gray-500";
@@ -138,6 +150,55 @@ function ProtocolNode({ data, selected, id }: NodeProps<ProtocolNodeData>) {
       setTokenBalances([]);
     }
   }, [activeAccount, data.protocol, ethBalanceData, isEthLoading]);
+
+  // Fetch current view value for conditional logic node (for display)
+  useEffect(() => {
+    if (data.protocol !== "conditional" || !data.contractAddress || !data.contractAbi || !data.selectedFunction) {
+      setCurrentViewValue(null);
+      setCurrentViewError(null);
+      return;
+    }
+    const fns = getAbiViewFunctions(data.contractAbi);
+    const fn = fns.find((f) => f.name === data.selectedFunction);
+    const inputs = fn?.inputs ?? [];
+    const args = data.functionArgs ?? {};
+    const allArgsFilled = inputs.every((inp) => (args[inp.name] ?? "").trim() !== "");
+    if (!allArgsFilled) {
+      setCurrentViewValue(null);
+      setCurrentViewError(null);
+      return;
+    }
+    let cancelled = false;
+    setCurrentViewLoading(true);
+    setCurrentViewError(null);
+    readContractViewResult(
+      chainId || 1,
+      data.contractAddress,
+      data.contractAbi,
+      data.selectedFunction,
+      data.functionArgs,
+      inputs
+    )
+      .then((value) => {
+        if (!cancelled) setCurrentViewValue(value);
+      })
+      .catch((err) => {
+        if (!cancelled) setCurrentViewError(err instanceof Error ? err.message : "Failed to fetch");
+      })
+      .finally(() => {
+        if (!cancelled) setCurrentViewLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    data.protocol,
+    data.contractAddress,
+    data.contractAbi,
+    data.selectedFunction,
+    data.functionArgs,
+    chainId,
+  ]);
 
   // Fetch balances for transfer nodes
   useEffect(() => {
@@ -327,8 +388,8 @@ function ProtocolNode({ data, selected, id }: NodeProps<ProtocolNodeData>) {
         {/* Regular protocol content */}
         {data.protocol !== "wallet" && isExpanded && (
           <>
-            {/* Action Selection - Skip for transfer and custom (custom uses function selector) */}
-            {data.protocol !== "transfer" && data.protocol !== "custom" && (
+            {/* Action Selection - Skip for transfer, custom, conditional (custom/conditional use function selector) */}
+            {data.protocol !== "transfer" && data.protocol !== "custom" && data.protocol !== "conditional" && (
               <div>
                 <label className="text-xs text-gray-600 dark:text-gray-400 block mb-1">
                   Action:
@@ -488,6 +549,196 @@ function ProtocolNode({ data, selected, id }: NodeProps<ProtocolNodeData>) {
               </>
             )}
 
+            {/* Conditional Logic: contract address, verify, view function, condition */}
+            {data.protocol === "conditional" && (
+              <>
+                <div>
+                  <label className="text-xs text-gray-600 dark:text-gray-400 block mb-1">
+                    Contract Address:
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="0x..."
+                      className="flex-1 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-sm font-mono bg-white dark:bg-gray-700 dark:text-gray-200 dark:placeholder-gray-500"
+                      value={data.contractAddress || ""}
+                      onChange={(e) => {
+                        updateNodeData({
+                          contractAddress: e.target.value.trim() || undefined,
+                          conditionalContractVerified: false,
+                          contractAbi: undefined,
+                          selectedFunction: undefined,
+                          functionArgs: undefined,
+                          comparisonOperator: undefined,
+                          compareValue: undefined,
+                        });
+                        setContractVerifyError(null);
+                      }}
+                    />
+                    <button
+                      type="button"
+                      disabled={!data.contractAddress?.trim() || isVerifyingContract}
+                      className={cn(
+                        "px-3 py-1 rounded text-sm font-medium shrink-0",
+                        data.conditionalContractVerified
+                          ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400"
+                          : "bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-500 disabled:opacity-50"
+                      )}
+                      onClick={async () => {
+                        const addr = data.contractAddress?.trim();
+                        if (!addr) return;
+                        setIsVerifyingContract(true);
+                        setContractVerifyError(null);
+                        try {
+                          const isContract = await isContractAddress(chainId || 1, addr);
+                          if (!isContract) {
+                            setContractVerifyError("Address is not a contract (no bytecode)");
+                            return;
+                          }
+                          const abi = await fetchContractAbi(chainId || 1, addr);
+                          updateNodeData({
+                            contractAbi: abi,
+                            conditionalContractVerified: true,
+                            selectedFunction: undefined,
+                            functionArgs: undefined,
+                          });
+                        } catch (err) {
+                          setContractVerifyError(err instanceof Error ? err.message : "Failed to verify or fetch ABI");
+                        } finally {
+                          setIsVerifyingContract(false);
+                        }
+                      }}
+                    >
+                      {isVerifyingContract ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : data.conditionalContractVerified ? (
+                        <CheckCircle className="w-4 h-4" />
+                      ) : (
+                        "Verify"
+                      )}
+                    </button>
+                  </div>
+                  {contractVerifyError && (
+                    <div className="flex items-center gap-1 mt-1 text-xs text-red-600 dark:text-red-400">
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                      {contractVerifyError}
+                    </div>
+                  )}
+                </div>
+                {data.conditionalContractVerified && data.contractAbi && (
+                  <>
+                    <div>
+                      <label className="text-xs text-gray-600 dark:text-gray-400 block mb-1">
+                        View Function:
+                      </label>
+                      <select
+                        className="w-full border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-sm bg-white dark:bg-gray-700 dark:text-gray-200"
+                        value={data.selectedFunction || ""}
+                        onChange={(e) => {
+                          const name = e.target.value || undefined;
+                          updateNodeData({
+                            selectedFunction: name,
+                            functionArgs: undefined,
+                          });
+                        }}
+                      >
+                        <option value="">Select view function</option>
+                        {getAbiViewFunctions(data.contractAbi).map((fn) => (
+                          <option key={fn.name} value={fn.name}>
+                            {fn.name}
+                            {fn.inputs?.length ? `(${fn.inputs.map((i) => i.type).join(", ")})` : "()"}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    {data.selectedFunction && (() => {
+                      const fns = getAbiViewFunctions(data.contractAbi);
+                      const fn = fns.find((f) => f.name === data.selectedFunction);
+                      const inputs = fn?.inputs || [];
+                      return inputs.length > 0 ? (
+                        <div className="space-y-2">
+                          <label className="text-xs text-gray-600 dark:text-gray-400 block">
+                            Arguments:
+                          </label>
+                          {inputs.map((input) => (
+                            <div key={input.name}>
+                              <label className="text-xs text-gray-500 dark:text-gray-500 block mb-0.5">
+                                {input.name} ({input.type})
+                              </label>
+                              <input
+                                type="text"
+                                placeholder={input.type}
+                                className="w-full border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-sm font-mono bg-white dark:bg-gray-700 dark:text-gray-200 dark:placeholder-gray-500"
+                                value={data.functionArgs?.[input.name] ?? ""}
+                                onChange={(e) => {
+                                  updateNodeData({
+                                    functionArgs: {
+                                      ...(data.functionArgs || {}),
+                                      [input.name]: e.target.value,
+                                    },
+                                  });
+                                }}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      ) : null;
+                    })()}
+                    <div className="flex gap-2 items-end">
+                      <div className="flex-1">
+                        <label className="text-xs text-gray-600 dark:text-gray-400 block mb-1">
+                          Condition
+                        </label>
+                        <select
+                          className="w-full border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-sm bg-white dark:bg-gray-700 dark:text-gray-200"
+                          value={data.comparisonOperator ?? ""}
+                          onChange={(e) => {
+                            updateNodeData({
+                              comparisonOperator: (e.target.value || undefined) as typeof data.comparisonOperator,
+                            });
+                          }}
+                        >
+                          <option value="">Compare</option>
+                          {COMPARISON_OPTIONS.map((opt) => (
+                            <option key={opt.value} value={opt.value}>
+                              {opt.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="flex-1">
+                        <label className="text-xs text-gray-600 dark:text-gray-400 block mb-1">
+                          Value
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="e.g. 0 or true"
+                          className="w-full border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-sm font-mono bg-white dark:bg-gray-700 dark:text-gray-200 dark:placeholder-gray-500"
+                          value={data.compareValue ?? ""}
+                          onChange={(e) => updateNodeData({ compareValue: e.target.value || undefined })}
+                        />
+                      </div>
+                    </div>
+                    <div className="text-xs text-gray-600 dark:text-gray-400">
+                      {currentViewLoading ? (
+                        <span className="flex items-center gap-1">
+                          <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
+                          Current value: loading…
+                        </span>
+                      ) : currentViewError ? (
+                        <span className="text-red-600 dark:text-red-400">Current value: {currentViewError}</span>
+                      ) : currentViewValue !== null ? (
+                        <span className="font-mono">Current value: {currentViewValue}</span>
+                      ) : null}
+                    </div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      If condition is TRUE, execution proceeds to the next step.
+                    </p>
+                  </>
+                )}
+              </>
+            )}
+
             {/* Asset Selection - For transfer nodes, show dropdown with user balances */}
             {data.protocol === "transfer" ? (
               <div>
@@ -541,8 +792,8 @@ function ProtocolNode({ data, selected, id }: NodeProps<ProtocolNodeData>) {
               )
             )}
 
-            {/* Amount Input - not for custom (uses function args) */}
-            {(data.action || data.protocol === "transfer") && data.protocol !== "custom" && (
+            {/* Amount Input - not for custom or conditional (use function args / condition) */}
+            {(data.action || data.protocol === "transfer") && data.protocol !== "custom" && data.protocol !== "conditional" && (
               <div>
                 <label className="text-xs text-gray-600 dark:text-gray-400 block mb-1">
                   Amount:
@@ -623,6 +874,20 @@ function ProtocolNode({ data, selected, id }: NodeProps<ProtocolNodeData>) {
               ) : (
                 <div className="text-sm text-gray-500 dark:text-gray-400">
                   <div className="text-xs italic">Click to set contract address</div>
+                </div>
+              )
+            ) : data.protocol === "conditional" ? (
+              // Conditional Logic compact view
+              data.conditionalContractVerified && data.contractAddress && data.selectedFunction && data.comparisonOperator != null ? (
+                <div className="text-sm text-gray-600 dark:text-gray-300">
+                  <div className="font-mono text-xs truncate" title={data.contractAddress}>
+                    {data.contractAddress.slice(0, 8)}...{data.contractAddress.slice(-6)}
+                  </div>
+                  <div className="font-medium">{data.selectedFunction} {data.comparisonOperator} {data.compareValue ?? ""}</div>
+                </div>
+              ) : (
+                <div className="text-sm text-gray-500 dark:text-gray-400">
+                  <div className="text-xs italic">Click to set contract and condition</div>
                 </div>
               )
             ) : (

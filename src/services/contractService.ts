@@ -94,3 +94,22 @@ export function getAbiFunctions(abi: Abi): AbiFunctionInfo[] {
             return { name: fn.name, type: fn.type, inputs: fn.inputs };
         });
 }
+
+/**
+ * Get only view/pure functions from ABI (for Conditional Logic - read and compare result).
+ */
+export function getAbiViewFunctions(abi: Abi): AbiFunctionInfo[] {
+    return abi
+        .filter((item) => {
+            if (typeof item !== "object" || item === null || !("type" in item) || (item as { type?: string }).type !== "function" || !("name" in item)) {
+                return false;
+            }
+            const fn = item as { name: string; stateMutability?: string };
+            const mut = fn.stateMutability?.toLowerCase();
+            return VIEW_LIKE.includes(mut ?? "");
+        })
+        .map((item) => {
+            const fn = item as { name: string; type: string; inputs?: Array<{ name: string; type: string }>; outputs?: Array<{ type: string }> };
+            return { name: fn.name, type: fn.type, inputs: fn.inputs };
+        });
+}

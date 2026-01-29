@@ -11,7 +11,8 @@ export type ProtocolType =
   | "curve"
   | "pendle"
   | "custom"
-  | "transfer";
+  | "transfer"
+  | "conditional";
 
 export type ActionType =
   | "lend"
@@ -38,6 +39,10 @@ export interface ProtocolNodeData extends Record<string, unknown> {
   customContractVerified?: boolean;
   selectedFunction?: string;
   functionArgs?: Record<string, string>;
+  // Conditional Logic node (view function + comparison)
+  comparisonOperator?: "gt" | "gte" | "lt" | "lte" | "ne";
+  compareValue?: string;
+  conditionalContractVerified?: boolean;
 }
 
 export type ProtocolNode = Node<ProtocolNodeData>;
