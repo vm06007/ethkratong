@@ -4,10 +4,11 @@ import type { ProtocolNodeData } from "@/types";
 import { cn } from "@/lib/utils";
 import { allProtocols } from "@/data/protocols";
 import { MoreVertical, Wallet, Trash2, ExternalLink } from "lucide-react";
-import { useActiveAccount, useReadContract, ConnectButton } from "thirdweb/react";
+import { useActiveAccount, useReadContract, ConnectButton, useWalletBalance } from "thirdweb/react";
 import { client, chains } from "@/config/thirdweb";
 import { getContract } from "thirdweb";
-import { balanceOf } from "thirdweb/extensions/erc20";
+import { balanceOf, decimals } from "thirdweb/extensions/erc20";
+import { toTokens } from "thirdweb";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 
 // Token addresses for balance checking
@@ -46,6 +47,14 @@ function ProtocolNode({ data, selected, id }: NodeProps<ProtocolNodeData>) {
   // These protocols are terminal nodes - no output handle
   const isTerminalNode = data.protocol === "transfer" || data.protocol === "custom";
 
+  // Get ETH balance using useWalletBalance hook
+  const currentChain = activeAccount?.chain ? chains.find(c => c.id === activeAccount.chain.id) || chains[0] : chains[0];
+  const { data: ethBalanceData, isLoading: isEthLoading } = useWalletBalance({
+    client,
+    chain: currentChain,
+    address: activeAccount?.address,
+  });
+
   // Fetch token balances for wallet node
   useEffect(() => {
     if (data.protocol === "wallet" && activeAccount) {
@@ -63,14 +72,31 @@ function ProtocolNode({ data, selected, id }: NodeProps<ProtocolNodeData>) {
               address,
             });
 
-            const balance = await balanceOf({
-              contract,
-              address: activeAccount.address,
-            });
+            // Fetch balance and decimals concurrently
+            const [balance, tokenDecimals] = await Promise.all([
+              balanceOf({
+                contract,
+                address: activeAccount.address,
+              }),
+              decimals({ contract }),
+            ]);
 
-            // Format balance (assuming 6 decimals for stablecoins)
-            const decimals = symbol === "DAI" ? 18 : 6;
-            const formatted = (Number(balance) / Math.pow(10, decimals)).toFixed(2);
+            // Format balance using actual decimals
+            // Use toTokens for proper formatting, then format to appropriate decimal places
+            const balanceValue = toTokens(balance, tokenDecimals);
+            const numBalance = Number(balanceValue);
+            
+            // Format based on token type: ETH uses 4 decimals, others use 2
+            // For very small balances, show more decimals
+            let formatted: string;
+            if (numBalance === 0) {
+                formatted = "0.00";
+            } else if (numBalance < 0.01) {
+                // Show more decimals for very small amounts
+                formatted = numBalance.toFixed(6);
+            } else {
+                formatted = numBalance.toFixed(2);
+            }
 
             return { symbol, balance: formatted, isLoading: false };
           } catch (error) {
@@ -79,26 +105,31 @@ function ProtocolNode({ data, selected, id }: NodeProps<ProtocolNodeData>) {
           }
         });
 
-        // Also fetch ETH balance
-        const ethBalance = await activeAccount.chain?.nativeCurrency
-          ? (async () => {
-              try {
-                const balance = await activeAccount.getBalance();
-                const formatted = (Number(balance) / 1e18).toFixed(4);
-                return { symbol: "ETH", balance: formatted, isLoading: false };
-              } catch {
-                return { symbol: "ETH", balance: "0.0000", isLoading: false };
-              }
-            })()
-          : Promise.resolve({ symbol: "ETH", balance: "0.0000", isLoading: false });
+        const tokenResults = await Promise.all(balancePromises);
+        
+        // Add ETH balance from hook - format to 4 decimals
+        let ethBalance: TokenBalance;
+        if (ethBalanceData && ethBalanceData.value !== undefined) {
+            const ethValue = Number(ethBalanceData.value) / 1e18;
+            const formattedEth = ethValue === 0 ? "0.0000" : ethValue.toFixed(4);
+            ethBalance = {
+                symbol: ethBalanceData.symbol || "ETH",
+                balance: formattedEth,
+                isLoading: isEthLoading,
+            };
+        } else {
+            ethBalance = { symbol: "ETH", balance: "0.0000", isLoading: isEthLoading };
+        }
 
-        const [eth, ...tokenResults] = await Promise.all([ethBalance, ...balancePromises]);
-        setTokenBalances([eth, ...tokenResults]);
+        setTokenBalances([ethBalance, ...tokenResults]);
       };
 
       fetchBalances();
+    } else if (data.protocol === "wallet" && !activeAccount) {
+      // Clear balances when wallet is disconnected
+      setTokenBalances([]);
     }
-  }, [activeAccount, data.protocol]);
+  }, [activeAccount, data.protocol, ethBalanceData, isEthLoading]);
 
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -331,6 +362,24 @@ function ProtocolNode({ data, selected, id }: NodeProps<ProtocolNodeData>) {
                 />
               </div>
             )}
+
+            {/* Recipient Address Input - Only for transfer nodes */}
+            {data.protocol === "transfer" && (
+              <div>
+                <label className="text-xs text-gray-600 dark:text-gray-400 block mb-1">
+                  To Address:
+                </label>
+                <input
+                  type="text"
+                  placeholder="0x... or ENS name"
+                  className="w-full border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-sm font-mono bg-white dark:bg-gray-700 dark:text-gray-200 dark:placeholder-gray-500"
+                  value={data.recipientAddress || ""}
+                  onChange={(e) => {
+                    updateNodeData({ recipientAddress: e.target.value });
+                  }}
+                />
+              </div>
+            )}
           </>
         )}
 
@@ -343,6 +392,11 @@ function ProtocolNode({ data, selected, id }: NodeProps<ProtocolNodeData>) {
             </div>
             {data.amount && (
               <div className="text-xs text-gray-500 dark:text-gray-400">{data.amount}</div>
+            )}
+            {data.protocol === "transfer" && data.recipientAddress && (
+              <div className="text-xs text-gray-500 dark:text-gray-400 font-mono">
+                to {data.recipientAddress.slice(0, 6)}...{data.recipientAddress.slice(-4)}
+              </div>
             )}
           </div>
         )}

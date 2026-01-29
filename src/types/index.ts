@@ -2,6 +2,7 @@ import type { Node, Edge } from "@xyflow/react";
 
 export type ProtocolType =
   | "wallet"
+  | "transfer"
   | "morpho"
   | "aave"
   | "compound"
@@ -17,7 +18,7 @@ export type ActionType =
   | "swap"
   | "stake";
 
-export interface ProtocolNodeData {
+export interface ProtocolNodeData extends Record<string, unknown> {
   protocol: ProtocolType;
   label: string;
   action?: ActionType;
@@ -27,6 +28,7 @@ export interface ProtocolNodeData {
   borrowAsset?: string;
   targetAPY?: string;
   sequenceNumber?: number;
+  recipientAddress?: string; // For transfer nodes
 }
 
 export type ProtocolNode = Node<ProtocolNodeData>;

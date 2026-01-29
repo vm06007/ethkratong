@@ -1,8 +1,16 @@
-import { X, Play, CheckCircle2, AlertCircle, GripVertical } from "lucide-react";
+import { X, Play, CheckCircle2, AlertCircle, GripVertical, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Node, Edge } from "@xyflow/react";
 import type { ProtocolNodeData } from "@/types";
 import { useState } from "react";
+import { useActiveAccount } from "thirdweb/react";
+import { useChainId } from "wagmi";
+import { useWalletCapabilities } from "@/hooks/useWalletCapabilities";
+import {
+  prepareTransferCalls,
+  executeBatchedTransaction,
+  trackBatchedTransactionStatus
+} from "@/services/batchedExecution";
 import {
   DndContext,
   closestCenter,
@@ -36,7 +44,7 @@ interface SortableStepProps {
   isConfigured: boolean;
 }
 
-function SortableStep({ node, index, isExecuted, isConfigured }: SortableStepProps) {
+function SortableStep({ node, isExecuted, isConfigured }: SortableStepProps) {
   const {
     attributes,
     listeners,
@@ -108,6 +116,14 @@ function SortableStep({ node, index, isExecuted, isConfigured }: SortableStepPro
                 <span>{node.data.amount}</span>
               </div>
             )}
+            {node.data.protocol === "transfer" && node.data.recipientAddress && (
+              <div className="flex justify-between">
+                <span className="font-medium">To:</span>
+                <span className="font-mono">
+                  {node.data.recipientAddress.slice(0, 6)}...{node.data.recipientAddress.slice(-4)}
+                </span>
+              </div>
+            )}
           </>
         ) : (
           <div className="text-orange-500 dark:text-orange-400">
@@ -122,6 +138,11 @@ function SortableStep({ node, index, isExecuted, isConfigured }: SortableStepPro
 export function RightDrawer({ isOpen, onClose, nodes, edges, onReorderNodes }: RightDrawerProps) {
   const [isExecuting, setIsExecuting] = useState(false);
   const [executedSteps, setExecutedSteps] = useState<Set<string>>(new Set());
+  const [executionError, setExecutionError] = useState<string | null>(null);
+
+  const activeAccount = useActiveAccount();
+  const chainId = useChainId();
+  const { supportsBatch, isLoading: isCheckingCapabilities } = useWalletCapabilities();
 
   // Sort nodes by sequence number for display
   const sortedNodes = [...nodes]
@@ -129,9 +150,15 @@ export function RightDrawer({ isOpen, onClose, nodes, edges, onReorderNodes }: R
     .sort((a, b) => (a.data.sequenceNumber || 0) - (b.data.sequenceNumber || 0));
 
   const hasActions = sortedNodes.length > 0;
-  const allActionsConfigured = sortedNodes.every(
-    (node) => node.data.action && node.data.amount
-  );
+
+  // Check if all actions are configured
+  const allActionsConfigured = sortedNodes.every((node) => {
+    // For transfer nodes, also check recipient address
+    if (node.data.protocol === "transfer") {
+      return node.data.action && node.data.amount && node.data.asset && node.data.recipientAddress;
+    }
+    return node.data.action && node.data.amount;
+  });
 
   // Drag and drop sensors
   const sensors = useSensors(
@@ -156,17 +183,70 @@ export function RightDrawer({ isOpen, onClose, nodes, edges, onReorderNodes }: R
   };
 
   const handleExecute = async () => {
-    setIsExecuting(true);
-    // Placeholder for actual execution logic
-    console.log("Executing transaction sequence:", sortedNodes);
-
-    // Simulate execution
-    for (const node of sortedNodes) {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      setExecutedSteps((prev) => new Set(prev).add(node.id));
+    if (!activeAccount?.address) {
+      setExecutionError("No wallet connected");
+      return;
     }
 
-    setIsExecuting(false);
+    setIsExecuting(true);
+    setExecutionError(null);
+
+    try {
+      const currentChainId = chainId || 1;
+
+      console.log("Starting execution:", {
+        nodeCount: sortedNodes.length,
+        supportsBatch,
+        chainId: currentChainId,
+      });
+
+      // Check if all nodes are transfers and we support batching
+      const allTransfers = sortedNodes.every((node) => node.data.protocol === "transfer");
+
+      if (allTransfers && supportsBatch) {
+        console.log("Using batched EIP-7702 execution");
+
+        // Prepare batched calls (async to handle ENS resolution)
+        const calls = await prepareTransferCalls(sortedNodes);
+
+        if (calls.length === 0) {
+          throw new Error("No valid transfers to execute");
+        }
+
+        console.log(`Prepared ${calls.length} batched calls`);
+
+        // Execute batched transaction
+        const result = await executeBatchedTransaction(calls, activeAccount.address, currentChainId);
+
+        console.log("Batch submitted:", result.id);
+
+        // Track the transaction
+        const txHash = await trackBatchedTransactionStatus(result.id);
+
+        console.log("Transaction confirmed:", txHash);
+
+        // Mark all steps as executed
+        sortedNodes.forEach((node) => {
+          setExecutedSteps((prev) => new Set(prev).add(node.id));
+        });
+      } else {
+        console.log("⚠️ Falling back to sequential execution");
+
+        // Fallback to sequential execution
+        for (const node of sortedNodes) {
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+          setExecutedSteps((prev) => new Set(prev).add(node.id));
+          console.log(`Executed node: ${node.data.label}`);
+        }
+      }
+
+      console.log("Execution completed successfully");
+    } catch (error) {
+      console.error("Execution failed:", error);
+      setExecutionError(error instanceof Error ? error.message : "Execution failed");
+    } finally {
+      setIsExecuting(false);
+    }
   };
 
   return (
@@ -214,7 +294,11 @@ export function RightDrawer({ isOpen, onClose, nodes, edges, onReorderNodes }: R
                   <div className="flex-1 overflow-y-auto space-y-3 mb-4">
                     {sortedNodes.map((node, index) => {
                       const isExecuted = executedSteps.has(node.id);
-                      const isConfigured = !!(node.data.action && node.data.amount);
+
+                      // Check configuration based on node type
+                      const isConfigured = node.data.protocol === "transfer"
+                        ? !!(node.data.action && node.data.amount && node.data.asset && node.data.recipientAddress)
+                        : !!(node.data.action && node.data.amount);
 
                       return (
                         <SortableStep
@@ -231,13 +315,21 @@ export function RightDrawer({ isOpen, onClose, nodes, edges, onReorderNodes }: R
               </DndContext>
 
               {/* Execute Button */}
-              <div className="border-t border-gray-300 dark:border-gray-700 pt-4">
+              <div className="border-t border-gray-300 dark:border-gray-700 pt-4 space-y-2">
+                {/* Batching Status Indicator */}
+                {!isCheckingCapabilities && supportsBatch && (
+                  <div className="flex items-center justify-center gap-2 text-xs text-green-600 dark:text-green-400 mb-2">
+                    <Zap className="w-4 h-4" />
+                    <span>Atomic batching enabled</span>
+                  </div>
+                )}
+
                 <button
                   onClick={handleExecute}
-                  disabled={!allActionsConfigured || isExecuting}
+                  disabled={!allActionsConfigured || isExecuting || !activeAccount}
                   className={cn(
                     "w-full py-3 px-4 rounded-lg font-semibold text-white transition-all flex items-center justify-center gap-2",
-                    allActionsConfigured && !isExecuting
+                    allActionsConfigured && !isExecuting && activeAccount
                       ? "bg-gradient-to-r from-blue-600 to-purple-600 hover:shadow-lg hover:scale-105"
                       : "bg-gray-400 dark:bg-gray-700 cursor-not-allowed"
                   )}
@@ -254,9 +346,25 @@ export function RightDrawer({ isOpen, onClose, nodes, edges, onReorderNodes }: R
                     </>
                   )}
                 </button>
-                {!allActionsConfigured && (
-                  <p className="text-xs text-center text-orange-500 dark:text-orange-400 mt-2">
+
+                {/* Error Message */}
+                {executionError && (
+                  <p className="text-xs text-center text-red-500 dark:text-red-400">
+                    {executionError}
+                  </p>
+                )}
+
+                {/* Configuration Warning */}
+                {!allActionsConfigured && !executionError && (
+                  <p className="text-xs text-center text-orange-500 dark:text-orange-400">
                     Configure all actions before executing
+                  </p>
+                )}
+
+                {/* No Wallet Warning */}
+                {!activeAccount && !executionError && (
+                  <p className="text-xs text-center text-orange-500 dark:text-orange-400">
+                    Connect wallet to execute
                   </p>
                 )}
               </div>
