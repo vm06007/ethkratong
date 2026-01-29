@@ -155,11 +155,6 @@ export function ProtocolNodeUniswapBody({
                         );
                     })}
                 </select>
-                {data.swapFrom && swapFromBalance != null && (
-                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        Balance: {swapFromBalance} {data.swapFrom}
-                    </div>
-                )}
             </div>
             <div>
                 <label className="text-xs text-gray-600 dark:text-gray-400 block mb-1">
@@ -207,6 +202,20 @@ export function ProtocolNodeUniswapBody({
                     value={data.amount ?? ""}
                     onChange={(e) => onUpdateData({ amount: e.target.value })}
                 />
+                {data.swapFrom &&
+                    data.amount?.trim() &&
+                    swapFromBalance != null && (() => {
+                        const balance = parseFloat(swapFromBalance);
+                        const amount = parseFloat(data.amount ?? "0");
+                        if (!Number.isNaN(amount) && !Number.isNaN(balance) && amount > balance) {
+                            return (
+                                <div className="text-xs text-red-600 dark:text-red-400 font-medium mt-1">
+                                    Amount exceeds balance ({swapFromBalance} {data.swapFrom})
+                                </div>
+                            );
+                        }
+                        return null;
+                    })()}
             </div>
             {(data.swapFrom === "ETH" && data.swapTo && data.amount?.trim()) && (
                 <div className="pt-2 border-t border-gray-200 dark:border-gray-600">

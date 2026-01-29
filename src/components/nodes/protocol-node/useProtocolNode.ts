@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { useReactFlow } from "@xyflow/react";
+import { useReactFlow, useStore } from "@xyflow/react";
 import type { ProtocolNodeData } from "@/types";
 import { allProtocols } from "@/data/protocols";
 import { client, chains } from "@/config/thirdweb";
@@ -11,10 +11,12 @@ import { useActiveAccount, useWalletBalance } from "thirdweb/react";
 import { getAbiViewFunctions } from "@/services/contractService";
 import { readContractViewResult, readBalanceResult } from "@/services/batchedExecution";
 import { TOKEN_ADDRESSES } from "./constants";
+import { getEffectiveBalances } from "./effectiveBalances";
 import type { TokenBalance } from "./types";
 
 export function useProtocolNode(id: string, data: ProtocolNodeData) {
-    const { setNodes } = useReactFlow();
+    const { setNodes, getNodes, getEdges } = useReactFlow();
+    const edgesFromStore = useStore((s) => s.edges);
     const chainId = useChainId();
     const activeAccount = useActiveAccount();
 
@@ -181,13 +183,32 @@ export function useProtocolNode(id: string, data: ProtocolNodeData) {
 
     useEffect(() => {
         if (data.protocol === "transfer" && activeAccount && isExpanded) {
-            fetchUserBalances(activeAccount).then((balances) => {
-                setTransferBalances(balances.filter((token) => Number(token.balance) > 0));
+            fetchUserBalances(activeAccount).then((baseBalances) => {
+                const nodes = getNodes();
+                const edges = getEdges();
+                const effective = getEffectiveBalances(
+                    nodes as import("@xyflow/react").Node<ProtocolNodeData>[],
+                    edges as import("@xyflow/react").Edge[],
+                    id,
+                    baseBalances
+                );
+                setTransferBalances(effective.filter((token) => Number(token.balance) > 0));
             });
         } else if (data.protocol === "transfer" && !activeAccount) {
             setTransferBalances([]);
         }
-    }, [data.protocol, activeAccount, isExpanded, fetchUserBalances]);
+    }, [
+        data.protocol,
+        activeAccount,
+        isExpanded,
+        fetchUserBalances,
+        getNodes,
+        getEdges,
+        id,
+        data.asset,
+        data.amount,
+        edgesFromStore.length,
+    ]);
 
     const updateNodeData = useCallback(
         (updates: Partial<ProtocolNodeData>) => {

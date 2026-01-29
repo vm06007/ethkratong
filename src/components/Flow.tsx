@@ -246,9 +246,40 @@ function FlowCanvas() {
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [setNodes, setEdges]);
 
+  // When connecting from Uniswap (swap) to Transfer, pre-fill Transfer with output currency and estimated amount
   const onConnect = useCallback(
-    (params: Connection) => setEdges((eds) => addEdge(params, eds)),
-    [setEdges]
+    (params: Connection) => {
+      setEdges((eds) => addEdge(params, eds));
+      setNodes((nds) => {
+        const source = nds.find((n) => n.id === params.source);
+        const target = nds.find((n) => n.id === params.target);
+        if (!source || !target) return nds;
+        const s = source.data as ProtocolNodeData;
+        const t = target.data as ProtocolNodeData;
+        if (
+          s.protocol === "uniswap" &&
+          s.action === "swap" &&
+          s.estimatedAmountOutSymbol &&
+          s.estimatedAmountOut != null &&
+          t.protocol === "transfer"
+        ) {
+          return nds.map((n) =>
+            n.id === params.target
+              ? {
+                  ...n,
+                  data: {
+                    ...n.data,
+                    asset: s.estimatedAmountOutSymbol,
+                    amount: s.estimatedAmountOut,
+                  },
+                }
+              : n
+          );
+        }
+        return nds;
+      });
+    },
+    [setEdges, setNodes]
   );
 
   // Handle edge selection to add animation
