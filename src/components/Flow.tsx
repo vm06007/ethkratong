@@ -118,7 +118,6 @@ const initialNodes: Node<ProtocolNodeData>[] = [
 
 const initialEdges: Edge[] = [];
 
-let nodeId = 2;
 let tabId = 2;
 
 interface Tab {
@@ -357,6 +356,17 @@ function FlowCanvas() {
         y: event.clientY,
       });
 
+      // Ensure new node id never conflicts with existing nodes (avoid replacing on drop)
+      const existingIds = new Set(nodes.map((n) => n.id));
+      const maxN = nodes.reduce((max, n) => {
+        const m = n.id.match(/^node-(\d+)$/);
+        const num = m ? parseInt(m[1], 10) : 0;
+        return Math.max(max, num);
+      }, 0);
+      let nextNum = maxN + 1;
+      while (existingIds.has(`node-${nextNum}`)) nextNum++;
+      const nextNodeId = `node-${nextNum}`;
+
       // Find the highest sequence number among existing nodes
       const maxSequence = Math.max(
         0,
@@ -366,7 +376,7 @@ function FlowCanvas() {
       );
 
       const newNode: Node<ProtocolNodeData> = {
-        id: `node-${nodeId++}`,
+        id: nextNodeId,
         type: "protocol",
         position,
         data: {
