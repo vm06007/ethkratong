@@ -191,7 +191,7 @@ function FlowCanvas() {
 
     if (needsInitialization) {
       setNodes((nds) =>
-        nds.map((node, index) => {
+        nds.map((node) => {
           if (node.data.sequenceNumber === undefined && node.data.protocol !== "wallet") {
             // Find max sequence and add to end
             const maxSeq = Math.max(

@@ -5,7 +5,6 @@ import { inAppWallet, createWallet } from "thirdweb/wallets";
 
 // Client ID from environment variable
 const clientId = import.meta.env.VITE_THIRDWEB_CLIENT_ID || "";
-const walletConnectProjectId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || "";
 
 // Create Thirdweb client
 export const client = createThirdwebClient({
@@ -34,11 +33,7 @@ export const wallets = [
     },
   }),
   createWallet("io.metamask"),
-  createWallet("com.coinbase.wallet", {
-    walletConnect: {
-      projectId: walletConnectProjectId,
-    },
-  }),
+  createWallet("com.coinbase.wallet"),
   createWallet("io.rabby"),
   createWallet("com.tangem"),
   createWallet("com.exodus"),

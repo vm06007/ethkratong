@@ -141,7 +141,7 @@ export const prepareBatchedCalls = async (
  * @param chainId - Chain ID for resolution
  * @returns Promise with resolved address
  */
-const resolveAddress = async (addressOrENS: string, chainId: number): Promise<string> => {
+const resolveAddress = async (addressOrENS: string, _chainId: number): Promise<string> => {
   // Trim whitespace
   const trimmed = addressOrENS.trim();
 

@@ -19,7 +19,7 @@ if (walletConnectProjectId) {
   connectors.push(
     walletConnect({
       projectId: walletConnectProjectId,
-    })
+    }) as (typeof connectors)[number]
   );
 }
 

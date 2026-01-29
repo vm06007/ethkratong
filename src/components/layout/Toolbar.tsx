@@ -50,7 +50,7 @@ export function Toolbar({
   onToggleSidebar,
   isRightDrawerOpen,
   onToggleRightDrawer,
-  isMiniMapVisible,
+  isMiniMapVisible: _isMiniMapVisible,
   onToggleMiniMap,
   edgeType,
   onEdgeTypeChange,
