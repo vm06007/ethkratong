@@ -415,7 +415,11 @@ export function RightDrawer({ isOpen, onClose, nodes, edges, onReorderNodes }: R
           }
           continue;
         }
-        if (node.data.protocol === "transfer" || node.data.protocol === "custom") {
+        if (
+          node.data.protocol === "transfer" ||
+          node.data.protocol === "custom" ||
+          node.data.protocol === "uniswap"
+        ) {
           const condPreds = getDirectPredecessors(node.id, edges);
           const conditionPreds = [...condPreds].filter((predId) => {
             const pred = sortedNodes.find((n) => n.id === predId);
@@ -436,12 +440,18 @@ export function RightDrawer({ isOpen, onClose, nodes, edges, onReorderNodes }: R
 
       const nodesToExecute = sortedNodes.filter(
         (n) =>
-          (n.data.protocol === "transfer" || n.data.protocol === "custom") &&
+          (n.data.protocol === "transfer" ||
+            n.data.protocol === "custom" ||
+            n.data.protocol === "uniswap") &&
           !actionSkipSet.has(n.id)
       );
 
-      // Prepare calls only for nodes that are not skipped (transfers + custom; conditionals produce no call)
-      const calls = await prepareBatchedCalls(nodesToExecute, effectiveChainId);
+      // Prepare calls only for nodes that are not skipped (transfers + custom + uniswap; conditionals produce no call)
+      const calls = await prepareBatchedCalls(
+        nodesToExecute,
+        effectiveChainId,
+        activeAccount?.address
+      );
 
       if (calls.length === 0) {
         throw new Error("No valid actions to execute");

@@ -67,7 +67,7 @@ export const protocolCategories: ProtocolCategory[] = [
         label: "Uniswap",
         description: "Leading decentralized exchange",
         color: "bg-red-500",
-        availableActions: ["swap"],
+        availableActions: ["swap", "addLiquidity"],
         url: "https://app.uniswap.org",
       },
       {

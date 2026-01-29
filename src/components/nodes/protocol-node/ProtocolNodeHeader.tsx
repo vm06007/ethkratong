@@ -1,4 +1,4 @@
-import { MoreVertical, Trash2, ExternalLink } from "lucide-react";
+import { MoreVertical, Trash2, ExternalLink, Maximize2, Monitor } from "lucide-react";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { cn } from "@/lib/utils";
 import type { ProtocolNodeData, NodeTemplate } from "@/types";
@@ -9,6 +9,10 @@ interface ProtocolNodeHeaderProps {
     color: string;
     onToggleExpand: () => void;
     onDelete: (e: React.MouseEvent) => void;
+    /** When set, shows "View In Frame" (Uniswap app in iframe modal) */
+    onViewInFrame?: () => void;
+    /** When set, shows "Expanded View" (config modal to set up step details) */
+    onExpandedView?: () => void;
 }
 
 export function ProtocolNodeHeader({
@@ -17,6 +21,8 @@ export function ProtocolNodeHeader({
     color,
     onToggleExpand,
     onDelete,
+    onViewInFrame,
+    onExpandedView,
 }: ProtocolNodeHeaderProps) {
     return (
         <div
@@ -57,6 +63,30 @@ export function ProtocolNodeHeader({
                                 >
                                     <ExternalLink className="w-4 h-4" />
                                     <span>View Protocol</span>
+                                </DropdownMenu.Item>
+                            )}
+                            {onViewInFrame && (
+                                <DropdownMenu.Item
+                                    className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 rounded hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer outline-none"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        onViewInFrame();
+                                    }}
+                                >
+                                    <Monitor className="w-4 h-4" />
+                                    <span>View In Frame</span>
+                                </DropdownMenu.Item>
+                            )}
+                            {onExpandedView && (
+                                <DropdownMenu.Item
+                                    className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 rounded hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer outline-none"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        onExpandedView();
+                                    }}
+                                >
+                                    <Maximize2 className="w-4 h-4" />
+                                    <span>Expanded View</span>
                                 </DropdownMenu.Item>
                             )}
                             <DropdownMenu.Item

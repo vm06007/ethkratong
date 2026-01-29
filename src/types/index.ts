@@ -21,7 +21,8 @@ export type ActionType =
   | "deposit"
   | "withdraw"
   | "swap"
-  | "stake";
+  | "stake"
+  | "addLiquidity";
 
 export interface ProtocolNodeData extends Record<string, unknown> {
   protocol: ProtocolType;
@@ -48,6 +49,11 @@ export interface ProtocolNodeData extends Record<string, unknown> {
   balanceLogicAddress?: string;
   balanceLogicComparisonOperator?: "gt" | "gte" | "lt" | "lte" | "ne";
   balanceLogicCompareValue?: string;
+  // Uniswap (and DEX) swap / liquidity
+  swapFrom?: string;
+  swapTo?: string;
+  liquidityTokenA?: string;
+  liquidityTokenB?: string;
 }
 
 export type ProtocolNode = Node<ProtocolNodeData>;

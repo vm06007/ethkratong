@@ -3,6 +3,7 @@ import type { TokenBalance } from "./types";
 import { ProtocolNodeCustomBody } from "./ProtocolNodeCustomBody";
 import { ProtocolNodeConditionalBody } from "./ProtocolNodeConditionalBody";
 import { ProtocolNodeBalanceLogicBody } from "./ProtocolNodeBalanceLogicBody";
+import { ProtocolNodeUniswapBody } from "./ProtocolNodeUniswapBody";
 
 interface ProtocolNodeExpandedBodyProps {
     data: ProtocolNodeData;
@@ -102,6 +103,14 @@ export function ProtocolNodeExpandedBody({
                 />
             )}
 
+            {data.protocol === "uniswap" && (
+                <ProtocolNodeUniswapBody
+                    data={data}
+                    chainId={chainId}
+                    onUpdateData={onUpdateData}
+                />
+            )}
+
             {data.protocol === "transfer" ? (
                 <div>
                     <label className="text-xs text-gray-600 dark:text-gray-400 block mb-1">
@@ -131,6 +140,7 @@ export function ProtocolNodeExpandedBody({
                     )}
                 </div>
             ) : (
+                data.protocol !== "uniswap" &&
                 (data.action === "lend" ||
                     data.action === "deposit" ||
                     data.action === "borrow") && (
@@ -152,7 +162,8 @@ export function ProtocolNodeExpandedBody({
             {(data.action || data.protocol === "transfer") &&
                 data.protocol !== "custom" &&
                 data.protocol !== "conditional" &&
-                data.protocol !== "balanceLogic" && (
+                data.protocol !== "balanceLogic" &&
+                data.protocol !== "uniswap" && (
                     <div>
                         <label className="text-xs text-gray-600 dark:text-gray-400 block mb-1">
                             Amount:

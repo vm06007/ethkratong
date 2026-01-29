@@ -6,6 +6,18 @@ export const COMPARISON_OPTIONS: { value: "gt" | "gte" | "lt" | "lte" | "ne"; la
     { value: "ne", label: "≠" },
 ];
 
+/** Chain ID -> Uniswap app URL slug (app.uniswap.org/swap?chain=...) */
+export const UNISWAP_CHAIN_SLUG: Record<number, string> = {
+    1: "ethereum",
+    42161: "arbitrum",
+};
+
+/** Token symbols available for swap/liquidity dropdowns (ETH + stablecoins from TOKEN_ADDRESSES) */
+export const UNISWAP_TOKEN_OPTIONS: Record<number, string[]> = {
+    1: ["ETH", "USDC", "USDT", "DAI", "USDS"],
+    42161: ["ETH", "USDC", "USDT", "DAI", "USDS"],
+};
+
 export const TOKEN_ADDRESSES: Record<
     number,
     { USDC: string; USDT: string; DAI: string; USDS: string }

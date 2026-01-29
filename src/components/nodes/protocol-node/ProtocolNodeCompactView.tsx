@@ -112,6 +112,47 @@ export function ProtocolNodeCompactView({ data }: ProtocolNodeCompactViewProps) 
         );
     }
 
+    if (data.protocol === "uniswap") {
+        if (data.action === "addLiquidity") {
+            const a = data.liquidityTokenA;
+            const b = data.liquidityTokenB;
+            if (a && b) {
+                return (
+                    <div className="text-sm text-gray-600 dark:text-gray-300">
+                        <div className="font-medium">Liquidity {a}/{b}</div>
+                        {data.amount && (
+                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                                {data.amount}
+                            </div>
+                        )}
+                    </div>
+                );
+            }
+        } else {
+            const from = data.swapFrom;
+            const to = data.swapTo;
+            if (from || to) {
+                return (
+                    <div className="text-sm text-gray-600 dark:text-gray-300">
+                        <div className="font-medium">
+                            Swap {from ?? "…"} → {to ?? "…"}
+                        </div>
+                        {data.amount && (
+                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                                {data.amount}
+                            </div>
+                        )}
+                    </div>
+                );
+            }
+        }
+        return (
+            <div className="text-sm text-gray-500 dark:text-gray-400">
+                <div className="text-xs italic">Click to set pair or swap</div>
+            </div>
+        );
+    }
+
     if (data.action) {
         return (
             <div className="text-sm text-gray-600 dark:text-gray-300">

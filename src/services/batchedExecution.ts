@@ -25,6 +25,30 @@ const TOKEN_ADDRESSES = {
     },
 };
 
+// Uniswap V2 Router and WETH per chain (for swap execution)
+const UNISWAP_V2_ROUTER: Record<number, string> = {
+    1: "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D",
+    42161: "0x4752ba5DBc23f44D87826276BF6Fd6b1C372aD24",
+};
+const WETH_ADDRESS: Record<number, string> = {
+    1: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+    42161: "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1",
+};
+const UNISWAP_SWAP_ABI = [
+    {
+        type: "function",
+        name: "swapExactETHForTokens",
+        inputs: [
+            { name: "amountOutMin", type: "uint256" },
+            { name: "path", type: "address[]" },
+            { name: "to", type: "address" },
+            { name: "deadline", type: "uint256" },
+        ],
+        outputs: [{ type: "uint256[]" }],
+        stateMutability: "payable",
+    },
+] as const;
+
 // Token decimals mapping
 const TOKEN_DECIMALS: Record<string, number> = {
     ETH: 18,
@@ -116,11 +140,59 @@ export function prepareCustomContractCall(node: Node<ProtocolNodeData>): Batched
 }
 
 /**
- * Prepare batched transaction calls for all nodes (transfers + custom contracts) in order.
+ * Prepare a single batched call for a Uniswap swap node (ETH → token via V2 router).
+ * Only supports action "swap" with swapFrom "ETH"; addLiquidity and token→token are not encoded here.
+ */
+function prepareUniswapSwapCall(
+  node: Node<ProtocolNodeData>,
+  chainId: number,
+  account: string
+): BatchedTransactionCall {
+  const data = node.data;
+  if (data.protocol !== "uniswap" || data.action !== "swap") {
+    throw new Error("Node is not a Uniswap swap node");
+  }
+  if (data.swapFrom !== "ETH") {
+    throw new Error("Execution only supports ETH → token swap for now");
+  }
+  const swapTo = data.swapTo;
+  const chainTokens = TOKEN_ADDRESSES[chainId as keyof typeof TOKEN_ADDRESSES];
+  if (!chainTokens || !swapTo || swapTo === "ETH") {
+    throw new Error(`Uniswap: select a token to swap to (e.g. USDC)`);
+  }
+  const outputTokenAddress = chainTokens[swapTo as keyof typeof chainTokens];
+  if (!outputTokenAddress) {
+    throw new Error(`Token ${swapTo} not supported on chain ${chainId}`);
+  }
+  const router = UNISWAP_V2_ROUTER[chainId as keyof typeof UNISWAP_V2_ROUTER];
+  const weth = WETH_ADDRESS[chainId as keyof typeof WETH_ADDRESS];
+  if (!router || !weth) {
+    throw new Error(`Uniswap execution not supported on chain ${chainId}`);
+  }
+  const amountStr = data.amount?.trim() || "0";
+  const amountWei = parseEther(amountStr);
+  const path = [weth as `0x${string}`, outputTokenAddress as `0x${string}`];
+  const deadline = BigInt(Math.floor(Date.now() / 1000) + 300);
+  const dataEncoded = encodeFunctionData({
+    abi: UNISWAP_SWAP_ABI,
+    functionName: "swapExactETHForTokens",
+    args: [BigInt(0), path, account as `0x${string}`, deadline],
+  });
+  return {
+    to: router,
+    data: dataEncoded,
+    value: toHex(amountWei),
+  };
+}
+
+/**
+ * Prepare batched transaction calls for all nodes (transfers + custom + uniswap) in order.
+ * @param account - Required for Uniswap swap (recipient of output tokens)
  */
 export const prepareBatchedCalls = async (
   nodes: Node<ProtocolNodeData>[],
-  chainId: number
+  chainId: number,
+  account?: string
 ): Promise<BatchedTransactionCall[]> => {
   const calls: BatchedTransactionCall[] = [];
   for (const node of nodes) {
@@ -129,8 +201,14 @@ export const prepareBatchedCalls = async (
       calls.push(...transferCalls);
     } else if (node.data.protocol === "custom") {
       calls.push(prepareCustomContractCall(node));
+    } else if (node.data.protocol === "uniswap" && node.data.action === "swap" && account) {
+      try {
+        calls.push(prepareUniswapSwapCall(node, chainId, account));
+      } catch (err) {
+        console.warn(`Skipping Uniswap node ${node.id}:`, err);
+      }
     }
-    // Skip wallet and other protocol nodes that don't produce a call
+    // Skip wallet, condition, balanceLogic, and uniswap addLiquidity
   }
   return calls;
 };
