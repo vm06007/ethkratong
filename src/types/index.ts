@@ -26,6 +26,7 @@ export interface ProtocolNodeData {
   collateralAsset?: string;
   borrowAsset?: string;
   targetAPY?: string;
+  sequenceNumber?: number;
 }
 
 export type ProtocolNode = Node<ProtocolNodeData>;
@@ -37,4 +38,5 @@ export interface NodeTemplate {
   icon?: string;
   color?: string;
   availableActions: ActionType[];
+  url?: string;
 }

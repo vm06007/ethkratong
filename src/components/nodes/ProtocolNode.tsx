@@ -3,11 +3,12 @@ import { Handle, Position, type NodeProps, useReactFlow } from "@xyflow/react";
 import type { ProtocolNodeData } from "@/types";
 import { cn } from "@/lib/utils";
 import { allProtocols } from "@/data/protocols";
-import { X, Wallet } from "lucide-react";
+import { MoreVertical, Wallet, Trash2, ExternalLink } from "lucide-react";
 import { useActiveAccount, useReadContract, ConnectButton } from "thirdweb/react";
 import { client, chains } from "@/config/thirdweb";
 import { getContract } from "thirdweb";
 import { balanceOf } from "thirdweb/extensions/erc20";
+import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 
 // Token addresses for balance checking
 const TOKEN_ADDRESSES = {
@@ -35,7 +36,7 @@ interface TokenBalance {
 
 function ProtocolNode({ data, selected, id }: NodeProps<ProtocolNodeData>) {
   const [isExpanded, setIsExpanded] = useState(false);
-  const { deleteElements } = useReactFlow();
+  const { deleteElements, setNodes } = useReactFlow();
   const activeAccount = useActiveAccount();
   const [tokenBalances, setTokenBalances] = useState<TokenBalance[]>([]);
 
@@ -104,6 +105,23 @@ function ProtocolNode({ data, selected, id }: NodeProps<ProtocolNodeData>) {
     deleteElements({ nodes: [{ id }] });
   };
 
+  const updateNodeData = (updates: Partial<ProtocolNodeData>) => {
+    setNodes((nds) =>
+      nds.map((node) => {
+        if (node.id === id) {
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              ...updates,
+            },
+          };
+        }
+        return node;
+      })
+    );
+  };
+
   return (
     <div
       className={cn(
@@ -130,14 +148,51 @@ function ProtocolNode({ data, selected, id }: NodeProps<ProtocolNodeData>) {
         onClick={() => setIsExpanded(!isExpanded)}
       >
         <div className="flex items-center justify-between">
-          <span>{data.label}</span>
-          <button
-            onClick={handleDelete}
-            className="hover:bg-white/20 rounded p-1 transition-colors"
-            aria-label="Delete node"
-          >
-            <X className="w-4 h-4" />
-          </button>
+          <span>
+            {data.sequenceNumber !== undefined && data.sequenceNumber > 0
+              ? `${data.sequenceNumber}. ${data.label}`
+              : data.label}
+          </span>
+          <DropdownMenu.Root>
+            <DropdownMenu.Trigger asChild>
+              <button
+                onClick={(e) => e.stopPropagation()}
+                className="hover:bg-white/20 rounded p-1 transition-colors"
+                aria-label="Node options"
+              >
+                <MoreVertical className="w-4 h-4" />
+              </button>
+            </DropdownMenu.Trigger>
+            <DropdownMenu.Portal>
+              <DropdownMenu.Content
+                className="min-w-[180px] bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 p-1 z-50"
+                sideOffset={5}
+              >
+                {template?.url && (
+                  <DropdownMenu.Item
+                    className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 rounded hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer outline-none"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      window.open(template.url, "_blank", "noopener,noreferrer");
+                    }}
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                    <span>View Protocol</span>
+                  </DropdownMenu.Item>
+                )}
+                <DropdownMenu.Item
+                  className="flex items-center gap-2 px-3 py-2 text-sm text-red-600 dark:text-red-400 rounded hover:bg-red-50 dark:hover:bg-red-900/20 cursor-pointer outline-none"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDelete(e as any);
+                  }}
+                >
+                  <Trash2 className="w-4 h-4" />
+                  <span>Delete</span>
+                </DropdownMenu.Item>
+              </DropdownMenu.Content>
+            </DropdownMenu.Portal>
+          </DropdownMenu.Root>
         </div>
       </div>
 
@@ -227,8 +282,7 @@ function ProtocolNode({ data, selected, id }: NodeProps<ProtocolNodeData>) {
                 className="w-full border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-sm bg-white dark:bg-gray-700 dark:text-gray-200"
                 value={data.action || ""}
                 onChange={(e) => {
-                  // Will be handled by parent flow component
-                  console.log("Action changed:", e.target.value);
+                  updateNodeData({ action: e.target.value as any });
                 }}
               >
                 <option value="">Select action</option>
@@ -254,7 +308,7 @@ function ProtocolNode({ data, selected, id }: NodeProps<ProtocolNodeData>) {
                   className="w-full border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-sm bg-white dark:bg-gray-700 dark:text-gray-200 dark:placeholder-gray-500"
                   value={data.asset || ""}
                   onChange={(e) => {
-                    console.log("Asset changed:", e.target.value);
+                    updateNodeData({ asset: e.target.value });
                   }}
                 />
               </div>
@@ -272,7 +326,7 @@ function ProtocolNode({ data, selected, id }: NodeProps<ProtocolNodeData>) {
                   className="w-full border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-sm bg-white dark:bg-gray-700 dark:text-gray-200 dark:placeholder-gray-500"
                   value={data.amount || ""}
                   onChange={(e) => {
-                    console.log("Amount changed:", e.target.value);
+                    updateNodeData({ amount: e.target.value });
                   }}
                 />
               </div>

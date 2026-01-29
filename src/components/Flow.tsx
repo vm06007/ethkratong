@@ -11,6 +11,7 @@ import {
   type Edge,
   type Node,
   ReactFlowProvider,
+  useReactFlow,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 
@@ -21,6 +22,82 @@ import { Tabs } from "./layout/Tabs";
 import { RightDrawer } from "./layout/RightDrawer";
 import { useTheme } from "@/hooks/useTheme";
 import type { ProtocolNodeData } from "@/types";
+
+// Helper function to calculate execution order starting from wallet
+// Uses topological sort to create a linear execution sequence
+function calculateExecutionOrder(nodes: Node[], edges: Edge[]): Map<string, number> {
+  const orderMap = new Map<string, number>();
+  const walletNode = nodes.find((n) => n.data.protocol === "wallet");
+
+  if (!walletNode) return orderMap;
+
+  // Build adjacency list and in-degree map
+  const adjList = new Map<string, string[]>();
+  const inDegree = new Map<string, number>();
+
+  // Initialize all nodes
+  nodes.forEach((node) => {
+    adjList.set(node.id, []);
+    inDegree.set(node.id, 0);
+  });
+
+  // Build graph
+  edges.forEach((edge) => {
+    adjList.get(edge.source)?.push(edge.target);
+    inDegree.set(edge.target, (inDegree.get(edge.target) || 0) + 1);
+  });
+
+  // Topological sort using Kahn's algorithm
+  const queue: string[] = [walletNode.id];
+  const result: string[] = [];
+  let sequenceCounter = 0;
+
+  orderMap.set(walletNode.id, 0); // Wallet is always 0
+
+  while (queue.length > 0) {
+    // Sort queue by existing sequence numbers to preserve manual ordering
+    queue.sort((a, b) => {
+      const nodeA = nodes.find((n) => n.id === a);
+      const nodeB = nodes.find((n) => n.id === b);
+      if (!nodeA || !nodeB) return 0;
+
+      // Use existing sequence numbers if available
+      const seqA = nodeA.data.sequenceNumber || 999999;
+      const seqB = nodeB.data.sequenceNumber || 999999;
+      return seqA - seqB;
+    });
+
+    const nodeId = queue.shift()!;
+    result.push(nodeId);
+
+    // Process all neighbors
+    const neighbors = adjList.get(nodeId) || [];
+
+    // Sort neighbors by existing sequence numbers
+    const sortedNeighbors = neighbors.sort((a, b) => {
+      const nodeA = nodes.find((n) => n.id === a);
+      const nodeB = nodes.find((n) => n.id === b);
+      if (!nodeA || !nodeB) return 0;
+
+      const seqA = nodeA.data.sequenceNumber || 999999;
+      const seqB = nodeB.data.sequenceNumber || 999999;
+      return seqA - seqB;
+    });
+
+    sortedNeighbors.forEach((neighborId) => {
+      const currentInDegree = inDegree.get(neighborId) || 0;
+      inDegree.set(neighborId, currentInDegree - 1);
+
+      if (inDegree.get(neighborId) === 0) {
+        sequenceCounter++;
+        orderMap.set(neighborId, sequenceCounter);
+        queue.push(neighborId);
+      }
+    });
+  }
+
+  return orderMap;
+}
 
 const nodeTypes = {
   protocol: ProtocolNode,
@@ -83,6 +160,59 @@ function FlowCanvas() {
   ]);
   const [activeTabId, setActiveTabId] = useState("1");
   const { theme } = useTheme();
+
+  // Calculate sequence numbers based on graph topology when edges change
+  useEffect(() => {
+    const orderMap = calculateExecutionOrder(nodes, edges);
+
+    // Update nodes with calculated sequence numbers
+    setNodes((nds) =>
+      nds.map((node) => {
+        const sequenceNumber = orderMap.get(node.id);
+        if (sequenceNumber !== undefined && sequenceNumber !== node.data.sequenceNumber) {
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              sequenceNumber,
+            },
+          };
+        }
+        return node;
+      })
+    );
+  }, [edges]); // Recalculate when edges change
+
+  // Initialize sequence numbers for nodes that don't have them
+  useEffect(() => {
+    const needsInitialization = nodes.some(
+      (node) => node.data.sequenceNumber === undefined && node.data.protocol !== "wallet"
+    );
+
+    if (needsInitialization) {
+      setNodes((nds) =>
+        nds.map((node, index) => {
+          if (node.data.sequenceNumber === undefined && node.data.protocol !== "wallet") {
+            // Find max sequence and add to end
+            const maxSeq = Math.max(
+              0,
+              ...nds
+                .filter((n) => n.data.sequenceNumber !== undefined)
+                .map((n) => n.data.sequenceNumber || 0)
+            );
+            return {
+              ...node,
+              data: {
+                ...node.data,
+                sequenceNumber: maxSeq + 1,
+              },
+            };
+          }
+          return node;
+        })
+      );
+    }
+  }, [nodes, setNodes]); // Only initialize missing sequence numbers
 
   // Save to history on changes
   useEffect(() => {
@@ -176,6 +306,14 @@ function FlowCanvas() {
         y: event.clientY,
       });
 
+      // Find the highest sequence number among existing nodes
+      const maxSequence = Math.max(
+        0,
+        ...nodes
+          .filter((n) => n.data.sequenceNumber !== undefined)
+          .map((n) => n.data.sequenceNumber || 0)
+      );
+
       const newNode: Node<ProtocolNodeData> = {
         id: `node-${nodeId++}`,
         type: "protocol",
@@ -183,12 +321,13 @@ function FlowCanvas() {
         data: {
           protocol: protocol as any,
           label: label,
+          sequenceNumber: maxSequence + 1, // Add to the end
         },
       };
 
       setNodes((nds) => nds.concat(newNode));
     },
-    [reactFlowInstance, setNodes]
+    [reactFlowInstance, setNodes, nodes]
   );
 
   const handleSave = () => {
@@ -299,6 +438,50 @@ function FlowCanvas() {
     }
   };
 
+  const handleReorderNodes = (newOrder: string[]) => {
+    if (newOrder.length === 0) return;
+
+    // Find wallet node
+    const walletNode = nodes.find((n) => n.data.protocol === "wallet");
+    if (!walletNode) return;
+
+    const firstNodeId = newOrder[0];
+
+    // Update sequence numbers
+    setNodes((nds) =>
+      nds.map((node) => {
+        const orderIndex = newOrder.indexOf(node.id);
+        if (orderIndex !== -1) {
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              sequenceNumber: orderIndex + 1, // +1 because sequence starts at 1
+            },
+          };
+        }
+        return node;
+      })
+    );
+
+    // Ensure the first node is connected ONLY to wallet
+    setEdges((eds) => {
+      // Remove ALL incoming edges to the first node
+      const filteredEdges = eds.filter((edge) => edge.target !== firstNodeId);
+
+      // Add single edge from wallet to first node
+      return [
+        ...filteredEdges,
+        {
+          id: `${walletNode.id}-${firstNodeId}`,
+          source: walletNode.id,
+          target: firstNodeId,
+          type: edgeType,
+        },
+      ];
+    });
+  };
+
   return (
     <div className="flex flex-col h-full w-full bg-gray-50 dark:bg-gray-950">
       <Toolbar
@@ -373,6 +556,9 @@ function FlowCanvas() {
         <RightDrawer
           isOpen={isRightDrawerOpen}
           onClose={() => setIsRightDrawerOpen(false)}
+          nodes={nodes}
+          edges={edges}
+          onReorderNodes={handleReorderNodes}
         />
       </div>
     </div>

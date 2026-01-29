@@ -30,6 +30,7 @@ export const protocolCategories: ProtocolCategory[] = [
         description: "Optimized lending and borrowing",
         color: "bg-blue-500",
         availableActions: ["lend", "borrow", "deposit", "withdraw"],
+        url: "https://morpho.org",
       },
       {
         protocol: "aave",
@@ -37,6 +38,7 @@ export const protocolCategories: ProtocolCategory[] = [
         description: "Decentralized lending protocol",
         color: "bg-pink-500",
         availableActions: ["lend", "borrow", "deposit", "withdraw"],
+        url: "https://aave.com",
       },
       {
         protocol: "compound",
@@ -44,6 +46,7 @@ export const protocolCategories: ProtocolCategory[] = [
         description: "Algorithmic money market",
         color: "bg-green-500",
         availableActions: ["lend", "borrow", "deposit", "withdraw"],
+        url: "https://compound.finance",
       },
       {
         protocol: "spark",
@@ -51,6 +54,7 @@ export const protocolCategories: ProtocolCategory[] = [
         description: "MakerDAO's lending protocol",
         color: "bg-orange-500",
         availableActions: ["lend", "borrow", "deposit", "withdraw"],
+        url: "https://spark.fi",
       },
     ],
   },
@@ -64,6 +68,7 @@ export const protocolCategories: ProtocolCategory[] = [
         description: "Leading decentralized exchange",
         color: "bg-red-500",
         availableActions: ["swap"],
+        url: "https://app.uniswap.org",
       },
       {
         protocol: "curve",
@@ -71,6 +76,7 @@ export const protocolCategories: ProtocolCategory[] = [
         description: "Stablecoin-optimized DEX",
         color: "bg-yellow-500",
         availableActions: ["swap", "stake"],
+        url: "https://curve.fi",
       },
     ],
   },
@@ -84,6 +90,7 @@ export const protocolCategories: ProtocolCategory[] = [
         description: "Yield trading protocol",
         color: "bg-indigo-500",
         availableActions: ["swap", "stake"],
+        url: "https://www.pendle.finance",
       },
     ],
   },
