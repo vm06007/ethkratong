@@ -45,6 +45,7 @@ const UNISWAP_V2_PAIR_ABI = [
     { type: "function", name: "getReserves", inputs: [], outputs: [{ name: "reserve0", type: "uint112" }, { name: "reserve1", type: "uint112" }, { name: "blockTimestampLast", type: "uint32" }], stateMutability: "view" },
     { type: "function", name: "token0", inputs: [], outputs: [{ name: "", type: "address" }], stateMutability: "view" },
     { type: "function", name: "token1", inputs: [], outputs: [{ name: "", type: "address" }], stateMutability: "view" },
+    { type: "function", name: "totalSupply", inputs: [], outputs: [{ name: "", type: "uint256" }], stateMutability: "view" },
 ] as const;
 const UNISWAP_SWAP_ABI = [
     {
@@ -368,6 +369,122 @@ async function prepareUniswapSwapCall(
 /** Buffer on top of expected token amount for addLiquidity to avoid tx failure from small rate changes (2%). */
 const ADD_LIQUIDITY_APPROVAL_BUFFER_BPS = 200; // 2% = 200 basis points
 
+/** Uniswap V2 LP tokens use 18 decimals */
+const UNISWAP_V2_LP_DECIMALS = 18;
+
+/**
+ * Estimate LP tokens received from addLiquidityETH (Uniswap V2).
+ * liquidity = min(amountETH * totalSupply / reserveETH, amountToken * totalSupply / reserveToken)
+ */
+export async function getEstimatedLpForAddLiquidity(
+  chainId: number,
+  tokenSymbol: string,
+  amountWei: bigint
+): Promise<{ amountLpFormatted: string; amountLpRaw: bigint } | null> {
+  if (amountWei <= 0n) return null;
+  const chainTokens = TOKEN_ADDRESSES[chainId as keyof typeof TOKEN_ADDRESSES];
+  const router = UNISWAP_V2_ROUTER[chainId as keyof typeof UNISWAP_V2_ROUTER];
+  const weth = WETH_ADDRESS[chainId as keyof typeof WETH_ADDRESS];
+  if (!chainTokens || !router || !weth) return null;
+  const tokenAddress = chainTokens[tokenSymbol as keyof typeof chainTokens];
+  if (!tokenAddress) return null;
+  const chain = CHAINS[chainId];
+  if (!chain) return null;
+  const clientId = (typeof import.meta !== "undefined" && (import.meta as { env?: { VITE_THIRDWEB_CLIENT_ID?: string } }).env?.VITE_THIRDWEB_CLIENT_ID) || "";
+  const rpcUrl = chainId === 1 ? `https://ethereum.rpc.thirdweb.com/${clientId}` : chainId === 42161 ? `https://arbitrum.rpc.thirdweb.com/${clientId}` : undefined;
+  const client = createPublicClient({ chain, transport: rpcUrl ? http(rpcUrl) : http() });
+  const routerAddr = getAddress(router);
+  const factoryAddr = await client.readContract({
+    address: routerAddr,
+    abi: UNISWAP_V2_ROUTER_FACTORY_ABI,
+    functionName: "factory",
+  });
+  const pairAddress = await client.readContract({
+    address: getAddress(factoryAddr as string),
+    abi: UNISWAP_V2_FACTORY_ABI,
+    functionName: "getPair",
+    args: [getAddress(tokenAddress), getAddress(weth)],
+  });
+  if (!pairAddress || pairAddress === "0x0000000000000000000000000000000000000000") return null;
+  const pairAddr = getAddress(pairAddress as string);
+  const [reserves, token0, totalSupply] = await Promise.all([
+    client.readContract({ address: pairAddr, abi: UNISWAP_V2_PAIR_ABI, functionName: "getReserves" }),
+    client.readContract({ address: pairAddr, abi: UNISWAP_V2_PAIR_ABI, functionName: "token0" }),
+    client.readContract({ address: pairAddr, abi: UNISWAP_V2_PAIR_ABI, functionName: "totalSupply" }),
+  ]);
+  if (totalSupply === 0n) return null;
+  const isWethToken0 = (token0 as string).toLowerCase() === weth.toLowerCase();
+  const reserveWETH = isWethToken0 ? reserves[0] : reserves[1];
+  const reserveToken = isWethToken0 ? reserves[1] : reserves[0];
+  if (reserveWETH === 0n) return null;
+  const amountToken = (amountWei * reserveToken) / reserveWETH;
+  const liquidityFromEth = (amountWei * totalSupply) / reserveWETH;
+  const liquidityFromToken = (amountToken * totalSupply) / reserveToken;
+  const liquidity = liquidityFromEth < liquidityFromToken ? liquidityFromEth : liquidityFromToken;
+  const formatted = liquidity === 0n ? "0" : Number(liquidity) / 1e18 < 0.0001
+    ? (Number(liquidity) / 1e18).toExponential(2)
+    : (Number(liquidity) / 1e18).toFixed(4);
+  return { amountLpFormatted: formatted, amountLpRaw: liquidity };
+}
+
+/**
+ * Resolve LP token (pair) address for a transfer node that receives from addLiquidity.
+ * asset is e.g. "ETH-USDC LP"; finds upstream addLiquidity node and returns pair address.
+ */
+async function getPairAddressForLpAsset(
+  chainId: number,
+  asset: string,
+  nodes: Node<ProtocolNodeData>[],
+  edges: { source: string; target: string }[],
+  transferNodeId: string
+): Promise<string> {
+  if (!asset.endsWith(" LP")) throw new Error(`Invalid LP asset: ${asset}`);
+  const pairLabel = asset.slice(0, -3).trim();
+  const parts = pairLabel.split("-");
+  if (parts.length !== 2) throw new Error(`Invalid LP asset label: ${asset}`);
+  const [a, b] = parts.map((p) => p.trim());
+  const incoming = edges.filter((e) => e.target === transferNodeId).map((e) => e.source);
+  const addLiqNode = nodes.find(
+    (n) =>
+      incoming.includes(n.id) &&
+      n.data.protocol === "uniswap" &&
+      n.data.action === "addLiquidity" &&
+      n.data.liquidityTokenA &&
+      n.data.liquidityTokenB &&
+      ((n.data.liquidityTokenA === a && n.data.liquidityTokenB === b) ||
+        (n.data.liquidityTokenA === b && n.data.liquidityTokenB === a))
+  );
+  if (!addLiqNode?.data.liquidityTokenA || !addLiqNode.data.liquidityTokenB)
+    throw new Error(`No upstream addLiquidity node for ${asset}`);
+  const tokenSymbol = addLiqNode.data.liquidityTokenA === "ETH" ? addLiqNode.data.liquidityTokenB : addLiqNode.data.liquidityTokenA;
+  const chainTokens = TOKEN_ADDRESSES[chainId as keyof typeof TOKEN_ADDRESSES];
+  const weth = WETH_ADDRESS[chainId as keyof typeof WETH_ADDRESS];
+  const router = UNISWAP_V2_ROUTER[chainId as keyof typeof UNISWAP_V2_ROUTER];
+  if (!chainTokens || !weth || !router) throw new Error(`Uniswap V2 not supported on chain ${chainId}`);
+  const tokenAddress = chainTokens[tokenSymbol as keyof typeof chainTokens];
+  if (!tokenAddress) throw new Error(`Token ${tokenSymbol} not supported on chain ${chainId}`);
+  const chain = CHAINS[chainId];
+  if (!chain) throw new Error(`Unsupported chain ${chainId}`);
+  const clientId = (typeof import.meta !== "undefined" && (import.meta as { env?: { VITE_THIRDWEB_CLIENT_ID?: string } }).env?.VITE_THIRDWEB_CLIENT_ID) || "";
+  const rpcUrl = chainId === 1 ? `https://ethereum.rpc.thirdweb.com/${clientId}` : chainId === 42161 ? `https://arbitrum.rpc.thirdweb.com/${clientId}` : undefined;
+  const client = createPublicClient({ chain, transport: rpcUrl ? http(rpcUrl) : http() });
+  const routerAddr = getAddress(router);
+  const factoryAddr = await client.readContract({
+    address: routerAddr,
+    abi: UNISWAP_V2_ROUTER_FACTORY_ABI,
+    functionName: "factory",
+  });
+  const pairAddress = await client.readContract({
+    address: getAddress(factoryAddr as string),
+    abi: UNISWAP_V2_FACTORY_ABI,
+    functionName: "getPair",
+    args: [getAddress(tokenAddress), getAddress(weth)],
+  });
+  if (!pairAddress || pairAddress === "0x0000000000000000000000000000000000000000")
+    throw new Error(`Liquidity pair not found for ${asset} on chain ${chainId}`);
+  return getAddress(pairAddress as string);
+}
+
 /**
  * Get expected token amount for addLiquidityETH from pair reserves; add small buffer for approval.
  * Returns amountTokenDesired (expected + buffer) and amountTokenMin (for slippage).
@@ -503,17 +620,22 @@ async function prepareUniswapAddLiquidityCalls(
  * Prepare batched transaction calls for all nodes (transfers + custom + uniswap) in order.
  * Returns a flat list for EIP-7702 wallet_sendCalls (approve + addLiquidity are separate calls in the same batch).
  * @param account - Required for Uniswap swap/addLiquidity (recipient of output tokens)
+ * @param edges - Optional edges so transfer nodes can resolve LP token from upstream addLiquidity
+ * @param allNodes - Optional full node list for LP resolution (defaults to nodes)
  */
 export const prepareBatchedCalls = async (
   nodes: Node<ProtocolNodeData>[],
   chainId: number,
-  account?: string
+  account?: string,
+  edges?: { source: string; target: string }[],
+  allNodes?: Node<ProtocolNodeData>[]
 ): Promise<BatchedTransactionCall[]> => {
   const calls: BatchedTransactionCall[] = [];
   let lastError: Error | null = null;
+  const nodeList = allNodes ?? nodes;
   for (const node of nodes) {
     if (node.data.protocol === "transfer") {
-      const transferCalls = await prepareTransferCalls([node], chainId);
+      const transferCalls = await prepareTransferCalls([node], chainId, edges, nodeList);
       calls.push(...transferCalls);
     } else if (node.data.protocol === "custom") {
       calls.push(prepareCustomContractCall(node));
@@ -607,23 +729,20 @@ const resolveAddress = async (addressOrENS: string, _chainId: number): Promise<s
 /**
  * Prepare batched transaction calls for transfer nodes
  * @param nodes - Array of nodes in execution order
- * @param account - Active account address
  * @param chainId - Current chain ID
- * @returns Array of transaction calls
+ * @param edges - Optional edges so LP token (pair) address can be resolved from upstream addLiquidity
+ * @param allNodes - Optional full node list when resolving LP from upstream addLiquidity
  */
 export const prepareTransferCalls = async (
   nodes: Node<ProtocolNodeData>[],
-  chainId: number
+  chainId: number,
+  edges?: { source: string; target: string }[],
+  allNodes?: Node<ProtocolNodeData>[]
 ): Promise<BatchedTransactionCall[]> => {
   const calls: BatchedTransactionCall[] = [];
 
   for (const node of nodes) {
-    // Only process transfer nodes
-    if (node.data.protocol !== "transfer") {
-      continue;
-    }
-
-    // Validate transfer data
+    if (node.data.protocol !== "transfer") continue;
     if (!node.data.recipientAddress || !node.data.amount || !node.data.asset) {
       console.warn(`Skipping transfer node ${node.id} - missing required fields`);
       continue;
@@ -632,53 +751,37 @@ export const prepareTransferCalls = async (
     const { recipientAddress, amount, asset } = node.data;
 
     try {
-      // Resolve ENS name to address
       const resolvedAddress = await resolveAddress(recipientAddress, chainId);
 
-      // Handle ETH transfers
       if (asset.toUpperCase() === "ETH") {
         const value = parseEther(amount);
-        calls.push({
-          to: resolvedAddress,
-          // No data field for simple ETH transfers to EOA
-          value: toHex(value), // Convert to hex string with 0x prefix
-        });
-        console.log(`Prepared ETH transfer: ${amount} ETH to ${resolvedAddress} (${recipientAddress})`);
-      } else {
-        // Handle ERC20 transfers
-        const assetUpper = asset.toUpperCase();
-        const chainTokens = TOKEN_ADDRESSES[chainId as keyof typeof TOKEN_ADDRESSES];
-
-        if (!chainTokens) {
-          throw new Error(`Unsupported chain ID: ${chainId}`);
-        }
-
-        const tokenAddress = chainTokens[assetUpper as keyof typeof chainTokens];
-
-        if (!tokenAddress) {
-          throw new Error(`Token ${asset} not supported on chain ${chainId}`);
-        }
-
-        // Get token decimals (default to 18 if not found)
-        const decimals = TOKEN_DECIMALS[assetUpper] || 18;
-
-        // Parse amount with correct decimals
-        const amountInWei = parseUnits(amount, decimals);
-
-        // Encode the ERC20 transfer function call
+        calls.push({ to: resolvedAddress, value: toHex(value) });
+        console.log(`Prepared ETH transfer: ${amount} ETH to ${resolvedAddress}`);
+      } else if (asset.endsWith(" LP") && edges && allNodes) {
+        const pairAddress = await getPairAddressForLpAsset(chainId, asset, allNodes, edges, node.id);
+        const amountInWei = parseUnits(amount, UNISWAP_V2_LP_DECIMALS);
         const transferData = encodeFunctionData({
           abi: ERC20_TRANSFER_ABI,
           functionName: "transfer",
           args: [resolvedAddress as `0x${string}`, amountInWei],
         });
-
-        calls.push({
-          to: tokenAddress,
-          data: transferData,
-          value: toHex(0n), // ERC20 transfers don't send ETH
+        calls.push({ to: pairAddress, data: transferData, value: toHex(0n) });
+        console.log(`Prepared LP transfer: ${amount} ${asset} to ${resolvedAddress}`);
+      } else {
+        const assetUpper = asset.toUpperCase();
+        const chainTokens = TOKEN_ADDRESSES[chainId as keyof typeof TOKEN_ADDRESSES];
+        if (!chainTokens) throw new Error(`Unsupported chain ID: ${chainId}`);
+        const tokenAddress = chainTokens[assetUpper as keyof typeof chainTokens];
+        if (!tokenAddress) throw new Error(`Token ${asset} not supported on chain ${chainId}`);
+        const decimals = TOKEN_DECIMALS[assetUpper] || 18;
+        const amountInWei = parseUnits(amount, decimals);
+        const transferData = encodeFunctionData({
+          abi: ERC20_TRANSFER_ABI,
+          functionName: "transfer",
+          args: [resolvedAddress as `0x${string}`, amountInWei],
         });
-
-        console.log(`Prepared ERC20 transfer: ${amount} ${asset} to ${resolvedAddress} (${recipientAddress})`);
+        calls.push({ to: tokenAddress, data: transferData, value: toHex(0n) });
+        console.log(`Prepared ERC20 transfer: ${amount} ${asset} to ${resolvedAddress}`);
       }
     } catch (error) {
       console.error(`Error preparing transfer for node ${node.id}:`, error);

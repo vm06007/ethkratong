@@ -59,6 +59,10 @@ export interface ProtocolNodeData extends Record<string, unknown> {
   estimatedAmountOut?: string;
   /** Symbol of the estimated output token (e.g. USDC) */
   estimatedAmountOutSymbol?: string;
+  /** Estimated LP tokens from addLiquidity (for display and transfer step) */
+  estimatedLpAmount?: string;
+  /** Label for LP token (e.g. "ETH-USDC LP") */
+  estimatedLpSymbol?: string;
   /** Max slippage % (e.g. "0.5" for 0.5%). Used when maxSlippageAuto is false. */
   maxSlippagePercent?: string;
   /** Use automatic slippage (default true) */

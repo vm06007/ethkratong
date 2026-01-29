@@ -74,12 +74,28 @@ export function getEffectiveBalances(
                 balances[d.asset] = (balances[d.asset] ?? 0) + amt;
             }
         }
+        if (d.protocol === "uniswap" && d.action === "addLiquidity" && d.liquidityTokenA && d.liquidityTokenB) {
+            const lpSymbol = `${d.liquidityTokenA}-${d.liquidityTokenB} LP`;
+            if (balances[lpSymbol] == null) balances[lpSymbol] = 0;
+            const estLp = d.estimatedLpAmount != null ? parseFloat(d.estimatedLpAmount) : NaN;
+            if (!Number.isNaN(estLp) && estLp > 0) {
+                balances[lpSymbol] += estLp;
+            }
+        }
     }
 
-    return baseBalances.map((t) => {
+    const lpSymbols = Object.keys(balances).filter((s) => s.endsWith(" LP"));
+    const baseResult = baseBalances.map((t) => {
         const v = balances[t.symbol] ?? 0;
         const formatted =
             v === 0 ? "0.00" : v < 0.01 ? v.toFixed(6) : v.toFixed(2);
         return { symbol: t.symbol, balance: formatted, isLoading: false };
     });
+    const lpEntries = lpSymbols.map((symbol) => {
+        const v = balances[symbol] ?? 0;
+        const balance =
+            v === 0 ? "0.00" : v < 0.01 ? v.toFixed(6) : v.toFixed(2);
+        return { symbol, balance, isLoading: false };
+    });
+    return [...baseResult, ...lpEntries];
 }

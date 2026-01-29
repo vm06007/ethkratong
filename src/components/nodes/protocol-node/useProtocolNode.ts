@@ -211,7 +211,11 @@ export function useProtocolNode(id: string, data: ProtocolNodeData) {
                     id,
                     baseBalances
                 );
-                setTransferBalances(effective.filter((token) => Number(token.balance) > 0));
+                setTransferBalances(
+                    effective.filter(
+                        (token) => Number(token.balance) > 0 || token.symbol.endsWith(" LP")
+                    )
+                );
             });
         } else if (data.protocol === "transfer" && !activeAccount) {
             setTransferBalances([]);
@@ -239,6 +243,7 @@ export function useProtocolNode(id: string, data: ProtocolNodeData) {
             .filter((e) => e.target === id)
             .map((e) => e.source);
         const sumsBySymbol: Record<string, number> = {};
+        let lpAsset: string | null = null;
         for (const sourceId of incomingSourceIds) {
             const src = nodes.find((n) => n.id === sourceId);
             const d = src?.data as ProtocolNodeData | undefined;
@@ -254,6 +259,28 @@ export function useProtocolNode(id: string, data: ProtocolNodeData) {
                     sumsBySymbol[sym] = (sumsBySymbol[sym] ?? 0) + amt;
                 }
             }
+            if (
+                d?.protocol === "uniswap" &&
+                d?.action === "addLiquidity" &&
+                d?.liquidityTokenA &&
+                d?.liquidityTokenB
+            ) {
+                lpAsset = `${d.liquidityTokenA}-${d.liquidityTokenB} LP`;
+            }
+        }
+        if (lpAsset) {
+            setNodes((nds) =>
+                nds.map((node) => {
+                    if (node.id !== id) return node;
+                    const current = node.data as ProtocolNodeData;
+                    if (current.asset === lpAsset) return node;
+                    return {
+                        ...node,
+                        data: { ...current, asset: lpAsset!, amount: current.amount || "0" },
+                    };
+                })
+            );
+            return;
         }
         const symbols = Object.keys(sumsBySymbol);
         if (symbols.length === 0) return;

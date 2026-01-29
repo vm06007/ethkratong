@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import type { ProtocolNodeData } from "@/types";
 import { UNISWAP_TOKEN_OPTIONS } from "./constants";
 import { useUniswapQuote } from "./useUniswapQuote";
+import { useUniswapLpQuote } from "./useUniswapLpQuote";
 import { useWalletBalancesForModal } from "./useWalletBalancesForModal";
 import type { TokenBalance } from "./types";
 
@@ -78,6 +79,37 @@ export function ProtocolNodeUniswapBody({
         const b = data.liquidityTokenB ?? "";
         const oneIsEth = a === "ETH" || b === "ETH";
         const ethBalance = getBalanceForSymbol(balances, "ETH");
+        const lpQuote = useUniswapLpQuote(
+            chainId,
+            a || undefined,
+            b || undefined,
+            oneIsEth ? (data.amount ?? "").trim() || undefined : undefined
+        );
+        const lpSymbol = a && b ? `${a}-${b} LP` : "";
+
+        useEffect(() => {
+            if (!oneIsEth || !a || !b) return;
+            const amountSet = (data.amount ?? "").trim() !== "";
+            if (lpQuote.amountLpFormatted != null && amountSet) {
+                onUpdateData({
+                    estimatedLpAmount: lpQuote.amountLpFormatted,
+                    estimatedLpSymbol: lpSymbol,
+                });
+            } else if (!amountSet && (data.estimatedLpAmount != null || data.estimatedLpSymbol != null)) {
+                onUpdateData({ estimatedLpAmount: undefined, estimatedLpSymbol: undefined });
+            }
+        }, [
+            oneIsEth,
+            a,
+            b,
+            lpSymbol,
+            lpQuote.amountLpFormatted,
+            data.amount,
+            data.estimatedLpAmount,
+            data.estimatedLpSymbol,
+            onUpdateData,
+        ]);
+
         const setLiquidityAmountPct = (pct: number) => {
             if (!ethBalance) return;
             const num = parseFloat(ethBalance);
@@ -164,6 +196,23 @@ export function ProtocolNodeUniswapBody({
                             value={data.amount ?? ""}
                             onChange={(e) => onUpdateData({ amount: e.target.value })}
                         />
+                    </div>
+                )}
+                {oneIsEth && a && b && (data.amount ?? "").trim() !== "" && (
+                    <div className="pt-2 border-t border-gray-200 dark:border-gray-600">
+                        {lpQuote.loading ? (
+                            <div className="text-sm text-gray-500 dark:text-gray-400">
+                                Est. LP: …
+                            </div>
+                        ) : lpQuote.error ? (
+                            <div className="text-sm text-amber-600 dark:text-amber-400">
+                                {lpQuote.error}
+                            </div>
+                        ) : lpQuote.amountLpFormatted != null ? (
+                            <div className="text-sm font-medium text-green-600 dark:text-green-400">
+                                Est. LP: ~{lpQuote.amountLpFormatted} {lpSymbol}
+                            </div>
+                        ) : null}
                     </div>
                 )}
             </div>

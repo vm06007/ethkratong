@@ -585,11 +585,13 @@ export function RightDrawer({ isOpen, onClose, nodes, edges, onReorderNodes }: R
           !actionSkipSet.has(n.id)
       );
 
-      // Prepare flat list of calls for EIP-7702 batch (all steps from preview; approve + addLiquidity = 2 calls in same batch)
+      // Prepare flat list of calls for EIP-7702 batch (edges + all nodes so transfer can resolve LP from addLiquidity)
       const calls = await prepareBatchedCalls(
         nodesToExecute,
         effectiveChainId,
-        activeAccount?.address
+        activeAccount?.address,
+        edges,
+        nodes
       );
 
       if (calls.length === 0) {
