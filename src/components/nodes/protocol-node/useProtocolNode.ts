@@ -9,7 +9,7 @@ import { toTokens } from "thirdweb";
 import { useChainId } from "wagmi";
 import { useActiveAccount, useWalletBalance } from "thirdweb/react";
 import { getAbiViewFunctions } from "@/services/contractService";
-import { readContractViewResult } from "@/services/batchedExecution";
+import { readContractViewResult, readBalanceResult } from "@/services/batchedExecution";
 import { TOKEN_ADDRESSES } from "./constants";
 import type { TokenBalance } from "./types";
 
@@ -151,6 +151,33 @@ export function useProtocolNode(id: string, data: ProtocolNodeData) {
         data.functionArgs,
         chainId,
     ]);
+
+    useEffect(() => {
+        if (data.protocol !== "balanceLogic" || !data.balanceLogicAddress?.trim()) {
+            if (data.protocol === "balanceLogic") {
+                setCurrentViewValue(null);
+                setCurrentViewError(null);
+            }
+            return;
+        }
+        let cancelled = false;
+        setCurrentViewLoading(true);
+        setCurrentViewError(null);
+        readBalanceResult(chainId || 1, data.balanceLogicAddress.trim())
+            .then((value) => {
+                if (!cancelled) setCurrentViewValue(value);
+            })
+            .catch((err) => {
+                if (!cancelled)
+                    setCurrentViewError(err instanceof Error ? err.message : "Failed to fetch balance");
+            })
+            .finally(() => {
+                if (!cancelled) setCurrentViewLoading(false);
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, [data.protocol, data.balanceLogicAddress, chainId]);
 
     useEffect(() => {
         if (data.protocol === "transfer" && activeAccount && isExpanded) {

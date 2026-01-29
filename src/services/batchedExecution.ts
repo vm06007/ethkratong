@@ -359,6 +359,66 @@ export async function readContractViewResult(
 }
 
 /**
+ * Read ETH balance of an address (EOA or contract) for display (e.g. "Current value" on Balance Logic card).
+ * Returns the balance as a string in ETH (e.g. "1.5").
+ */
+export async function readBalanceResult(chainId: number, address: string): Promise<string> {
+  const chain = CHAINS[chainId];
+  if (!chain) {
+    throw new Error(`Unsupported chain ${chainId}`);
+  }
+  const publicClient = createPublicClient({ chain, transport: http() });
+  const balance = await publicClient.getBalance({ address: address.trim() as `0x${string}` });
+  const ethValue = Number(balance) / 1e18;
+  return ethValue === 0 ? "0" : ethValue.toFixed(6);
+}
+
+/**
+ * Evaluate a balance logic node: get ETH balance of the address and compare to balanceLogicCompareValue.
+ * Returns true if the condition is met (proceed to next action), false otherwise.
+ */
+export async function evaluateBalanceLogicNode(
+  node: Node<ProtocolNodeData>,
+  chainId: number
+): Promise<boolean> {
+  const data = node.data;
+  if (data.protocol !== "balanceLogic") {
+    throw new Error("Node is not a balance logic node");
+  }
+  const { balanceLogicAddress, balanceLogicComparisonOperator, balanceLogicCompareValue } = data;
+  if (!balanceLogicAddress?.trim() || balanceLogicComparisonOperator == null || balanceLogicCompareValue == null) {
+    throw new Error(`Balance logic node ${node.id}: missing address, operator, or compare value`);
+  }
+  const balanceStr = await readBalanceResult(chainId, balanceLogicAddress.trim());
+  const result = BigInt(Math.floor(parseFloat(balanceStr) * 1e18));
+  const cmpStr = String(balanceLogicCompareValue).trim();
+  let compareVal: bigint;
+  try {
+    if (cmpStr.includes(".")) {
+      compareVal = BigInt(Math.floor(parseFloat(cmpStr) * 1e18));
+    } else {
+      compareVal = BigInt(cmpStr);
+    }
+  } catch {
+    compareVal = BigInt(0);
+  }
+  switch (balanceLogicComparisonOperator) {
+    case "gt":
+      return result > compareVal;
+    case "gte":
+      return result >= compareVal;
+    case "lt":
+      return result < compareVal;
+    case "lte":
+      return result <= compareVal;
+    case "ne":
+      return result !== compareVal;
+    default:
+      return result === compareVal;
+  }
+}
+
+/**
  * Execute batched transaction using EIP-5792 wallet_sendCalls
  * @param calls - Array of transaction calls
  * @param account - Active account address

@@ -2,6 +2,7 @@ import type { ProtocolNodeData } from "@/types";
 import type { TokenBalance } from "./types";
 import { ProtocolNodeCustomBody } from "./ProtocolNodeCustomBody";
 import { ProtocolNodeConditionalBody } from "./ProtocolNodeConditionalBody";
+import { ProtocolNodeBalanceLogicBody } from "./ProtocolNodeBalanceLogicBody";
 
 interface ProtocolNodeExpandedBodyProps {
     data: ProtocolNodeData;
@@ -37,7 +38,8 @@ export function ProtocolNodeExpandedBody({
     const showActionSelect =
         data.protocol !== "transfer" &&
         data.protocol !== "custom" &&
-        data.protocol !== "conditional";
+        data.protocol !== "conditional" &&
+        data.protocol !== "balanceLogic";
 
     return (
         <>
@@ -90,6 +92,16 @@ export function ProtocolNodeExpandedBody({
                 />
             )}
 
+            {data.protocol === "balanceLogic" && (
+                <ProtocolNodeBalanceLogicBody
+                    data={data}
+                    currentViewValue={currentViewValue}
+                    currentViewLoading={currentViewLoading}
+                    currentViewError={currentViewError}
+                    onUpdateData={onUpdateData}
+                />
+            )}
+
             {data.protocol === "transfer" ? (
                 <div>
                     <label className="text-xs text-gray-600 dark:text-gray-400 block mb-1">
@@ -139,7 +151,8 @@ export function ProtocolNodeExpandedBody({
 
             {(data.action || data.protocol === "transfer") &&
                 data.protocol !== "custom" &&
-                data.protocol !== "conditional" && (
+                data.protocol !== "conditional" &&
+                data.protocol !== "balanceLogic" && (
                     <div>
                         <label className="text-xs text-gray-600 dark:text-gray-400 block mb-1">
                             Amount:

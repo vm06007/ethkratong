@@ -12,6 +12,7 @@ import {
   trackBatchedTransactionStatus,
   sendSingleTransaction,
   evaluateConditionalNode,
+  evaluateBalanceLogicNode,
 } from "@/services/batchedExecution";
 import { getAbiFunctions, getAbiViewFunctions } from "@/services/contractService";
 import {
@@ -61,26 +62,50 @@ function getReachableNodeIds(nodes: Node<ProtocolNodeData>[], edges: Edge[]): Se
   return reachable;
 }
 
-/** Return node IDs downstream of a given node (BFS following edges from this node). Used to skip only dependent actions when a condition fails. */
-function getNodesDownstreamOf(nodeId: string, edges: Edge[]): Set<string> {
-  const adj = new Map<string, string[]>();
+/** Return node IDs that are direct predecessors of targetId (have an edge into targetId). */
+function getDirectPredecessors(targetId: string, edges: Edge[]): Set<string> {
+  const preds = new Set<string>();
   edges.forEach((e) => {
-    const list = adj.get(e.source) ?? [];
-    list.push(e.target);
-    adj.set(e.source, list);
+    if (e.target === targetId) preds.add(e.source);
   });
-  const downstream = new Set<string>();
-  const queue: string[] = [nodeId];
+  return preds;
+}
+
+/** Return nodes in topological order (every node after its predecessors). Used so condition nodes are evaluated before their downstream nodes. */
+function getTopologicalOrder(
+  nodes: Node<ProtocolNodeData>[],
+  edges: Edge[]
+): Node<ProtocolNodeData>[] {
+  const idToNode = new Map(nodes.map((n) => [n.id, n]));
+  const inDegree = new Map<string, number>();
+  nodes.forEach((n) => inDegree.set(n.id, 0));
+  edges.forEach((e) => {
+    if (idToNode.has(e.source) && idToNode.has(e.target) && e.source !== e.target) {
+      inDegree.set(e.target, (inDegree.get(e.target) ?? 0) + 1);
+    }
+  });
+  const queue: string[] = [];
+  inDegree.forEach((deg, id) => {
+    if (deg === 0) queue.push(id);
+  });
+  const order: Node<ProtocolNodeData>[] = [];
   while (queue.length > 0) {
     const id = queue.shift()!;
-    (adj.get(id) ?? []).forEach((t) => {
-      if (!downstream.has(t)) {
-        downstream.add(t);
-        queue.push(t);
+    const node = idToNode.get(id);
+    if (node) order.push(node);
+    edges.forEach((e) => {
+      if (e.source === id && idToNode.has(e.target)) {
+        const d = (inDegree.get(e.target) ?? 0) - 1;
+        inDegree.set(e.target, d);
+        if (d === 0) queue.push(e.target);
       }
     });
   }
-  return downstream;
+  return order.length === nodes.length ? order : nodes;
+}
+
+function isConditionNode(node: Node<ProtocolNodeData>): boolean {
+  return node.data.protocol === "conditional" || node.data.protocol === "balanceLogic";
 }
 
 interface SortableStepProps {
@@ -213,6 +238,25 @@ function SortableStep({ node, isExecuted, isConfigured }: SortableStepProps) {
               ⚠ Set contract and condition
             </div>
           )
+        ) : node.data.protocol === "balanceLogic" ? (
+          node.data.balanceLogicAddress && node.data.balanceLogicComparisonOperator != null && node.data.balanceLogicCompareValue ? (
+            <>
+              <div className="flex justify-between">
+                <span className="font-medium">Address:</span>
+                <span className="font-mono">
+                  {node.data.balanceLogicAddress.slice(0, 6)}...{node.data.balanceLogicAddress.slice(-4)}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="font-medium">Condition:</span>
+                <span>ETH balance {node.data.balanceLogicComparisonOperator} {node.data.balanceLogicCompareValue}</span>
+              </div>
+            </>
+          ) : (
+            <div className="text-orange-500 dark:text-orange-400">
+              ⚠ Set address and condition
+            </div>
+          )
         ) : node.data.action ? (
           <>
             <div className="flex justify-between">
@@ -288,6 +332,13 @@ export function RightDrawer({ isOpen, onClose, nodes, edges, onReorderNodes }: R
       const args = node.data.functionArgs || {};
       return inputs.every((inp) => (args[inp.name] ?? "").trim() !== "");
     }
+    if (node.data.protocol === "balanceLogic") {
+      return !!(
+        node.data.balanceLogicAddress?.trim() &&
+        node.data.balanceLogicComparisonOperator != null &&
+        (node.data.balanceLogicCompareValue ?? "").trim() !== ""
+      );
+    }
     return !!(node.data.action && node.data.amount);
   });
 
@@ -332,20 +383,62 @@ export function RightDrawer({ isOpen, onClose, nodes, edges, onReorderNodes }: R
         chainId: effectiveChainId,
       });
 
-      // Evaluate conditional nodes; when a condition is false, skip only downstream actions (not the entire flow)
-      const skipSet = new Set<string>();
-      for (const node of sortedNodes) {
-        if (node.data.protocol === "conditional") {
-          const conditionMet = await evaluateConditionalNode(node, effectiveChainId);
-          if (!conditionMet) {
-            const downstream = getNodesDownstreamOf(node.id, edges);
-            downstream.forEach((id) => skipSet.add(id));
-            console.log(`Condition not met for node ${node.id}; skipping ${downstream.size} downstream action(s)`);
+      // OR semantics: multiple conditions into one action => run if at least one condition is true.
+      // AND semantics: chained conditions (Cond A → Cond B → Action) => run only if all conditions are true.
+      const conditionResults = new Map<string, boolean>();
+      const skippedConditionNodes = new Set<string>();
+      const actionSkipSet = new Set<string>();
+      const topoOrder = getTopologicalOrder(sortedNodes, edges);
+
+      for (const node of topoOrder) {
+        if (node.data.protocol === "conditional" || node.data.protocol === "balanceLogic") {
+          const condPreds = getDirectPredecessors(node.id, edges);
+          const conditionPreds = [...condPreds].filter((predId) => {
+            const pred = sortedNodes.find((n) => n.id === predId);
+            return pred && isConditionNode(pred);
+          });
+          const anyPredFalse = conditionPreds.some(
+            (predId) => skippedConditionNodes.has(predId) || conditionResults.get(predId) === false
+          );
+          if (conditionPreds.length > 0 && anyPredFalse) {
+            skippedConditionNodes.add(node.id);
+            conditionResults.set(node.id, false);
+            continue;
+          }
+          const met =
+            node.data.protocol === "conditional"
+              ? await evaluateConditionalNode(node, effectiveChainId)
+              : await evaluateBalanceLogicNode(node, effectiveChainId);
+          conditionResults.set(node.id, met);
+          if (!met) {
+            console.log(`Condition not met for node ${node.id}`);
+          }
+          continue;
+        }
+        if (node.data.protocol === "transfer" || node.data.protocol === "custom") {
+          const condPreds = getDirectPredecessors(node.id, edges);
+          const conditionPreds = [...condPreds].filter((predId) => {
+            const pred = sortedNodes.find((n) => n.id === predId);
+            return pred && isConditionNode(pred);
+          });
+          if (conditionPreds.length === 0) {
+            continue;
+          }
+          const atLeastOneTrue = conditionPreds.some(
+            (predId) => conditionResults.get(predId) === true
+          );
+          if (!atLeastOneTrue) {
+            actionSkipSet.add(node.id);
+            console.log(`Skipping action node ${node.id} (no condition predecessor was true)`);
           }
         }
       }
 
-      const nodesToExecute = sortedNodes.filter((n) => !skipSet.has(n.id));
+      const nodesToExecute = sortedNodes.filter(
+        (n) =>
+          (n.data.protocol === "transfer" || n.data.protocol === "custom") &&
+          !actionSkipSet.has(n.id)
+      );
 
       // Prepare calls only for nodes that are not skipped (transfers + custom; conditionals produce no call)
       const calls = await prepareBatchedCalls(nodesToExecute, effectiveChainId);
@@ -375,7 +468,7 @@ export function RightDrawer({ isOpen, onClose, nodes, edges, onReorderNodes }: R
         setExecutedSteps((prev) => new Set(prev).add(node.id));
       });
       setExecutionError(null);
-      setExecutionSkippedCount(skipSet.size);
+      setExecutionSkippedCount(actionSkipSet.size);
       console.log("Execution completed successfully");
     } catch (error: any) {
       console.error("Execution failed:", error);
@@ -458,6 +551,12 @@ export function RightDrawer({ isOpen, onClose, nodes, edges, onReorderNodes }: R
                         const inputs = fn?.inputs || [];
                         const args = node.data.functionArgs || {};
                         isConfigured = hasBase && hasCond && inputs.every((inp) => (args[inp.name] ?? "").trim() !== "");
+                      } else if (node.data.protocol === "balanceLogic") {
+                        isConfigured = !!(
+                          node.data.balanceLogicAddress?.trim() &&
+                          node.data.balanceLogicComparisonOperator != null &&
+                          (node.data.balanceLogicCompareValue ?? "").trim() !== ""
+                        );
                       } else {
                         isConfigured = !!(node.data.action && node.data.amount);
                       }

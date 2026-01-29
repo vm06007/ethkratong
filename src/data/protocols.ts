@@ -119,6 +119,13 @@ export const protocolCategories: ProtocolCategory[] = [
         color: "bg-amber-500",
         availableActions: [],
       },
+      {
+        protocol: "balanceLogic",
+        label: "Balance Logic",
+        description: "If ETH balance of address meets condition, proceed to next action",
+        color: "bg-cyan-500",
+        availableActions: [],
+      },
     ],
   },
 ];

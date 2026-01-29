@@ -12,7 +12,8 @@ export type ProtocolType =
   | "pendle"
   | "custom"
   | "transfer"
-  | "conditional";
+  | "conditional"
+  | "balanceLogic";
 
 export type ActionType =
   | "lend"
@@ -43,6 +44,10 @@ export interface ProtocolNodeData extends Record<string, unknown> {
   comparisonOperator?: "gt" | "gte" | "lt" | "lte" | "ne";
   compareValue?: string;
   conditionalContractVerified?: boolean;
+  // Balance Logic node (ETH balance of EOA/contract + comparison)
+  balanceLogicAddress?: string;
+  balanceLogicComparisonOperator?: "gt" | "gte" | "lt" | "lte" | "ne";
+  balanceLogicCompareValue?: string;
 }
 
 export type ProtocolNode = Node<ProtocolNodeData>;

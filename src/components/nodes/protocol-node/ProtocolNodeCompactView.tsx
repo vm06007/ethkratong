@@ -87,6 +87,31 @@ export function ProtocolNodeCompactView({ data }: ProtocolNodeCompactViewProps) 
         );
     }
 
+    if (data.protocol === "balanceLogic") {
+        if (
+            data.balanceLogicAddress &&
+            data.balanceLogicComparisonOperator != null &&
+            (data.balanceLogicCompareValue ?? "").trim() !== ""
+        ) {
+            return (
+                <div className="text-sm text-gray-600 dark:text-gray-300">
+                    <div className="font-mono text-xs truncate" title={data.balanceLogicAddress}>
+                        {data.balanceLogicAddress.slice(0, 8)}...{data.balanceLogicAddress.slice(-6)}
+                    </div>
+                    <div className="font-medium">
+                        ETH balance {data.balanceLogicComparisonOperator}{" "}
+                        {data.balanceLogicCompareValue ?? ""}
+                    </div>
+                </div>
+            );
+        }
+        return (
+            <div className="text-sm text-gray-500 dark:text-gray-400">
+                <div className="text-xs italic">Click to set address and condition</div>
+            </div>
+        );
+    }
+
     if (data.action) {
         return (
             <div className="text-sm text-gray-600 dark:text-gray-300">
