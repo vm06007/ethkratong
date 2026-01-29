@@ -3,9 +3,9 @@ export interface WalletSendCallsResult {
   id: string;
 }
 
-/** EIP-5792 wallet_getCallsStatus result */
+/** EIP-5792 wallet_getCallsStatus result (status: 100 pending, 200 confirmed, 4xx/5xx/6xx failure) */
 export interface WalletGetCallsStatusResult {
-  status: 'PENDING' | 'CONFIRMED' | 'FAILED';
+  status: number | 'PENDING' | 'CONFIRMED' | 'FAILED';
   receipts?: Array<{ transactionHash?: string }>;
 }
 

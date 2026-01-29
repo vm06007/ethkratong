@@ -65,12 +65,12 @@ export const useWalletCapabilities = () => {
           const supportAtomic = chainCapabilities?.atomic || chainCapabilities?.atomicBatch;
 
           setSupportsBatch(!!supportAtomic);
-          console.log('Atomic batching support:', supportAtomic);
+          console.log('✅ Atomic batching support:', supportAtomic);
           console.log('Full chain capabilities:', JSON.stringify(chainCapabilities, null, 2));
           console.log('=================================');
         } else {
           setSupportsBatch(false);
-          console.log('No capabilities found for chain:', chainIdHex);
+          console.log('❌ No capabilities found for chain:', chainIdHex);
           console.log('All capabilities:', JSON.stringify(caps, null, 2));
           console.log('=================================');
         }

@@ -10,10 +10,11 @@ import {
   prepareBatchedCalls,
   executeBatchedTransaction,
   trackBatchedTransactionStatus,
-  sendSingleTransaction,
   evaluateConditionalNode,
   evaluateBalanceLogicNode,
 } from "@/services/batchedExecution";
+import { prepareTransaction, sendTransaction } from "thirdweb";
+import { client, getChainById } from "@/config/thirdweb";
 import { getAbiFunctions, getAbiViewFunctions } from "@/services/contractService";
 import {
   DndContext,
@@ -325,6 +326,13 @@ function SortableStep({ node, isExecuted, isConfigured }: SortableStepProps) {
                   {node.data.liquidityTokenB ?? "…"}
                 </span>
               </div>
+              {(node.data.liquidityTokenA === "ETH" || node.data.liquidityTokenB === "ETH") &&
+                node.data.amount && (
+                <div className="flex justify-between">
+                  <span className="font-medium">Amount (ETH):</span>
+                  <span>{node.data.amount}</span>
+                </div>
+              )}
               {(node.data.uniswapVersionAuto === false
                 ? (node.data.uniswapVersion ?? "v2") !== "v2"
                 : false) && (
@@ -452,7 +460,12 @@ export function RightDrawer({ isOpen, onClose, nodes, edges, onReorderNodes }: R
         );
       }
       if (node.data.action === "addLiquidity") {
-        return !!(node.data.liquidityTokenA && node.data.liquidityTokenB);
+        const a = node.data.liquidityTokenA;
+        const b = node.data.liquidityTokenB;
+        const hasPair = !!(a && b);
+        const oneIsEth = a === "ETH" || b === "ETH";
+        const hasAmount = (node.data.amount ?? "").trim() !== "";
+        return hasPair && (!oneIsEth || hasAmount);
       }
       if (node.data.action === "removeLiquidity") {
         return !!(node.data.liquidityTokenA && node.data.liquidityTokenB);
@@ -562,6 +575,7 @@ export function RightDrawer({ isOpen, onClose, nodes, edges, onReorderNodes }: R
         }
       }
 
+      // Flow from preview: only action nodes from the execution plan, excluding skipped (condition not met)
       const nodesToExecute = sortedNodes.filter(
         (n) =>
           (n.data.protocol === "transfer" ||
@@ -571,7 +585,7 @@ export function RightDrawer({ isOpen, onClose, nodes, edges, onReorderNodes }: R
           !actionSkipSet.has(n.id)
       );
 
-      // Prepare calls only for nodes that are not skipped (transfers + custom + uniswap; conditionals produce no call)
+      // Prepare flat list of calls for EIP-7702 batch (all steps from preview; approve + addLiquidity = 2 calls in same batch)
       const calls = await prepareBatchedCalls(
         nodesToExecute,
         effectiveChainId,
@@ -582,7 +596,7 @@ export function RightDrawer({ isOpen, onClose, nodes, edges, onReorderNodes }: R
         throw new Error("No valid actions to execute");
       }
 
-      console.log(`Prepared ${calls.length} call(s)`);
+      console.log(`Prepared ${calls.length} call(s) for EIP-7702 batch`);
 
       if (supportsBatch && calls.length > 0) {
         console.log("Using batched EIP-7702 execution");
@@ -591,10 +605,21 @@ export function RightDrawer({ isOpen, onClose, nodes, edges, onReorderNodes }: R
         const txHash = await trackBatchedTransactionStatus(result.id);
         console.log("Transaction confirmed:", txHash);
       } else {
-        console.log("Sending transactions sequentially");
+        console.log("Wallet does not support EIP-7702 batching; sending transactions sequentially");
+        const chain = getChainById(effectiveChainId);
         for (const call of calls) {
-          const txHash = await sendSingleTransaction(call, activeAccount.address, effectiveChainId);
-          console.log("Transaction submitted:", txHash);
+          const transaction = prepareTransaction({
+            to: call.to as `0x${string}`,
+            data: (call.data as `0x${string}`) || undefined,
+            value: BigInt(call.value),
+            chain,
+            client,
+          });
+          const { transactionHash } = await sendTransaction({
+            account: activeAccount,
+            transaction,
+          });
+          console.log("Transaction submitted:", transactionHash);
         }
       }
 
@@ -698,6 +723,25 @@ export function RightDrawer({ isOpen, onClose, nodes, edges, onReorderNodes }: R
                           node.data.balanceLogicComparisonOperator != null &&
                           (node.data.balanceLogicCompareValue ?? "").trim() !== ""
                         );
+                      } else if (node.data.protocol === "uniswap") {
+                        if (node.data.action === "swap") {
+                          isConfigured = !!(
+                            node.data.swapFrom &&
+                            node.data.swapTo &&
+                            (node.data.amount ?? "").trim() !== ""
+                          );
+                        } else if (node.data.action === "addLiquidity") {
+                          const a = node.data.liquidityTokenA;
+                          const b = node.data.liquidityTokenB;
+                          const hasPair = !!(a && b);
+                          const oneIsEth = a === "ETH" || b === "ETH";
+                          const hasAmount = (node.data.amount ?? "").trim() !== "";
+                          isConfigured = hasPair && (!oneIsEth || hasAmount);
+                        } else if (node.data.action === "removeLiquidity") {
+                          isConfigured = !!(node.data.liquidityTokenA && node.data.liquidityTokenB);
+                        } else {
+                          isConfigured = false;
+                        }
                       } else {
                         isConfigured = !!(node.data.action && node.data.amount);
                       }

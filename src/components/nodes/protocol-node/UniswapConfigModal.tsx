@@ -108,14 +108,13 @@ export function UniswapConfigModal({
                                 </label>
                                 <select
                                     className="w-full border border-gray-600 rounded-lg px-3 py-2 text-sm bg-gray-800 text-white"
-                                    value={data.action ?? ""}
+                                    value={data.action ?? "swap"}
                                     onChange={(e) =>
                                         onUpdateData({
-                                            action: e.target.value as ProtocolNodeData["action"],
+                                            action: (e.target.value || "swap") as ProtocolNodeData["action"],
                                         })
                                     }
                                 >
-                                    <option value="">Select action</option>
                                     {template?.availableActions.map((action) => {
                                         const label =
                                             action === "addLiquidity"

@@ -1,7 +1,7 @@
 import type { Node } from "@xyflow/react";
 import type { ProtocolNodeData } from "@/types";
 import type { WalletGetCallsStatusResult, WalletSendCallsResult } from "@/types/global";
-import { parseEther, parseUnits, encodeFunctionData, isAddress, toHex, createPublicClient, http, type Abi, type Chain } from "viem";
+import { parseEther, parseUnits, encodeFunctionData, isAddress, getAddress, toHex, createPublicClient, http, type Abi, type Chain } from "viem";
 import { normalize } from "viem/ens";
 import { mainnet, arbitrum } from "viem/chains";
 
@@ -34,6 +34,18 @@ const WETH_ADDRESS: Record<number, string> = {
     1: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
     42161: "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1",
 };
+// Factory address is read at runtime via router.factory() to avoid hardcoding wrong/checksum issues
+const UNISWAP_V2_ROUTER_FACTORY_ABI = [
+    { type: "function", name: "factory", inputs: [], outputs: [{ name: "", type: "address" }], stateMutability: "view" },
+] as const;
+const UNISWAP_V2_FACTORY_ABI = [
+    { type: "function", name: "getPair", inputs: [{ name: "tokenA", type: "address" }, { name: "tokenB", type: "address" }], outputs: [{ name: "pair", type: "address" }], stateMutability: "view" },
+] as const;
+const UNISWAP_V2_PAIR_ABI = [
+    { type: "function", name: "getReserves", inputs: [], outputs: [{ name: "reserve0", type: "uint112" }, { name: "reserve1", type: "uint112" }, { name: "blockTimestampLast", type: "uint32" }], stateMutability: "view" },
+    { type: "function", name: "token0", inputs: [], outputs: [{ name: "", type: "address" }], stateMutability: "view" },
+    { type: "function", name: "token1", inputs: [], outputs: [{ name: "", type: "address" }], stateMutability: "view" },
+] as const;
 const UNISWAP_SWAP_ABI = [
     {
         type: "function",
@@ -45,6 +57,40 @@ const UNISWAP_SWAP_ABI = [
             { name: "deadline", type: "uint256" },
         ],
         outputs: [{ type: "uint256[]" }],
+        stateMutability: "payable",
+    },
+] as const;
+
+const ERC20_APPROVE_ABI = [
+    {
+        type: "function",
+        name: "approve",
+        inputs: [
+            { name: "spender", type: "address" },
+            { name: "amount", type: "uint256" },
+        ],
+        outputs: [{ type: "bool" }],
+        stateMutability: "nonpayable",
+    },
+] as const;
+
+const UNISWAP_ADD_LIQUIDITY_ETH_ABI = [
+    {
+        type: "function",
+        name: "addLiquidityETH",
+        inputs: [
+            { name: "token", type: "address" },
+            { name: "amountTokenDesired", type: "uint256" },
+            { name: "amountTokenMin", type: "uint256" },
+            { name: "amountETHMin", type: "uint256" },
+            { name: "to", type: "address" },
+            { name: "deadline", type: "uint256" },
+        ],
+        outputs: [
+            { name: "amountToken", type: "uint256" },
+            { name: "amountETH", type: "uint256" },
+            { name: "liquidity", type: "uint256" },
+        ],
         stateMutability: "payable",
     },
 ] as const;
@@ -319,9 +365,144 @@ async function prepareUniswapSwapCall(
   };
 }
 
+/** Buffer on top of expected token amount for addLiquidity to avoid tx failure from small rate changes (2%). */
+const ADD_LIQUIDITY_APPROVAL_BUFFER_BPS = 200; // 2% = 200 basis points
+
+/**
+ * Get expected token amount for addLiquidityETH from pair reserves; add small buffer for approval.
+ * Returns amountTokenDesired (expected + buffer) and amountTokenMin (for slippage).
+ */
+async function getExpectedTokenAmountForAddLiquidity(
+  chainId: number,
+  tokenAddress: string,
+  amountWei: bigint,
+  slippagePercent: number
+): Promise<{ amountTokenDesired: bigint; amountTokenMin: bigint }> {
+  const chain = CHAINS[chainId];
+  if (!chain) throw new Error(`Unsupported chain ${chainId}`);
+  const router = UNISWAP_V2_ROUTER[chainId as keyof typeof UNISWAP_V2_ROUTER];
+  const weth = WETH_ADDRESS[chainId as keyof typeof WETH_ADDRESS];
+  if (!router || !weth) throw new Error(`Uniswap V2 not supported on chain ${chainId}`);
+
+  // Use same RPC as app (wagmi/Thirdweb) so reads work in browser; fallback to default chain RPC
+  const clientId = (typeof import.meta !== "undefined" && (import.meta as { env?: { VITE_THIRDWEB_CLIENT_ID?: string } }).env?.VITE_THIRDWEB_CLIENT_ID) || "";
+  const rpcUrl = chainId === 1
+    ? `https://ethereum.rpc.thirdweb.com/${clientId}`
+    : chainId === 42161
+      ? `https://arbitrum.rpc.thirdweb.com/${clientId}`
+      : undefined;
+  const client = createPublicClient({ chain, transport: rpcUrl ? http(rpcUrl) : http() });
+  // Get factory address from router.factory() so we never hardcode – returns correct 20-byte address
+  const routerAddr = getAddress(router);
+  const factoryAddr = await client.readContract({
+    address: routerAddr,
+    abi: UNISWAP_V2_ROUTER_FACTORY_ABI,
+    functionName: "factory",
+  });
+  const tokenAddr = getAddress(tokenAddress);
+  const wethAddr = getAddress(weth);
+  // Get pair address via factory.getPair(tokenA, tokenB)
+  const pairAddress = await client.readContract({
+    address: getAddress(factoryAddr as string),
+    abi: UNISWAP_V2_FACTORY_ABI,
+    functionName: "getPair",
+    args: [tokenAddr, wethAddr],
+  });
+  if (!pairAddress || pairAddress === "0x0000000000000000000000000000000000000000") {
+    throw new Error("Liquidity pair not found for this token/ETH on this chain");
+  }
+  const pairAddr = getAddress(pairAddress as string);
+
+  const [reserves, token0] = await Promise.all([
+    client.readContract({ address: pairAddr, abi: UNISWAP_V2_PAIR_ABI, functionName: "getReserves" }),
+    client.readContract({ address: pairAddr, abi: UNISWAP_V2_PAIR_ABI, functionName: "token0" }),
+  ]);
+  const isWethToken0 = (token0 as string).toLowerCase() === wethAddr.toLowerCase();
+  const reserveWETH = isWethToken0 ? reserves[0] : reserves[1];
+  const reserveToken = isWethToken0 ? reserves[1] : reserves[0];
+  if (reserveWETH === 0n) throw new Error("Pair has no liquidity");
+
+  // amountToken = (amountWei * reserveToken) / reserveWETH (same ratio as pool)
+  const amountTokenExpected = (amountWei * reserveToken) / reserveWETH;
+  const amountTokenDesired = (amountTokenExpected * BigInt(10000 + ADD_LIQUIDITY_APPROVAL_BUFFER_BPS)) / BigInt(10000);
+  const amountTokenMin = (amountTokenExpected * BigInt(Math.floor((100 - slippagePercent) * 100))) / BigInt(10000);
+  return { amountTokenDesired, amountTokenMin };
+}
+
+/**
+ * Prepare batched calls for Uniswap addLiquidity (ETH + token pair only).
+ * Approves only the expected token amount (+ small buffer), not unlimited.
+ */
+async function prepareUniswapAddLiquidityCalls(
+  node: Node<ProtocolNodeData>,
+  chainId: number,
+  account: string
+): Promise<BatchedTransactionCall[]> {
+  const data = node.data;
+  if (data.protocol !== "uniswap" || data.action !== "addLiquidity") {
+    throw new Error("Node is not a Uniswap addLiquidity node");
+  }
+  const a = data.liquidityTokenA ?? "";
+  const b = data.liquidityTokenB ?? "";
+  if (a !== "ETH" && b !== "ETH") {
+    throw new Error("Add liquidity execution only supports ETH + token pair for now");
+  }
+  const tokenSymbol = a === "ETH" ? b : a;
+  const chainTokens = TOKEN_ADDRESSES[chainId as keyof typeof TOKEN_ADDRESSES];
+  const router = UNISWAP_V2_ROUTER[chainId as keyof typeof UNISWAP_V2_ROUTER];
+  if (!chainTokens || !router) {
+    throw new Error(`Uniswap add liquidity not supported on chain ${chainId}`);
+  }
+  const tokenAddress = chainTokens[tokenSymbol as keyof typeof chainTokens];
+  if (!tokenAddress) {
+    throw new Error(`Token ${tokenSymbol} not supported on chain ${chainId}`);
+  }
+  const amountStr = data.amount?.trim() || "0";
+  const amountWei = parseEther(amountStr);
+  if (amountWei <= 0n) {
+    throw new Error("Add liquidity: enter an ETH amount");
+  }
+  const slippagePercent = data.maxSlippageAuto !== false
+    ? 0.5
+    : Math.min(50, Math.max(0, parseFloat(data.maxSlippagePercent ?? "0.5") || 0.5));
+  const amountETHMin = (amountWei * BigInt(Math.floor(100 - slippagePercent) * 100)) / BigInt(10000);
+  const deadlineMinutes = data.swapDeadlineMinutes ?? 30;
+  const deadline = BigInt(Math.floor(Date.now() / 1000) + deadlineMinutes * 60);
+
+  const { amountTokenDesired, amountTokenMin } = await getExpectedTokenAmountForAddLiquidity(
+    chainId,
+    tokenAddress,
+    amountWei,
+    slippagePercent
+  );
+
+  const approveData = encodeFunctionData({
+    abi: ERC20_APPROVE_ABI,
+    functionName: "approve",
+    args: [router as `0x${string}`, amountTokenDesired],
+  });
+  const addLiqData = encodeFunctionData({
+    abi: UNISWAP_ADD_LIQUIDITY_ETH_ABI,
+    functionName: "addLiquidityETH",
+    args: [
+      tokenAddress as `0x${string}`,
+      amountTokenDesired,
+      amountTokenMin,
+      amountETHMin,
+      account as `0x${string}`,
+      deadline,
+    ],
+  });
+  return [
+    { to: tokenAddress, data: approveData, value: toHex(0n) },
+    { to: router, data: addLiqData, value: toHex(amountWei) },
+  ];
+}
+
 /**
  * Prepare batched transaction calls for all nodes (transfers + custom + uniswap) in order.
- * @param account - Required for Uniswap swap (recipient of output tokens)
+ * Returns a flat list for EIP-7702 wallet_sendCalls (approve + addLiquidity are separate calls in the same batch).
+ * @param account - Required for Uniswap swap/addLiquidity (recipient of output tokens)
  */
 export const prepareBatchedCalls = async (
   nodes: Node<ProtocolNodeData>[],
@@ -329,27 +510,48 @@ export const prepareBatchedCalls = async (
   account?: string
 ): Promise<BatchedTransactionCall[]> => {
   const calls: BatchedTransactionCall[] = [];
+  let lastError: Error | null = null;
   for (const node of nodes) {
     if (node.data.protocol === "transfer") {
       const transferCalls = await prepareTransferCalls([node], chainId);
       calls.push(...transferCalls);
     } else if (node.data.protocol === "custom") {
       calls.push(prepareCustomContractCall(node));
-    } else if (node.data.protocol === "uniswap" && node.data.action === "swap" && account) {
-      const versionAuto = node.data.uniswapVersionAuto !== false;
-      const version = node.data.uniswapVersion ?? "v2";
-      const useV2 = versionAuto || version === "v2";
-      if (!useV2) {
-        console.warn(`Uniswap ${version} swap execution not yet supported, skipping node ${node.id}`);
-      } else {
-        try {
-          calls.push(await prepareUniswapSwapCall(node, chainId, account));
-        } catch (err) {
-          console.warn(`Skipping Uniswap node ${node.id}:`, err);
+    } else if (node.data.protocol === "uniswap" && account) {
+      if (node.data.action === "swap") {
+        const versionAuto = node.data.uniswapVersionAuto !== false;
+        const version = node.data.uniswapVersion ?? "v2";
+        const useV2 = versionAuto || version === "v2";
+        if (!useV2) {
+          console.warn(`Uniswap ${version} swap execution not yet supported, skipping node ${node.id}`);
+        } else {
+          try {
+            calls.push(await prepareUniswapSwapCall(node, chainId, account));
+          } catch (err) {
+            lastError = err instanceof Error ? err : new Error(String(err));
+            console.warn(`Skipping Uniswap node ${node.id}:`, err);
+          }
+        }
+      } else if (node.data.action === "addLiquidity") {
+        const versionAuto = node.data.uniswapVersionAuto !== false;
+        const version = node.data.uniswapVersion ?? "v2";
+        const useV2 = versionAuto || version === "v2";
+        if (!useV2) {
+          console.warn(`Uniswap ${version} add liquidity not yet supported, skipping node ${node.id}`);
+        } else {
+          try {
+            calls.push(...(await prepareUniswapAddLiquidityCalls(node, chainId, account)));
+          } catch (err) {
+            lastError = err instanceof Error ? err : new Error(String(err));
+            console.warn(`Skipping Uniswap add liquidity node ${node.id}:`, err);
+          }
         }
       }
+      // removeLiquidity not implemented for execution
     }
-    // Skip wallet, condition, balanceLogic, uniswap addLiquidity and removeLiquidity
+  }
+  if (calls.length === 0 && lastError) {
+    throw lastError;
   }
   return calls;
 };
@@ -718,14 +920,17 @@ export const trackBatchedTransactionStatus = async (
 
         console.log('Batch status:', status);
 
-        if (status?.status === 'CONFIRMED') {
+        // EIP-5792: status is numeric (200 = confirmed) or string ('CONFIRMED')
+        const s = status?.status as number | string | undefined;
+        const confirmed = s === 'CONFIRMED' || s === 200;
+        const failed = s === 'FAILED' || s === 400 || s === 500 || s === 600;
+        if (confirmed) {
           console.log('Batch confirmed! Receipts:', status.receipts);
-          // Get the transaction hash from the first receipt
           const txHash = status.receipts?.[0]?.transactionHash;
           if (txHash) {
             return txHash;
           }
-        } else if (status?.status === 'FAILED') {
+        } else if (failed) {
           throw new Error('Batch transaction failed');
         }
       } catch (error) {

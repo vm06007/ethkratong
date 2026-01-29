@@ -32,15 +32,16 @@ export function ProtocolNodeUniswapBody({
     const { balances: balancesFetched } = useWalletBalancesForModal(!balancesProp);
     const balances = balancesProp ?? balancesFetched;
 
+    const isSwap = data.action === "swap" || data.action == null;
     const quote = useUniswapQuote(
         chainId,
-        data.action === "swap" ? data.swapFrom : undefined,
-        data.action === "swap" ? data.swapTo : undefined,
-        data.action === "swap" ? data.amount : undefined
+        isSwap ? data.swapFrom : undefined,
+        isSwap ? data.swapTo : undefined,
+        isSwap ? data.amount : undefined
     );
 
     useEffect(() => {
-        if (data.action !== "swap") return;
+        if (!isSwap) return;
         const amountSet = (data.amount ?? "").trim() !== "";
         if (
             quote.amountOutFormatted != null &&
@@ -62,7 +63,7 @@ export function ProtocolNodeUniswapBody({
         }
     }, [
         quote.amountOutFormatted,
-        data.action,
+        isSwap,
         data.swapTo,
         data.amount,
         data.estimatedAmountOut,
@@ -73,6 +74,18 @@ export function ProtocolNodeUniswapBody({
     if (data.action === "addLiquidity") {
         const versionAuto = data.uniswapVersionAuto !== false;
         const version = data.uniswapVersion ?? "v2";
+        const a = data.liquidityTokenA ?? "";
+        const b = data.liquidityTokenB ?? "";
+        const oneIsEth = a === "ETH" || b === "ETH";
+        const ethBalance = getBalanceForSymbol(balances, "ETH");
+        const setLiquidityAmountPct = (pct: number) => {
+            if (!ethBalance) return;
+            const num = parseFloat(ethBalance);
+            if (Number.isNaN(num)) return;
+            const value = pct === 1 ? num : num * pct;
+            const str = value <= 0 ? "0" : value < 0.0001 ? value.toExponential(2) : value.toFixed(6);
+            onUpdateData({ amount: str });
+        };
         return (
             <div className="space-y-2">
                 <div className="text-xs text-gray-500 dark:text-gray-400">
@@ -84,7 +97,7 @@ export function ProtocolNodeUniswapBody({
                     </label>
                     <select
                         className="w-full border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-sm bg-white dark:bg-gray-700 dark:text-gray-200"
-                        value={data.liquidityTokenA ?? ""}
+                        value={a}
                         onChange={(e) =>
                             onUpdateData({ liquidityTokenA: e.target.value || undefined })
                         }
@@ -106,7 +119,7 @@ export function ProtocolNodeUniswapBody({
                     </label>
                     <select
                         className="w-full border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-sm bg-white dark:bg-gray-700 dark:text-gray-200"
-                        value={data.liquidityTokenB ?? ""}
+                        value={b}
                         onChange={(e) =>
                             onUpdateData({ liquidityTokenB: e.target.value || undefined })
                         }
@@ -122,6 +135,37 @@ export function ProtocolNodeUniswapBody({
                         })}
                     </select>
                 </div>
+                {oneIsEth && (
+                    <div>
+                        <label className="text-xs text-gray-600 dark:text-gray-400 block mb-1">
+                            Amount (ETH)
+                        </label>
+                        <div className="flex gap-1.5 mb-1.5">
+                            {([0.25, 0.5, 0.75, 1] as const).map((pct) => {
+                                const balance = ethBalance ? parseFloat(ethBalance) : 0;
+                                const disabled = !ethBalance || Number.isNaN(balance) || balance <= 0;
+                                return (
+                                    <button
+                                        key={pct}
+                                        type="button"
+                                        disabled={disabled}
+                                        className="rounded-md px-2 py-1 text-xs font-medium bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-500 disabled:opacity-50 disabled:pointer-events-none"
+                                        onClick={() => setLiquidityAmountPct(pct)}
+                                    >
+                                        {pct === 1 ? "Max" : `${pct * 100}%`}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                        <input
+                            type="text"
+                            placeholder="0.00"
+                            className="w-full border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-sm bg-white dark:bg-gray-700 dark:text-gray-200 dark:placeholder-gray-500"
+                            value={data.amount ?? ""}
+                            onChange={(e) => onUpdateData({ amount: e.target.value })}
+                        />
+                    </div>
+                )}
             </div>
         );
     }
