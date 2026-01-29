@@ -257,6 +257,57 @@ function SortableStep({ node, isExecuted, isConfigured }: SortableStepProps) {
               ⚠ Set address and condition
             </div>
           )
+        ) : node.data.protocol === "uniswap" ? (
+          node.data.action === "swap" &&
+          (node.data.swapFrom || node.data.swapTo) ? (
+            <>
+              <div className="flex justify-between">
+                <span className="font-medium">Action:</span>
+                <span className="capitalize">Swap</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="font-medium">From → To:</span>
+                <span>
+                  {node.data.swapFrom ?? "…"} → {node.data.swapTo ?? "…"}
+                </span>
+              </div>
+              {node.data.amount && (
+                <div className="flex justify-between">
+                  <span className="font-medium">Amount:</span>
+                  <span>{node.data.amount}</span>
+                </div>
+              )}
+              {node.data.estimatedAmountOut != null &&
+                node.data.estimatedAmountOutSymbol && (
+                <div className="flex justify-between text-green-600 dark:text-green-400">
+                  <span className="font-medium">Est. out:</span>
+                  <span>
+                    ~{node.data.estimatedAmountOut}{" "}
+                    {node.data.estimatedAmountOutSymbol}
+                  </span>
+                </div>
+              )}
+            </>
+          ) : node.data.action === "addLiquidity" &&
+            (node.data.liquidityTokenA || node.data.liquidityTokenB) ? (
+            <>
+              <div className="flex justify-between">
+                <span className="font-medium">Action:</span>
+                <span>Add liquidity</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="font-medium">Pair:</span>
+                <span>
+                  {node.data.liquidityTokenA ?? "…"} /{" "}
+                  {node.data.liquidityTokenB ?? "…"}
+                </span>
+              </div>
+            </>
+          ) : (
+            <div className="text-orange-500 dark:text-orange-400">
+              ⚠ Configure swap or liquidity
+            </div>
+          )
         ) : node.data.action ? (
           <>
             <div className="flex justify-between">
@@ -338,6 +389,19 @@ export function RightDrawer({ isOpen, onClose, nodes, edges, onReorderNodes }: R
         node.data.balanceLogicComparisonOperator != null &&
         (node.data.balanceLogicCompareValue ?? "").trim() !== ""
       );
+    }
+    if (node.data.protocol === "uniswap") {
+      if (node.data.action === "swap") {
+        return !!(
+          node.data.swapFrom &&
+          node.data.swapTo &&
+          (node.data.amount ?? "").trim() !== ""
+        );
+      }
+      if (node.data.action === "addLiquidity") {
+        return !!(node.data.liquidityTokenA && node.data.liquidityTokenB);
+      }
+      return false;
     }
     return !!(node.data.action && node.data.amount);
   });

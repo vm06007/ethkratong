@@ -49,6 +49,19 @@ const UNISWAP_SWAP_ABI = [
     },
 ] as const;
 
+const UNISWAP_ROUTER_QUOTE_ABI = [
+    {
+        type: "function",
+        name: "getAmountsOut",
+        inputs: [
+            { name: "amountIn", type: "uint256" },
+            { name: "path", type: "address[]" },
+        ],
+        outputs: [{ name: "amounts", type: "uint256[]" }],
+        stateMutability: "view",
+    },
+] as const;
+
 // Token decimals mapping
 const TOKEN_DECIMALS: Record<string, number> = {
     ETH: 18,
@@ -140,14 +153,60 @@ export function prepareCustomContractCall(node: Node<ProtocolNodeData>): Batched
 }
 
 /**
- * Prepare a single batched call for a Uniswap swap node (ETH → token via V2 router).
- * Only supports action "swap" with swapFrom "ETH"; addLiquidity and token→token are not encoded here.
+ * Simulate Uniswap V2 swap and return estimated amount out (router.getAmountsOut).
+ * Only supports ETH → token path. Use for display and for downstream steps.
  */
-function prepareUniswapSwapCall(
+export async function getUniswapSwapQuote(
+  chainId: number,
+  amountInWei: bigint,
+  outputTokenSymbol: string
+): Promise<{ amountOutFormatted: string; amountOutRaw: bigint } | null> {
+  const chain = CHAINS[chainId as keyof typeof CHAINS];
+  if (!chain) return null;
+  const router = UNISWAP_V2_ROUTER[chainId as keyof typeof UNISWAP_V2_ROUTER];
+  const weth = WETH_ADDRESS[chainId as keyof typeof WETH_ADDRESS];
+  const chainTokens = TOKEN_ADDRESSES[chainId as keyof typeof TOKEN_ADDRESSES];
+  if (!router || !weth || !chainTokens) return null;
+  const outputTokenAddress = chainTokens[outputTokenSymbol as keyof typeof chainTokens];
+  if (!outputTokenAddress || outputTokenSymbol === "ETH") return null;
+  if (amountInWei <= 0n) return null;
+
+  try {
+    const publicClient = createPublicClient({ chain, transport: http() });
+    const path = [weth as `0x${string}`, outputTokenAddress as `0x${string}`];
+    const amounts = await publicClient.readContract({
+      address: router as `0x${string}`,
+      abi: UNISWAP_ROUTER_QUOTE_ABI,
+      functionName: "getAmountsOut",
+      args: [amountInWei, path],
+    });
+    if (!amounts || amounts.length < 2) return null;
+    const amountOutRaw = amounts[1];
+    const decimals = TOKEN_DECIMALS[outputTokenSymbol] ?? 18;
+    const divisor = 10 ** decimals;
+    const amountOutNum = Number(amountOutRaw) / divisor;
+    const amountOutFormatted =
+      amountOutNum === 0
+        ? "0"
+        : amountOutNum < 0.01
+          ? amountOutNum.toFixed(6)
+          : amountOutNum.toFixed(decimals <= 6 ? 2 : 4);
+    return { amountOutFormatted, amountOutRaw };
+  } catch (err) {
+    console.warn("Uniswap quote failed:", err);
+    return null;
+  }
+}
+
+/**
+ * Prepare a single batched call for a Uniswap swap node (ETH → token via V2 router).
+ * Uses quote for amountOutMin (with slippage) and optional swap deadline.
+ */
+async function prepareUniswapSwapCall(
   node: Node<ProtocolNodeData>,
   chainId: number,
   account: string
-): BatchedTransactionCall {
+): Promise<BatchedTransactionCall> {
   const data = node.data;
   if (data.protocol !== "uniswap" || data.action !== "swap") {
     throw new Error("Node is not a Uniswap swap node");
@@ -172,11 +231,22 @@ function prepareUniswapSwapCall(
   const amountStr = data.amount?.trim() || "0";
   const amountWei = parseEther(amountStr);
   const path = [weth as `0x${string}`, outputTokenAddress as `0x${string}`];
-  const deadline = BigInt(Math.floor(Date.now() / 1000) + 300);
+
+  const quoteResult = await getUniswapSwapQuote(chainId, amountWei, swapTo);
+  const slippagePercent = data.maxSlippageAuto !== false
+    ? 0.5
+    : Math.min(50, Math.max(0, parseFloat(data.maxSlippagePercent ?? "0.5") || 0.5));
+  const amountOutMin = quoteResult
+    ? (quoteResult.amountOutRaw * BigInt(Math.floor(100 - slippagePercent) * 100)) / BigInt(10000)
+    : 0n;
+
+  const deadlineMinutes = data.swapDeadlineMinutes ?? 30;
+  const deadline = BigInt(Math.floor(Date.now() / 1000) + deadlineMinutes * 60);
+
   const dataEncoded = encodeFunctionData({
     abi: UNISWAP_SWAP_ABI,
     functionName: "swapExactETHForTokens",
-    args: [BigInt(0), path, account as `0x${string}`, deadline],
+    args: [amountOutMin, path, account as `0x${string}`, deadline],
   });
   return {
     to: router,
@@ -203,7 +273,7 @@ export const prepareBatchedCalls = async (
       calls.push(prepareCustomContractCall(node));
     } else if (node.data.protocol === "uniswap" && node.data.action === "swap" && account) {
       try {
-        calls.push(prepareUniswapSwapCall(node, chainId, account));
+        calls.push(await prepareUniswapSwapCall(node, chainId, account));
       } catch (err) {
         console.warn(`Skipping Uniswap node ${node.id}:`, err);
       }

@@ -142,6 +142,13 @@ export function ProtocolNodeCompactView({ data }: ProtocolNodeCompactViewProps) 
                                 {data.amount}
                             </div>
                         )}
+                        {data.estimatedAmountOut != null &&
+                            data.estimatedAmountOutSymbol && (
+                            <div className="text-xs text-green-600 dark:text-green-400 font-medium">
+                                Est. out: ~{data.estimatedAmountOut}{" "}
+                                {data.estimatedAmountOutSymbol}
+                            </div>
+                        )}
                     </div>
                 );
             }

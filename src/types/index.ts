@@ -54,6 +54,16 @@ export interface ProtocolNodeData extends Record<string, unknown> {
   swapTo?: string;
   liquidityTokenA?: string;
   liquidityTokenB?: string;
+  /** Simulated/estimated amount out from swap (for display and use in next action) */
+  estimatedAmountOut?: string;
+  /** Symbol of the estimated output token (e.g. USDC) */
+  estimatedAmountOutSymbol?: string;
+  /** Max slippage % (e.g. "0.5" for 0.5%). Used when maxSlippageAuto is false. */
+  maxSlippagePercent?: string;
+  /** Use automatic slippage (default true) */
+  maxSlippageAuto?: boolean;
+  /** Swap deadline in minutes (e.g. 30) */
+  swapDeadlineMinutes?: number;
 }
 
 export type ProtocolNode = Node<ProtocolNodeData>;
