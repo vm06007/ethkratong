@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 import { useState } from "react";
+import { WalletConnect } from "../WalletConnect";
 
 interface ToolbarProps {
   isSidebarOpen: boolean;
@@ -216,6 +217,11 @@ export function Toolbar({
         <button className={iconButton} aria-label="Links">
           <Globe className={iconClass} />
         </button>
+
+        <div className="w-px h-6 bg-gray-300 dark:bg-gray-600" />
+
+        {/* Wallet Connect */}
+        <WalletConnect />
 
         <div className="w-px h-6 bg-gray-300 dark:bg-gray-600" />
 
