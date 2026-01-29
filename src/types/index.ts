@@ -2,13 +2,15 @@ import type { Node, Edge } from "@xyflow/react";
 
 export type ProtocolType =
   | "wallet"
-  | "transfer"
   | "morpho"
   | "aave"
   | "compound"
   | "spark"
   | "uniswap"
-  | "curve";
+  | "curve"
+  | "pendle"
+  | "custom"
+  | "transfer";
 
 export type ActionType =
   | "lend"

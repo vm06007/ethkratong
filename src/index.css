@@ -132,3 +132,18 @@ html, body, #root {
 .react-flow__edgeupdater:hover circle {
   fill: #2563eb;
 }
+
+.dark\:bg-gray-900:is(.dark *) {
+  background-color: #071c1f !important;
+}
+
+.dark\:bg-gray-800:is(.dark *) {
+  --tw-bg-opacity: 1;
+  background-color: rgb(18 25 34) !important;
+}
+
+.dark\:border-gray-600:is(.dark *) {
+  --tw-border-opacity: 1;
+  border-color: rgb(39 68 67) !important;
+}
+

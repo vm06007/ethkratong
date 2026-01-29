@@ -40,6 +40,7 @@ function ProtocolNode({ data, selected, id }: NodeProps<ProtocolNodeData>) {
   const { deleteElements, setNodes } = useReactFlow();
   const activeAccount = useActiveAccount();
   const [tokenBalances, setTokenBalances] = useState<TokenBalance[]>([]);
+  const [transferBalances, setTransferBalances] = useState<TokenBalance[]>([]);
 
   const template = allProtocols.find((t) => t.protocol === data.protocol);
   const color = template?.color || "bg-gray-500";
@@ -55,81 +56,98 @@ function ProtocolNode({ data, selected, id }: NodeProps<ProtocolNodeData>) {
     address: activeAccount?.address,
   });
 
+  // Helper function to fetch balances
+  const fetchUserBalances = async (account: typeof activeAccount) => {
+    if (!account) return [];
+
+    const chainId = account.chain?.id || 1;
+    const tokens = TOKEN_ADDRESSES[chainId as keyof typeof TOKEN_ADDRESSES];
+
+    if (!tokens) return [];
+
+    const balancePromises = Object.entries(tokens).map(async ([symbol, address]) => {
+      try {
+        const contract = getContract({
+          client,
+          chain: chains.find(c => c.id === chainId) || chains[0],
+          address,
+        });
+
+        // Fetch balance and decimals concurrently
+        const [balance, tokenDecimals] = await Promise.all([
+          balanceOf({
+            contract,
+            address: account.address,
+          }),
+          decimals({ contract }),
+        ]);
+
+        // Format balance using actual decimals
+        const balanceValue = toTokens(balance, tokenDecimals);
+        const numBalance = Number(balanceValue);
+        
+        // Format based on token type: ETH uses 4 decimals, others use 2
+        // For very small balances, show more decimals
+        let formatted: string;
+        if (numBalance === 0) {
+            formatted = "0.00";
+        } else if (numBalance < 0.01) {
+            // Show more decimals for very small amounts
+            formatted = numBalance.toFixed(6);
+        } else {
+            formatted = numBalance.toFixed(2);
+        }
+
+        return { symbol, balance: formatted, isLoading: false };
+      } catch (error) {
+        console.error(`Error fetching ${symbol} balance:`, error);
+        return { symbol, balance: "0.00", isLoading: false };
+      }
+    });
+
+    const tokenResults = await Promise.all(balancePromises);
+    
+    // Add ETH balance from hook - format to 4 decimals
+    let ethBalance: TokenBalance;
+    if (ethBalanceData && ethBalanceData.value !== undefined) {
+        const ethValue = Number(ethBalanceData.value) / 1e18;
+        const formattedEth = ethValue === 0 ? "0.0000" : ethValue.toFixed(4);
+        ethBalance = {
+            symbol: ethBalanceData.symbol || "ETH",
+            balance: formattedEth,
+            isLoading: isEthLoading,
+        };
+    } else {
+        ethBalance = { symbol: "ETH", balance: "0.0000", isLoading: isEthLoading };
+    }
+
+    return [ethBalance, ...tokenResults];
+  };
+
   // Fetch token balances for wallet node
   useEffect(() => {
     if (data.protocol === "wallet" && activeAccount) {
-      const fetchBalances = async () => {
-        const chainId = activeAccount.chain?.id || 1;
-        const tokens = TOKEN_ADDRESSES[chainId as keyof typeof TOKEN_ADDRESSES];
-
-        if (!tokens) return;
-
-        const balancePromises = Object.entries(tokens).map(async ([symbol, address]) => {
-          try {
-            const contract = getContract({
-              client,
-              chain: chains.find(c => c.id === chainId) || chains[0],
-              address,
-            });
-
-            // Fetch balance and decimals concurrently
-            const [balance, tokenDecimals] = await Promise.all([
-              balanceOf({
-                contract,
-                address: activeAccount.address,
-              }),
-              decimals({ contract }),
-            ]);
-
-            // Format balance using actual decimals
-            // Use toTokens for proper formatting, then format to appropriate decimal places
-            const balanceValue = toTokens(balance, tokenDecimals);
-            const numBalance = Number(balanceValue);
-            
-            // Format based on token type: ETH uses 4 decimals, others use 2
-            // For very small balances, show more decimals
-            let formatted: string;
-            if (numBalance === 0) {
-                formatted = "0.00";
-            } else if (numBalance < 0.01) {
-                // Show more decimals for very small amounts
-                formatted = numBalance.toFixed(6);
-            } else {
-                formatted = numBalance.toFixed(2);
-            }
-
-            return { symbol, balance: formatted, isLoading: false };
-          } catch (error) {
-            console.error(`Error fetching ${symbol} balance:`, error);
-            return { symbol, balance: "0.00", isLoading: false };
-          }
-        });
-
-        const tokenResults = await Promise.all(balancePromises);
-        
-        // Add ETH balance from hook - format to 4 decimals
-        let ethBalance: TokenBalance;
-        if (ethBalanceData && ethBalanceData.value !== undefined) {
-            const ethValue = Number(ethBalanceData.value) / 1e18;
-            const formattedEth = ethValue === 0 ? "0.0000" : ethValue.toFixed(4);
-            ethBalance = {
-                symbol: ethBalanceData.symbol || "ETH",
-                balance: formattedEth,
-                isLoading: isEthLoading,
-            };
-        } else {
-            ethBalance = { symbol: "ETH", balance: "0.0000", isLoading: isEthLoading };
-        }
-
-        setTokenBalances([ethBalance, ...tokenResults]);
-      };
-
-      fetchBalances();
+      fetchUserBalances(activeAccount).then(setTokenBalances);
     } else if (data.protocol === "wallet" && !activeAccount) {
       // Clear balances when wallet is disconnected
       setTokenBalances([]);
     }
   }, [activeAccount, data.protocol, ethBalanceData, isEthLoading]);
+
+  // Fetch balances for transfer nodes
+  useEffect(() => {
+    if (data.protocol === "transfer" && activeAccount && isExpanded) {
+      fetchUserBalances(activeAccount).then((balances) => {
+        // Filter to only show assets with non-zero balances
+        const availableBalances = balances.filter(
+          (token) => Number(token.balance) > 0
+        );
+        setTransferBalances(availableBalances);
+      });
+    } else if (data.protocol === "transfer" && !activeAccount) {
+      setTransferBalances([]);
+    }
+  }, [activeAccount, data.protocol, isExpanded, ethBalanceData, isEthLoading]);
 
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -158,7 +176,7 @@ function ProtocolNode({ data, selected, id }: NodeProps<ProtocolNodeData>) {
       className={cn(
         "rounded-lg border-2 bg-white dark:bg-gray-800 shadow-lg transition-all",
         selected ? "border-blue-500 shadow-xl" : "border-gray-300 dark:border-gray-600",
-        "min-w-[200px]"
+        data.protocol === "transfer" ? "w-fit min-w-[240px] max-w-[320px]" : "min-w-[200px]"
       )}
     >
       {/* Input Handle */}
@@ -259,7 +277,7 @@ function ProtocolNode({ data, selected, id }: NodeProps<ProtocolNodeData>) {
                   <label className="text-xs text-gray-600 dark:text-gray-400 font-medium">
                     Connected Wallet
                   </label>
-                  <div className="text-sm font-mono bg-gray-100 dark:bg-gray-700 px-3 py-2 rounded border border-gray-200 dark:border-gray-600">
+                  <div className="text-sm font-mono bg-gray-100 dark:bg-gray-700 px-3 py-2 rounded border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white">
                     {activeAccount.address.slice(0, 6)}...{activeAccount.address.slice(-4)}
                   </div>
                 </div>
@@ -304,49 +322,84 @@ function ProtocolNode({ data, selected, id }: NodeProps<ProtocolNodeData>) {
         {/* Regular protocol content */}
         {data.protocol !== "wallet" && isExpanded && (
           <>
-            {/* Action Selection */}
-            <div>
-              <label className="text-xs text-gray-600 dark:text-gray-400 block mb-1">
-                Action:
-              </label>
-              <select
-                className="w-full border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-sm bg-white dark:bg-gray-700 dark:text-gray-200"
-                value={data.action || ""}
-                onChange={(e) => {
-                  updateNodeData({ action: e.target.value as any });
-                }}
-              >
-                <option value="">Select action</option>
-                {template?.availableActions.map((action) => (
-                  <option key={action} value={action}>
-                    {action.charAt(0).toUpperCase() + action.slice(1)}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {/* Action Selection - Skip for transfer nodes */}
+            {data.protocol !== "transfer" && (
+              <div>
+                <label className="text-xs text-gray-600 dark:text-gray-400 block mb-1">
+                  Action:
+                </label>
+                <select
+                  className="w-full border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-sm bg-white dark:bg-gray-700 dark:text-gray-200"
+                  value={data.action || ""}
+                  onChange={(e) => {
+                    updateNodeData({ action: e.target.value as any });
+                  }}
+                >
+                  <option value="">Select action</option>
+                  {template?.availableActions.map((action) => (
+                    <option key={action} value={action}>
+                      {action.charAt(0).toUpperCase() + action.slice(1)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
-            {/* Asset Input */}
-            {(data.action === "lend" ||
-              data.action === "deposit" ||
-              data.action === "borrow") && (
+            {/* Asset Selection - For transfer nodes, show dropdown with user balances */}
+            {data.protocol === "transfer" ? (
               <div>
                 <label className="text-xs text-gray-600 dark:text-gray-400 block mb-1">
                   Asset:
                 </label>
-                <input
-                  type="text"
-                  placeholder="e.g., USDC, ETH"
-                  className="w-full border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-sm bg-white dark:bg-gray-700 dark:text-gray-200 dark:placeholder-gray-500"
-                  value={data.asset || ""}
-                  onChange={(e) => {
-                    updateNodeData({ asset: e.target.value });
-                  }}
-                />
+                {!activeAccount ? (
+                  <div className="text-xs text-gray-500 dark:text-gray-400 py-2">
+                    Connect wallet to see available assets
+                  </div>
+                ) : transferBalances.length === 0 ? (
+                  <div className="text-xs text-gray-500 dark:text-gray-400 py-2">
+                    Loading balances...
+                  </div>
+                ) : (
+                  <select
+                    className="w-full border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-sm bg-white dark:bg-gray-700 dark:text-gray-200"
+                    value={data.asset || ""}
+                    onChange={(e) => {
+                      updateNodeData({ asset: e.target.value });
+                    }}
+                  >
+                    <option value="">Select asset</option>
+                    {transferBalances.map((token) => (
+                      <option key={token.symbol} value={token.symbol}>
+                        {token.symbol} ({token.balance})
+                      </option>
+                    ))}
+                  </select>
+                )}
               </div>
+            ) : (
+              /* Asset Input for other protocols */
+              (data.action === "lend" ||
+                data.action === "deposit" ||
+                data.action === "borrow") && (
+                <div>
+                  <label className="text-xs text-gray-600 dark:text-gray-400 block mb-1">
+                    Asset:
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g., USDC, ETH"
+                    className="w-full border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-sm bg-white dark:bg-gray-700 dark:text-gray-200 dark:placeholder-gray-500"
+                    value={data.asset || ""}
+                    onChange={(e) => {
+                      updateNodeData({ asset: e.target.value });
+                    }}
+                  />
+                </div>
+              )
             )}
 
             {/* Amount Input */}
-            {data.action && (
+            {(data.action || data.protocol === "transfer") && (
               <div>
                 <label className="text-xs text-gray-600 dark:text-gray-400 block mb-1">
                   Amount:
@@ -384,21 +437,52 @@ function ProtocolNode({ data, selected, id }: NodeProps<ProtocolNodeData>) {
         )}
 
         {/* Compact View for non-wallet nodes */}
-        {data.protocol !== "wallet" && !isExpanded && data.action && (
-          <div className="text-sm text-gray-600 dark:text-gray-300">
-            <div>
-              <span className="font-medium">{data.action}</span>
-              {data.asset && <span> • {data.asset}</span>}
-            </div>
-            {data.amount && (
-              <div className="text-xs text-gray-500 dark:text-gray-400">{data.amount}</div>
+        {data.protocol !== "wallet" && !isExpanded && (
+          <>
+            {/* Transfer node states */}
+            {data.protocol === "transfer" ? (
+              // Check if transfer is configured
+              data.asset && data.amount && data.recipientAddress ? (
+                // Configured state - show transfer details in 2 lines
+                <div className="text-sm text-gray-600 dark:text-gray-300">
+                  <div>
+                    <span className="font-medium">Transfer</span>
+                    {data.amount && data.asset && (
+                      <span> • {data.amount} {data.asset}</span>
+                    )}
+                  </div>
+                  {data.recipientAddress && (
+                    <div className="text-sm text-gray-600 dark:text-gray-300 font-mono">
+                      to {
+                        // Show full ENS names, truncate only long addresses
+                        data.recipientAddress.endsWith('.eth') || data.recipientAddress.length <= 20
+                          ? data.recipientAddress
+                          : `${data.recipientAddress.slice(0, 8)}...${data.recipientAddress.slice(-6)}`
+                      }
+                    </div>
+                  )}
+                </div>
+              ) : (
+                // Initial state - not configured
+                <div className="text-sm text-gray-500 dark:text-gray-400">
+                  <div className="text-xs italic">Click header to configure</div>
+                </div>
+              )
+            ) : (
+              // Other protocol nodes
+              data.action && (
+                <div className="text-sm text-gray-600 dark:text-gray-300">
+                  <div>
+                    <span className="font-medium">{data.action}</span>
+                    {data.asset && <span> • {data.asset}</span>}
+                  </div>
+                  {data.amount && (
+                    <div className="text-xs text-gray-500 dark:text-gray-400">{data.amount}</div>
+                  )}
+                </div>
+              )
             )}
-            {data.protocol === "transfer" && data.recipientAddress && (
-              <div className="text-xs text-gray-500 dark:text-gray-400 font-mono">
-                to {data.recipientAddress.slice(0, 6)}...{data.recipientAddress.slice(-4)}
-              </div>
-            )}
-          </div>
+          </>
         )}
       </div>
 

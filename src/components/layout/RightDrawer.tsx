@@ -39,7 +39,6 @@ interface RightDrawerProps {
 
 interface SortableStepProps {
   node: Node<ProtocolNodeData>;
-  index: number;
   isExecuted: boolean;
   isConfigured: boolean;
 }
@@ -98,7 +97,35 @@ function SortableStep({ node, isExecuted, isConfigured }: SortableStepProps) {
 
       {/* Action Details */}
       <div className="space-y-1 text-xs text-gray-600 dark:text-gray-400 ml-11">
-        {node.data.action ? (
+        {/* For transfer nodes, check if all required fields are present */}
+        {node.data.protocol === "transfer" ? (
+          node.data.asset && node.data.amount && node.data.recipientAddress ? (
+            <>
+              <div className="flex justify-between">
+                <span className="font-medium">Action:</span>
+                <span className="capitalize">Transfer</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="font-medium">Asset:</span>
+                <span>{node.data.asset}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="font-medium">Amount:</span>
+                <span>{node.data.amount}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="font-medium">To:</span>
+                <span className="font-mono">
+                  {node.data.recipientAddress.slice(0, 6)}...{node.data.recipientAddress.slice(-4)}
+                </span>
+              </div>
+            </>
+          ) : (
+            <div className="text-orange-500 dark:text-orange-400">
+              ⚠ Action not configured
+            </div>
+          )
+        ) : node.data.action ? (
           <>
             <div className="flex justify-between">
               <span className="font-medium">Action:</span>
@@ -114,14 +141,6 @@ function SortableStep({ node, isExecuted, isConfigured }: SortableStepProps) {
               <div className="flex justify-between">
                 <span className="font-medium">Amount:</span>
                 <span>{node.data.amount}</span>
-              </div>
-            )}
-            {node.data.protocol === "transfer" && node.data.recipientAddress && (
-              <div className="flex justify-between">
-                <span className="font-medium">To:</span>
-                <span className="font-mono">
-                  {node.data.recipientAddress.slice(0, 6)}...{node.data.recipientAddress.slice(-4)}
-                </span>
               </div>
             )}
           </>
@@ -153,11 +172,11 @@ export function RightDrawer({ isOpen, onClose, nodes, edges, onReorderNodes }: R
 
   // Check if all actions are configured
   const allActionsConfigured = sortedNodes.every((node) => {
-    // For transfer nodes, also check recipient address
+    // For transfer nodes, check asset, amount, and recipient address (action is implicit)
     if (node.data.protocol === "transfer") {
-      return node.data.action && node.data.amount && node.data.asset && node.data.recipientAddress;
+      return !!(node.data.amount && node.data.asset && node.data.recipientAddress);
     }
-    return node.data.action && node.data.amount;
+    return !!(node.data.action && node.data.amount);
   });
 
   // Drag and drop sensors
@@ -192,12 +211,12 @@ export function RightDrawer({ isOpen, onClose, nodes, edges, onReorderNodes }: R
     setExecutionError(null);
 
     try {
-      const currentChainId = chainId || 1;
+      const effectiveChainId = chainId || 1;
 
-      console.log("Starting execution:", {
+      console.log("🚀 Starting execution:", {
         nodeCount: sortedNodes.length,
         supportsBatch,
-        chainId: currentChainId,
+        chainId: effectiveChainId,
       });
 
       // Check if all nodes are transfers and we support batching
@@ -207,7 +226,7 @@ export function RightDrawer({ isOpen, onClose, nodes, edges, onReorderNodes }: R
         console.log("Using batched EIP-7702 execution");
 
         // Prepare batched calls (async to handle ENS resolution)
-        const calls = await prepareTransferCalls(sortedNodes);
+        const calls = await prepareTransferCalls(sortedNodes, effectiveChainId);
 
         if (calls.length === 0) {
           throw new Error("No valid transfers to execute");
@@ -216,7 +235,7 @@ export function RightDrawer({ isOpen, onClose, nodes, edges, onReorderNodes }: R
         console.log(`Prepared ${calls.length} batched calls`);
 
         // Execute batched transaction
-        const result = await executeBatchedTransaction(calls, activeAccount.address, currentChainId);
+        const result = await executeBatchedTransaction(calls, activeAccount.address, effectiveChainId);
 
         console.log("Batch submitted:", result.id);
 
@@ -229,8 +248,11 @@ export function RightDrawer({ isOpen, onClose, nodes, edges, onReorderNodes }: R
         sortedNodes.forEach((node) => {
           setExecutedSteps((prev) => new Set(prev).add(node.id));
         });
+
+        // Clear any previous errors on success
+        setExecutionError(null);
       } else {
-        console.log("⚠️ Falling back to sequential execution");
+        console.log("Falling back to sequential execution");
 
         // Fallback to sequential execution
         for (const node of sortedNodes) {
@@ -238,13 +260,22 @@ export function RightDrawer({ isOpen, onClose, nodes, edges, onReorderNodes }: R
           setExecutedSteps((prev) => new Set(prev).add(node.id));
           console.log(`Executed node: ${node.data.label}`);
         }
+
+        setExecutionError(null);
       }
 
       console.log("Execution completed successfully");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Execution failed:", error);
-      setExecutionError(error instanceof Error ? error.message : "Execution failed");
+
+      // Check for user rejection (code 4001 is standard rejection code)
+      if (error?.code === 4001 || error?.message?.toLowerCase().includes("user rejected")) {
+        setExecutionError("Transaction rejected by user");
+      } else {
+        setExecutionError(error instanceof Error ? error.message : "Execution failed");
+      }
     } finally {
+      // Always reset executing state
       setIsExecuting(false);
     }
   };
@@ -292,19 +323,19 @@ export function RightDrawer({ isOpen, onClose, nodes, edges, onReorderNodes }: R
                   strategy={verticalListSortingStrategy}
                 >
                   <div className="flex-1 overflow-y-auto space-y-3 mb-4">
-                    {sortedNodes.map((node, index) => {
+                    {sortedNodes.map((node) => {
                       const isExecuted = executedSteps.has(node.id);
 
                       // Check configuration based on node type
+                      // For transfer nodes, action is implicit, so we don't check for it
                       const isConfigured = node.data.protocol === "transfer"
-                        ? !!(node.data.action && node.data.amount && node.data.asset && node.data.recipientAddress)
+                        ? !!(node.data.amount && node.data.asset && node.data.recipientAddress)
                         : !!(node.data.action && node.data.amount);
 
                       return (
                         <SortableStep
                           key={node.id}
                           node={node}
-                          index={index}
                           isExecuted={isExecuted}
                           isConfigured={isConfigured}
                         />

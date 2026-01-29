@@ -1,9 +1,50 @@
 import type { Node } from "@xyflow/react";
 import type { ProtocolNodeData } from "@/types";
 import type { WalletGetCallsStatusResult, WalletSendCallsResult } from "@/types/global";
-import { parseEther, isAddress, toHex, createPublicClient, http } from "viem";
+import { parseEther, parseUnits, encodeFunctionData, isAddress, toHex, createPublicClient, http } from "viem";
 import { normalize } from "viem/ens";
 import { mainnet } from "viem/chains";
+
+// Token addresses for different chains
+const TOKEN_ADDRESSES = {
+    // Ethereum Mainnet
+    1: {
+        USDC: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        USDT: "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+        DAI: "0x6B175474E89094C44Da98b954EedeAC495271d0F",
+        USDS: "0xdC035D45d973E3EC169d2276DDab16f1e407384F",
+    },
+    // Arbitrum One
+    42161: {
+        USDC: "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
+        USDT: "0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9",
+        DAI: "0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1",
+        USDS: "0xa3931d71877C0E7a3148CB7Eb4463524FEc27fbD",
+    },
+};
+
+// Token decimals mapping
+const TOKEN_DECIMALS: Record<string, number> = {
+    ETH: 18,
+    USDC: 6,
+    USDT: 6,
+    DAI: 18,
+    USDS: 18, // Assuming 18 decimals for USDS, adjust if needed
+};
+
+// ERC20 Transfer function ABI
+const ERC20_TRANSFER_ABI = [
+    {
+        type: "function",
+        name: "transfer",
+        inputs: [
+            { name: "to", type: "address" },
+            { name: "amount", type: "uint256" },
+        ],
+        outputs: [{ type: "bool" }],
+        stateMutability: "nonpayable",
+    },
+] as const;
 
 export interface BatchedTransactionCall {
   to: string;
@@ -17,7 +58,7 @@ export interface BatchedTransactionCall {
  * @param chainId - Chain ID for resolution
  * @returns Promise with resolved address
  */
-const resolveAddress = async (addressOrENS: string): Promise<string> => {
+const resolveAddress = async (addressOrENS: string, chainId: number): Promise<string> => {
   // Trim whitespace
   const trimmed = addressOrENS.trim();
 
@@ -68,6 +109,7 @@ const resolveAddress = async (addressOrENS: string): Promise<string> => {
  */
 export const prepareTransferCalls = async (
   nodes: Node<ProtocolNodeData>[],
+  chainId: number
 ): Promise<BatchedTransactionCall[]> => {
   const calls: BatchedTransactionCall[] = [];
 
@@ -87,7 +129,7 @@ export const prepareTransferCalls = async (
 
     try {
       // Resolve ENS name to address
-      const resolvedAddress = await resolveAddress(recipientAddress);
+      const resolvedAddress = await resolveAddress(recipientAddress, chainId);
 
       // Handle ETH transfers
       if (asset.toUpperCase() === "ETH") {
@@ -100,11 +142,39 @@ export const prepareTransferCalls = async (
         console.log(`Prepared ETH transfer: ${amount} ETH to ${resolvedAddress} (${recipientAddress})`);
       } else {
         // Handle ERC20 transfers
-        // We'll need the token contract address - for now, we'll add a placeholder
-        // In a real implementation, you'd have a token address mapping
-        console.log(`ERC20 transfer to ${resolvedAddress} of ${amount} ${asset}`);
-        // TODO: Add ERC20 transfer encoding
-        throw new Error("ERC20 transfers not yet implemented");
+        const assetUpper = asset.toUpperCase();
+        const chainTokens = TOKEN_ADDRESSES[chainId as keyof typeof TOKEN_ADDRESSES];
+
+        if (!chainTokens) {
+          throw new Error(`Unsupported chain ID: ${chainId}`);
+        }
+
+        const tokenAddress = chainTokens[assetUpper as keyof typeof chainTokens];
+
+        if (!tokenAddress) {
+          throw new Error(`Token ${asset} not supported on chain ${chainId}`);
+        }
+
+        // Get token decimals (default to 18 if not found)
+        const decimals = TOKEN_DECIMALS[assetUpper] || 18;
+
+        // Parse amount with correct decimals
+        const amountInWei = parseUnits(amount, decimals);
+
+        // Encode the ERC20 transfer function call
+        const transferData = encodeFunctionData({
+          abi: ERC20_TRANSFER_ABI,
+          functionName: "transfer",
+          args: [resolvedAddress as `0x${string}`, amountInWei],
+        });
+
+        calls.push({
+          to: tokenAddress,
+          data: transferData,
+          value: toHex(0n), // ERC20 transfers don't send ETH
+        });
+
+        console.log(`Prepared ERC20 transfer: ${amount} ${asset} to ${resolvedAddress} (${recipientAddress})`);
       }
     } catch (error) {
       console.error(`Error preparing transfer for node ${node.id}:`, error);

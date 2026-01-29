@@ -10,8 +10,8 @@ import {
   type Connection,
   type Edge,
   type Node,
+  type NodeTypes,
   ReactFlowProvider,
-  useReactFlow,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 
@@ -62,8 +62,8 @@ function calculateExecutionOrder(nodes: Node[], edges: Edge[]): Map<string, numb
       if (!nodeA || !nodeB) return 0;
 
       // Use existing sequence numbers if available
-      const seqA = nodeA.data.sequenceNumber || 999999;
-      const seqB = nodeB.data.sequenceNumber || 999999;
+      const seqA = typeof nodeA.data.sequenceNumber === "number" ? nodeA.data.sequenceNumber : 999999;
+      const seqB = typeof nodeB.data.sequenceNumber === "number" ? nodeB.data.sequenceNumber : 999999;
       return seqA - seqB;
     });
 
@@ -79,8 +79,8 @@ function calculateExecutionOrder(nodes: Node[], edges: Edge[]): Map<string, numb
       const nodeB = nodes.find((n) => n.id === b);
       if (!nodeA || !nodeB) return 0;
 
-      const seqA = nodeA.data.sequenceNumber || 999999;
-      const seqB = nodeB.data.sequenceNumber || 999999;
+      const seqA = typeof nodeA.data.sequenceNumber === "number" ? nodeA.data.sequenceNumber : 999999;
+      const seqB = typeof nodeB.data.sequenceNumber === "number" ? nodeB.data.sequenceNumber : 999999;
       return seqA - seqB;
     });
 
@@ -373,7 +373,7 @@ function FlowCanvas() {
   const handleUndo = () => {
     if (historyIndex > 0) {
       const prevState = history[historyIndex - 1];
-      setNodes(prevState.nodes);
+      setNodes(prevState.nodes as Node<ProtocolNodeData>[]);
       setEdges(prevState.edges);
       setHistoryIndex((prev) => prev - 1);
     }
@@ -382,7 +382,7 @@ function FlowCanvas() {
   const handleRedo = () => {
     if (historyIndex < history.length - 1) {
       const nextState = history[historyIndex + 1];
-      setNodes(nextState.nodes);
+      setNodes(nextState.nodes as Node<ProtocolNodeData>[]);
       setEdges(nextState.edges);
       setHistoryIndex((prev) => prev + 1);
     }
@@ -532,12 +532,11 @@ function FlowCanvas() {
             onInit={setReactFlowInstance}
             onDrop={onDrop}
             onDragOver={onDragOver}
-            nodeTypes={nodeTypes}
+            nodeTypes={nodeTypes as NodeTypes}
             fitView
             defaultEdgeOptions={{
               style: { strokeWidth: 2 },
             }}
-            edgesUpdatable
             edgesFocusable
             elementsSelectable
           >

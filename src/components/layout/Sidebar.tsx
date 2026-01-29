@@ -112,7 +112,7 @@ export function Sidebar({ isOpen }: SidebarProps) {
                       className={cn(
                         "p-3 rounded-lg border-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 cursor-move",
                         "hover:shadow-md transition-shadow",
-                        template.color.replace("bg-", "hover:border-")
+                        template.color?.replace("bg-", "hover:border-") ?? "hover:border-gray-400"
                       )}
                       draggable
                       onDragStart={(e) =>
