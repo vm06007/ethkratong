@@ -223,7 +223,7 @@ export function ProtocolNodeUniswapBody({
                         return null;
                     })()}
             </div>
-            {(data.swapFrom === "ETH" && data.swapTo && data.amount?.trim()) && (
+            {data.swapFrom && data.swapTo && data.amount?.trim() && (
                 <div className="pt-2 border-t border-gray-200 dark:border-gray-600">
                     {quote.loading ? (
                         <div className="text-sm text-gray-500 dark:text-gray-400">

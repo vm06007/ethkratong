@@ -199,6 +199,70 @@ export async function getUniswapSwapQuote(
 }
 
 /**
+ * Simulate Uniswap V2 token → token swap (e.g. DAI → USDC) via getAmountsOut.
+ * Path is [inputToken, WETH, outputToken]. Use for Est. out display.
+ */
+export async function getUniswapSwapQuoteTokenToToken(
+  chainId: number,
+  inputTokenSymbol: string,
+  outputTokenSymbol: string,
+  amountHumanStr: string
+): Promise<{ amountOutFormatted: string; amountOutRaw: bigint } | null> {
+  const chain = CHAINS[chainId as keyof typeof CHAINS];
+  if (!chain) return null;
+  const router = UNISWAP_V2_ROUTER[chainId as keyof typeof UNISWAP_V2_ROUTER];
+  const weth = WETH_ADDRESS[chainId as keyof typeof WETH_ADDRESS];
+  const chainTokens = TOKEN_ADDRESSES[chainId as keyof typeof TOKEN_ADDRESSES];
+  if (!router || !weth || !chainTokens) return null;
+  if (inputTokenSymbol === "ETH" || outputTokenSymbol === "ETH") return null;
+  if (inputTokenSymbol === outputTokenSymbol) return null;
+  const inputTokenAddress = chainTokens[inputTokenSymbol as keyof typeof chainTokens];
+  const outputTokenAddress = chainTokens[outputTokenSymbol as keyof typeof chainTokens];
+  if (!inputTokenAddress || !outputTokenAddress) return null;
+
+  const amountStr = amountHumanStr.trim();
+  if (!amountStr) return null;
+  const inputDecimals = TOKEN_DECIMALS[inputTokenSymbol] ?? 18;
+  let amountIn: bigint;
+  try {
+    amountIn = parseUnits(amountStr, inputDecimals);
+  } catch {
+    return null;
+  }
+  if (amountIn <= 0n) return null;
+
+  try {
+    const publicClient = createPublicClient({ chain, transport: http() });
+    const path = [
+      inputTokenAddress as `0x${string}`,
+      weth as `0x${string}`,
+      outputTokenAddress as `0x${string}`,
+    ];
+    const amounts = await publicClient.readContract({
+      address: router as `0x${string}`,
+      abi: UNISWAP_ROUTER_QUOTE_ABI,
+      functionName: "getAmountsOut",
+      args: [amountIn, path],
+    });
+    if (!amounts || amounts.length < 3) return null;
+    const amountOutRaw = amounts[2];
+    const outputDecimals = TOKEN_DECIMALS[outputTokenSymbol] ?? 18;
+    const divisor = 10 ** outputDecimals;
+    const amountOutNum = Number(amountOutRaw) / divisor;
+    const amountOutFormatted =
+      amountOutNum === 0
+        ? "0"
+        : amountOutNum < 0.01
+          ? amountOutNum.toFixed(6)
+          : amountOutNum.toFixed(outputDecimals <= 6 ? 2 : 4);
+    return { amountOutFormatted, amountOutRaw };
+  } catch (err) {
+    console.warn("Uniswap token→token quote failed:", err);
+    return null;
+  }
+}
+
+/**
  * Prepare a single batched call for a Uniswap swap node (ETH → token via V2 router).
  * Uses quote for amountOutMin (with slippage) and optional swap deadline.
  */

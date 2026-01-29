@@ -1,6 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { parseEther } from "viem";
-import { getUniswapSwapQuote } from "@/services/batchedExecution";
+import {
+    getUniswapSwapQuote,
+    getUniswapSwapQuoteTokenToToken,
+} from "@/services/batchedExecution";
 
 export interface UniswapQuoteResult {
     amountOutFormatted: string | null;
@@ -11,7 +14,7 @@ export interface UniswapQuoteResult {
 
 /**
  * Simulate Uniswap swap and return estimated amount out.
- * Only supports ETH → token for now.
+ * Supports ETH → token and token → token (e.g. DAI → USDC).
  */
 export function useUniswapQuote(
     chainId: number | undefined,
@@ -25,29 +28,8 @@ export function useUniswapQuote(
     const [error, setError] = useState<string | null>(null);
 
     const fetchQuote = useCallback(async () => {
-        if (!chainId || swapFrom !== "ETH" || !swapTo || swapTo === "ETH") {
-            setAmountOutFormatted(null);
-            setAmountOutRaw(null);
-            setError(null);
-            return;
-        }
         const amountStr = (amount ?? "").trim();
-        if (!amountStr) {
-            setAmountOutFormatted(null);
-            setAmountOutRaw(null);
-            setError(null);
-            return;
-        }
-        let amountWei: bigint;
-        try {
-            amountWei = parseEther(amountStr);
-        } catch {
-            setAmountOutFormatted(null);
-            setAmountOutRaw(null);
-            setError("Invalid amount");
-            return;
-        }
-        if (amountWei <= 0n) {
+        if (!chainId || !swapFrom || !swapTo || swapFrom === swapTo || !amountStr) {
             setAmountOutFormatted(null);
             setAmountOutRaw(null);
             setError(null);
@@ -57,14 +39,48 @@ export function useUniswapQuote(
         setLoading(true);
         setError(null);
         try {
-            const result = await getUniswapSwapQuote(chainId, amountWei, swapTo);
-            if (result) {
-                setAmountOutFormatted(result.amountOutFormatted);
-                setAmountOutRaw(result.amountOutRaw);
+            if (swapFrom === "ETH") {
+                let amountWei: bigint;
+                try {
+                    amountWei = parseEther(amountStr);
+                } catch {
+                    setAmountOutFormatted(null);
+                    setAmountOutRaw(null);
+                    setError("Invalid amount");
+                    setLoading(false);
+                    return;
+                }
+                if (amountWei <= 0n) {
+                    setAmountOutFormatted(null);
+                    setAmountOutRaw(null);
+                    setError(null);
+                    setLoading(false);
+                    return;
+                }
+                const result = await getUniswapSwapQuote(chainId, amountWei, swapTo);
+                if (result) {
+                    setAmountOutFormatted(result.amountOutFormatted);
+                    setAmountOutRaw(result.amountOutRaw);
+                } else {
+                    setAmountOutFormatted(null);
+                    setAmountOutRaw(null);
+                    setError("Quote unavailable");
+                }
             } else {
-                setAmountOutFormatted(null);
-                setAmountOutRaw(null);
-                setError("Quote unavailable");
+                const result = await getUniswapSwapQuoteTokenToToken(
+                    chainId,
+                    swapFrom,
+                    swapTo,
+                    amountStr
+                );
+                if (result) {
+                    setAmountOutFormatted(result.amountOutFormatted);
+                    setAmountOutRaw(result.amountOutRaw);
+                } else {
+                    setAmountOutFormatted(null);
+                    setAmountOutRaw(null);
+                    setError("Quote unavailable");
+                }
             }
         } catch (err) {
             setAmountOutFormatted(null);

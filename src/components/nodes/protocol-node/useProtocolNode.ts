@@ -14,7 +14,11 @@ import { TOKEN_ADDRESSES } from "./constants";
 import { getEffectiveBalances } from "./effectiveBalances";
 import type { TokenBalance } from "./types";
 
-/** Dependency string so effective balances recalc when any prior step's data changes. */
+/**
+ * Dependency string so effective balances recalc when any prior step's data changes.
+ * E.g. when Uniswap input amount changes → quote/estimatedAmountOut updates → this changes
+ * → transfer node's max balance (and 25%/50%/75%/Max) updates so "next card" reflects the new output.
+ */
 function useEffectiveBalanceDeps() {
     return useStore((s) =>
         s.nodes

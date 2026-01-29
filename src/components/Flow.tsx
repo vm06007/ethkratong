@@ -246,40 +246,60 @@ function FlowCanvas() {
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [setNodes, setEdges]);
 
-  // When connecting from Uniswap (swap) to Transfer, pre-fill Transfer with output currency and estimated amount
+  // When connecting from Uniswap (swap) to Transfer, pre-fill with output; if multiple swaps connect, combine their estimated outputs
   const onConnect = useCallback(
     (params: Connection) => {
       setEdges((eds) => addEdge(params, eds));
       setNodes((nds) => {
-        const source = nds.find((n) => n.id === params.source);
         const target = nds.find((n) => n.id === params.target);
-        if (!source || !target) return nds;
-        const s = source.data as ProtocolNodeData;
-        const t = target.data as ProtocolNodeData;
-        if (
-          s.protocol === "uniswap" &&
-          s.action === "swap" &&
-          s.estimatedAmountOutSymbol &&
-          s.estimatedAmountOut != null &&
-          t.protocol === "transfer"
-        ) {
-          return nds.map((n) =>
-            n.id === params.target
-              ? {
-                  ...n,
-                  data: {
-                    ...n.data,
-                    asset: s.estimatedAmountOutSymbol,
-                    amount: s.estimatedAmountOut,
-                  },
-                }
-              : n
-          );
+        if (!target || (target.data as ProtocolNodeData).protocol !== "transfer")
+          return nds;
+        // All sources that will connect to target after this connect (current incoming + new edge)
+        const incomingSourceIds = new Set(
+          edges.filter((e) => e.target === params.target).map((e) => e.source)
+        );
+        incomingSourceIds.add(params.source);
+        const sumsBySymbol: Record<string, number> = {};
+        for (const sourceId of incomingSourceIds) {
+          const src = nds.find((n) => n.id === sourceId);
+          const d = src?.data as ProtocolNodeData | undefined;
+          if (
+            d?.protocol === "uniswap" &&
+            d?.action === "swap" &&
+            d?.estimatedAmountOutSymbol &&
+            d?.estimatedAmountOut != null
+          ) {
+            const sym = d.estimatedAmountOutSymbol;
+            const amt = parseFloat(d.estimatedAmountOut);
+            if (!Number.isNaN(amt)) {
+              sumsBySymbol[sym] = (sumsBySymbol[sym] ?? 0) + amt;
+            }
+          }
         }
-        return nds;
+        const symbols = Object.keys(sumsBySymbol);
+        if (symbols.length === 0) return nds;
+        // Use the symbol with the largest sum (or first if single)
+        const asset = symbols.reduce((a, b) =>
+          (sumsBySymbol[a] ?? 0) >= (sumsBySymbol[b] ?? 0) ? a : b
+        );
+        const total = sumsBySymbol[asset] ?? 0;
+        const amountStr =
+          total <= 0 ? "0" : total < 0.0001 ? total.toExponential(2) : total.toFixed(6);
+        return nds.map((n) =>
+          n.id === params.target
+            ? {
+                ...n,
+                data: {
+                  ...n.data,
+                  asset,
+                  amount: amountStr,
+                },
+              }
+            : n
+        );
       });
     },
-    [setEdges, setNodes]
+    [setEdges, setNodes, edges]
   );
 
   // Handle edge selection to add animation
