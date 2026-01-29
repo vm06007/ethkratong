@@ -3,62 +3,34 @@ import type { ProtocolNodeData } from "@/types";
 import type { TokenBalance } from "./types";
 
 /**
- * Get all node IDs that are predecessors of targetId (have a path to targetId).
+ * Get all action nodes that execute before targetId by sequence order.
+ * Used for effective balance: max balance for step N = wallet + effects of steps 1..N-1.
+ * Connection/linking does not change this — only sequence number does.
  */
-function getPredecessorIds(edges: Edge[], targetId: string): Set<string> {
-    const result = new Set<string>();
-    const queue: string[] = [targetId];
-    const visited = new Set<string>([targetId]);
-    const reverseEdges = new Map<string, string[]>();
-    edges.forEach((e) => {
-        const list = reverseEdges.get(e.target) ?? [];
-        list.push(e.source);
-        reverseEdges.set(e.target, list);
-    });
-    while (queue.length > 0) {
-        const id = queue.shift()!;
-        const sources = reverseEdges.get(id) ?? [];
-        for (const src of sources) {
-            if (visited.has(src)) continue;
-            visited.add(src);
-            result.add(src);
-            queue.push(src);
-        }
-    }
-    return result;
-}
-
-/**
- * Get predecessor node IDs in execution order (wallet first, then by sequence number).
- */
-function getPredecessorsInOrder(
+function getPredecessorsBySequence(
     nodes: Node<ProtocolNodeData>[],
-    edges: Edge[],
     targetId: string
 ): Node<ProtocolNodeData>[] {
-    const wallet = nodes.find((n) => n.data.protocol === "wallet");
-    if (!wallet) return [];
-    const predIds = getPredecessorIds(edges, targetId);
-    const preds = nodes.filter((n) => predIds.has(n.id));
-    return preds.sort((a, b) => {
-        const seqA = a.data.sequenceNumber ?? 999999;
-        const seqB = b.data.sequenceNumber ?? 999999;
-        if (seqA !== seqB) return seqA - seqB;
-        return 0;
-    });
+    const target = nodes.find((n) => n.id === targetId);
+    if (!target) return [];
+    const targetSeq = typeof target.data.sequenceNumber === "number" ? target.data.sequenceNumber : 999999;
+    return nodes
+        .filter((n) => n.data.protocol !== "wallet" && typeof n.data.sequenceNumber === "number" && n.data.sequenceNumber < targetSeq)
+        .sort((a, b) => (a.data.sequenceNumber ?? 0) - (b.data.sequenceNumber ?? 0));
 }
 
 /**
- * Compute effective token balances at a node after applying all predecessor steps.
- * E.g. after Uniswap swap ETH→USDC: less ETH, more USDC.
+ * Compute effective token balances at a node after applying all prior steps in sequence.
+ * E.g. for action #2: balance = wallet + effect of step #1 (e.g. swap adds USDC).
+ * Linking only affects initial input value; max/25%/50%/75% use this sequence-based balance.
  */
 export function getEffectiveBalances(
     nodes: Node<ProtocolNodeData>[],
-    edges: Edge[],
+    _edges: Edge[],
     nodeId: string,
     baseBalances: TokenBalance[]
 ): TokenBalance[] {
-    const preds = getPredecessorsInOrder(nodes, edges, nodeId);
+    const preds = getPredecessorsBySequence(nodes, nodeId);
     const balances: Record<string, number> = {};
     baseBalances.forEach((t) => {
         const n = parseFloat(t.balance);

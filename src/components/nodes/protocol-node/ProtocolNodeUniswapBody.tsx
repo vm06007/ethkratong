@@ -141,9 +141,13 @@ export function ProtocolNodeUniswapBody({
                 <select
                     className="w-full border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-sm bg-white dark:bg-gray-700 dark:text-gray-200"
                     value={data.swapFrom ?? ""}
-                    onChange={(e) =>
-                        onUpdateData({ swapFrom: e.target.value || undefined })
-                    }
+                    onChange={(e) => {
+                        const newFrom = e.target.value || undefined;
+                        onUpdateData({
+                            swapFrom: newFrom,
+                            ...(newFrom && data.swapTo === newFrom ? { swapTo: undefined } : {}),
+                        });
+                    }}
                 >
                     <option value="">Select token</option>
                     {tokenOptions.map((symbol) => {
@@ -168,14 +172,16 @@ export function ProtocolNodeUniswapBody({
                     }
                 >
                     <option value="">Select token</option>
-                    {tokenOptions.map((symbol) => {
-                        const bal = getBalanceForSymbol(balances, symbol);
-                        return (
-                            <option key={symbol} value={symbol}>
-                                {bal != null ? `${symbol} (${bal})` : symbol}
-                            </option>
-                        );
-                    })}
+                    {tokenOptions
+                        .filter((symbol) => symbol !== data.swapFrom)
+                        .map((symbol) => {
+                            const bal = getBalanceForSymbol(balances, symbol);
+                            return (
+                                <option key={symbol} value={symbol}>
+                                    {bal != null ? `${symbol} (${bal})` : symbol}
+                                </option>
+                            );
+                        })}
                 </select>
             </div>
             <div>

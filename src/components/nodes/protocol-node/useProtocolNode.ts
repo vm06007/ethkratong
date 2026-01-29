@@ -14,9 +14,22 @@ import { TOKEN_ADDRESSES } from "./constants";
 import { getEffectiveBalances } from "./effectiveBalances";
 import type { TokenBalance } from "./types";
 
+/** Dependency string so effective balances recalc when any prior step's data changes. */
+function useEffectiveBalanceDeps() {
+    return useStore((s) =>
+        s.nodes
+            .map(
+                (n) =>
+                    `${n.id}:${(n.data as ProtocolNodeData).sequenceNumber}:${(n.data as ProtocolNodeData).amount}:${(n.data as ProtocolNodeData).estimatedAmountOut}`
+            )
+            .join("|")
+    );
+}
+
 export function useProtocolNode(id: string, data: ProtocolNodeData) {
     const { setNodes, getNodes, getEdges } = useReactFlow();
     const edgesFromStore = useStore((s) => s.edges);
+    const effectiveBalanceDeps = useEffectiveBalanceDeps();
     const chainId = useChainId();
     const activeAccount = useActiveAccount();
 
@@ -208,6 +221,7 @@ export function useProtocolNode(id: string, data: ProtocolNodeData) {
         data.asset,
         data.amount,
         edgesFromStore.length,
+        effectiveBalanceDeps,
     ]);
 
     const updateNodeData = useCallback(
