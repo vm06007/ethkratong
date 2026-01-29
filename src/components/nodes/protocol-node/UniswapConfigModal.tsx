@@ -6,7 +6,14 @@ import type { ProtocolNodeData } from "@/types";
 import { ProtocolNodeUniswapBody } from "./ProtocolNodeUniswapBody";
 import { useUniswapQuote } from "./useUniswapQuote";
 import { useWalletBalancesForModal } from "./useWalletBalancesForModal";
+import { useUniswapPositions } from "./useUniswapPositions";
 import { allProtocols } from "@/data/protocols";
+
+const UNISWAP_VERSIONS = [
+    { value: "v2" as const, label: "V2" },
+    { value: "v3" as const, label: "V3" },
+    { value: "v4" as const, label: "V4" },
+];
 
 const SWAP_DEADLINE_OPTIONS = [
     { value: 5, label: "5 minutes" },
@@ -33,6 +40,7 @@ export function UniswapConfigModal({
     const [showDetails, setShowDetails] = useState(true);
     const template = allProtocols.find((t) => t.protocol === "uniswap");
     const { balances } = useWalletBalancesForModal(open);
+    const { hasPositions } = useUniswapPositions(chainId ?? undefined);
 
     const quote = useUniswapQuote(
         chainId,
@@ -108,14 +116,91 @@ export function UniswapConfigModal({
                                     }
                                 >
                                     <option value="">Select action</option>
-                                    {template?.availableActions.map((action) => (
-                                        <option key={action} value={action}>
-                                            {action === "addLiquidity"
+                                    {template?.availableActions.map((action) => {
+                                        const label =
+                                            action === "addLiquidity"
                                                 ? "Add liquidity"
-                                                : action.charAt(0).toUpperCase() + action.slice(1)}
-                                        </option>
-                                    ))}
+                                                : action === "removeLiquidity"
+                                                    ? "Remove liquidity"
+                                                    : action.charAt(0).toUpperCase() + action.slice(1);
+                                        const disabled =
+                                            action === "removeLiquidity" && !hasPositions;
+                                        return (
+                                            <option
+                                                key={action}
+                                                value={action}
+                                                disabled={disabled}
+                                            >
+                                                {label}
+                                                {disabled ? " (no positions)" : ""}
+                                            </option>
+                                        );
+                                    })}
                                 </select>
+                            </div>
+
+                            {/* Uniswap version — auto (best route) or manual v2/v3/v4 */}
+                            <div className="space-y-2">
+                                <label className="text-xs font-medium text-gray-400 block">
+                                    Uniswap version
+                                </label>
+                                <div className="flex items-center gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            onUpdateData({
+                                                uniswapVersionAuto: true,
+                                            })
+                                        }
+                                        className={cn(
+                                            "rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                                            data.uniswapVersionAuto !== false
+                                                ? "bg-violet-600 text-white"
+                                                : "bg-gray-700 text-gray-400 hover:bg-gray-600"
+                                        )}
+                                    >
+                                        Auto (best route)
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            onUpdateData({
+                                                uniswapVersionAuto: false,
+                                                uniswapVersion: data.uniswapVersion ?? "v2",
+                                            })
+                                        }
+                                        className={cn(
+                                            "rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                                            data.uniswapVersionAuto === false
+                                                ? "bg-violet-600 text-white"
+                                                : "bg-gray-700 text-gray-400 hover:bg-gray-600"
+                                        )}
+                                    >
+                                        Manual
+                                    </button>
+                                </div>
+                                {data.uniswapVersionAuto !== false ? (
+                                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                                        Version chosen automatically based on best quote (V2 used for execution until multi-version).
+                                    </p>
+                                ) : (
+                                    <select
+                                        value={data.uniswapVersion ?? "v2"}
+                                        onChange={(e) =>
+                                            onUpdateData({
+                                                uniswapVersion: e.target
+                                                    .value as "v2" | "v3" | "v4",
+                                            })
+                                        }
+                                        className="w-full border border-gray-600 rounded-lg px-3 py-2 text-sm bg-gray-800 text-white mt-1"
+                                    >
+                                        {UNISWAP_VERSIONS.map((v) => (
+                                            <option key={v.value} value={v.value}>
+                                                {v.label}
+                                            </option>
+                                        ))}
+                                    </select>
+                                )}
                             </div>
 
                             {isSwap ? (

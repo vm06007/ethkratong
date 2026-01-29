@@ -257,6 +257,29 @@ function SortableStep({ node, isExecuted, isConfigured }: SortableStepProps) {
               ⚠ Set address and condition
             </div>
           )
+        ) : node.data.protocol === "morpho" ? (
+          node.data.action && node.data.asset ? (
+            <>
+              <div className="flex justify-between">
+                <span className="font-medium">Action:</span>
+                <span className="capitalize">{node.data.action}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="font-medium">Asset:</span>
+                <span>{node.data.asset}</span>
+              </div>
+              {node.data.amount && (
+                <div className="flex justify-between">
+                  <span className="font-medium">Amount:</span>
+                  <span>{node.data.amount}</span>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="text-orange-500 dark:text-orange-400">
+              ⚠ Set action and asset
+            </div>
+          )
         ) : node.data.protocol === "uniswap" ? (
           node.data.action === "swap" &&
           (node.data.swapFrom || node.data.swapTo) ? (
@@ -301,6 +324,36 @@ function SortableStep({ node, isExecuted, isConfigured }: SortableStepProps) {
                   {node.data.liquidityTokenA ?? "…"} /{" "}
                   {node.data.liquidityTokenB ?? "…"}
                 </span>
+              </div>
+              {(node.data.uniswapVersionAuto === false
+                ? (node.data.uniswapVersion ?? "v2") !== "v2"
+                : false) && (
+                <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Version: {node.data.uniswapVersion ?? "v2"} (execution: V2 only)
+                </div>
+              )}
+              {node.data.uniswapVersionAuto !== false && (
+                <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Version: Auto (best route)
+                </div>
+              )}
+            </>
+          ) : node.data.action === "removeLiquidity" &&
+            (node.data.liquidityTokenA || node.data.liquidityTokenB) ? (
+            <>
+              <div className="flex justify-between">
+                <span className="font-medium">Action:</span>
+                <span>Remove liquidity</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="font-medium">Pair:</span>
+                <span>
+                  {node.data.liquidityTokenA ?? "…"} /{" "}
+                  {node.data.liquidityTokenB ?? "…"}
+                </span>
+              </div>
+              <div className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                Use View In Frame to remove via Uniswap app
               </div>
             </>
           ) : (
@@ -401,7 +454,13 @@ export function RightDrawer({ isOpen, onClose, nodes, edges, onReorderNodes }: R
       if (node.data.action === "addLiquidity") {
         return !!(node.data.liquidityTokenA && node.data.liquidityTokenB);
       }
+      if (node.data.action === "removeLiquidity") {
+        return !!(node.data.liquidityTokenA && node.data.liquidityTokenB);
+      }
       return false;
+    }
+    if (node.data.protocol === "morpho") {
+      return !!(node.data.action && node.data.asset && (node.data.amount ?? "").trim() !== "");
     }
     return !!(node.data.action && node.data.amount);
   });
@@ -482,7 +541,8 @@ export function RightDrawer({ isOpen, onClose, nodes, edges, onReorderNodes }: R
         if (
           node.data.protocol === "transfer" ||
           node.data.protocol === "custom" ||
-          node.data.protocol === "uniswap"
+          node.data.protocol === "uniswap" ||
+          node.data.protocol === "morpho"
         ) {
           const condPreds = getDirectPredecessors(node.id, edges);
           const conditionPreds = [...condPreds].filter((predId) => {
@@ -506,7 +566,8 @@ export function RightDrawer({ isOpen, onClose, nodes, edges, onReorderNodes }: R
         (n) =>
           (n.data.protocol === "transfer" ||
             n.data.protocol === "custom" ||
-            n.data.protocol === "uniswap") &&
+            n.data.protocol === "uniswap" ||
+            n.data.protocol === "morpho") &&
           !actionSkipSet.has(n.id)
       );
 
@@ -625,6 +686,12 @@ export function RightDrawer({ isOpen, onClose, nodes, edges, onReorderNodes }: R
                         const inputs = fn?.inputs || [];
                         const args = node.data.functionArgs || {};
                         isConfigured = hasBase && hasCond && inputs.every((inp) => (args[inp.name] ?? "").trim() !== "");
+                      } else if (node.data.protocol === "morpho") {
+                        isConfigured = !!(
+                          node.data.action &&
+                          node.data.asset &&
+                          (node.data.amount ?? "").trim() !== ""
+                        );
                       } else if (node.data.protocol === "balanceLogic") {
                         isConfigured = !!(
                           node.data.balanceLogicAddress?.trim() &&

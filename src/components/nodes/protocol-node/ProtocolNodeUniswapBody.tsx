@@ -71,8 +71,13 @@ export function ProtocolNodeUniswapBody({
     ]);
 
     if (data.action === "addLiquidity") {
+        const versionAuto = data.uniswapVersionAuto !== false;
+        const version = data.uniswapVersion ?? "v2";
         return (
             <div className="space-y-2">
+                <div className="text-xs text-gray-500 dark:text-gray-400">
+                    Version: {versionAuto ? "Auto (best route)" : version.toUpperCase()} (execution supported for V2)
+                </div>
                 <div>
                     <label className="text-xs text-gray-600 dark:text-gray-400 block mb-1">
                         Pair — Token A
@@ -116,6 +121,59 @@ export function ProtocolNodeUniswapBody({
                             );
                         })}
                     </select>
+                </div>
+            </div>
+        );
+    }
+
+    if (data.action === "removeLiquidity") {
+        const versionAuto = data.uniswapVersionAuto !== false;
+        const version = data.uniswapVersion ?? "v2";
+        return (
+            <div className="space-y-2">
+                <div className="text-xs text-gray-500 dark:text-gray-400">
+                    Version: {versionAuto ? "Auto (best route)" : version.toUpperCase()}. Select the pair you have a position in.
+                </div>
+                <div>
+                    <label className="text-xs text-gray-600 dark:text-gray-400 block mb-1">
+                        Pair — Token A
+                    </label>
+                    <select
+                        className="w-full border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-sm bg-white dark:bg-gray-700 dark:text-gray-200"
+                        value={data.liquidityTokenA ?? ""}
+                        onChange={(e) =>
+                            onUpdateData({ liquidityTokenA: e.target.value || undefined })
+                        }
+                    >
+                        <option value="">Select token</option>
+                        {tokenOptions.map((symbol) => (
+                            <option key={symbol} value={symbol}>
+                                {symbol}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+                <div>
+                    <label className="text-xs text-gray-600 dark:text-gray-400 block mb-1">
+                        Pair — Token B
+                    </label>
+                    <select
+                        className="w-full border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-sm bg-white dark:bg-gray-700 dark:text-gray-200"
+                        value={data.liquidityTokenB ?? ""}
+                        onChange={(e) =>
+                            onUpdateData({ liquidityTokenB: e.target.value || undefined })
+                        }
+                    >
+                        <option value="">Select token</option>
+                        {tokenOptions.map((symbol) => (
+                            <option key={symbol} value={symbol}>
+                                {symbol}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+                <div className="text-xs text-amber-600 dark:text-amber-400 mt-2">
+                    Remove liquidity execution (V2) will be available when position detection is enabled. Use &quot;View In Frame&quot; to remove via Uniswap app.
                 </div>
             </div>
         );

@@ -23,8 +23,10 @@ function useEffectiveBalanceDeps() {
     return useStore((s) =>
         s.nodes
             .map(
-                (n) =>
-                    `${n.id}:${(n.data as ProtocolNodeData).sequenceNumber}:${(n.data as ProtocolNodeData).amount}:${(n.data as ProtocolNodeData).estimatedAmountOut}`
+                (n) => {
+                    const d = n.data as ProtocolNodeData;
+                    return `${n.id}:${d.sequenceNumber}:${d.amount}:${d.estimatedAmountOut}:${d.action}:${d.asset}`;
+                }
             )
             .join("|")
     );
@@ -227,6 +229,52 @@ export function useProtocolNode(id: string, data: ProtocolNodeData) {
         edgesFromStore.length,
         effectiveBalanceDeps,
     ]);
+
+    // When this transfer node receives from swap(s), keep default amount in sync with combined estimated outputs
+    useEffect(() => {
+        if (data.protocol !== "transfer") return;
+        const edges = getEdges();
+        const nodes = getNodes() as import("@xyflow/react").Node<ProtocolNodeData>[];
+        const incomingSourceIds = edges
+            .filter((e) => e.target === id)
+            .map((e) => e.source);
+        const sumsBySymbol: Record<string, number> = {};
+        for (const sourceId of incomingSourceIds) {
+            const src = nodes.find((n) => n.id === sourceId);
+            const d = src?.data as ProtocolNodeData | undefined;
+            if (
+                d?.protocol === "uniswap" &&
+                d?.action === "swap" &&
+                d?.estimatedAmountOutSymbol &&
+                d?.estimatedAmountOut != null
+            ) {
+                const sym = d.estimatedAmountOutSymbol;
+                const amt = parseFloat(d.estimatedAmountOut);
+                if (!Number.isNaN(amt)) {
+                    sumsBySymbol[sym] = (sumsBySymbol[sym] ?? 0) + amt;
+                }
+            }
+        }
+        const symbols = Object.keys(sumsBySymbol);
+        if (symbols.length === 0) return;
+        const asset = symbols.reduce((a, b) =>
+            (sumsBySymbol[a] ?? 0) >= (sumsBySymbol[b] ?? 0) ? a : b
+        );
+        const total = sumsBySymbol[asset] ?? 0;
+        const amountStr =
+            total <= 0 ? "0" : total < 0.0001 ? total.toExponential(2) : total.toFixed(6);
+        setNodes((nds) =>
+            nds.map((node) => {
+                if (node.id !== id) return node;
+                const current = node.data as ProtocolNodeData;
+                if (current.asset === asset && current.amount === amountStr) return node;
+                return {
+                    ...node,
+                    data: { ...current, asset, amount: amountStr },
+                };
+            })
+        );
+    }, [data.protocol, id, getNodes, getEdges, setNodes, effectiveBalanceDeps, edgesFromStore.length]);
 
     const updateNodeData = useCallback(
         (updates: Partial<ProtocolNodeData>) => {

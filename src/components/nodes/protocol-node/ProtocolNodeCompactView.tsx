@@ -112,6 +112,31 @@ export function ProtocolNodeCompactView({ data }: ProtocolNodeCompactViewProps) 
         );
     }
 
+    if (data.protocol === "morpho") {
+        const action = data.action;
+        const asset = data.asset;
+        const amount = data.amount;
+        if (action && asset) {
+            return (
+                <div className="text-sm text-gray-600 dark:text-gray-300">
+                    <div className="font-medium">
+                        {action.charAt(0).toUpperCase() + action.slice(1)} {asset}
+                    </div>
+                    {amount && (
+                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                            {amount}
+                        </div>
+                    )}
+                </div>
+            );
+        }
+        return (
+            <div className="text-sm text-gray-500 dark:text-gray-400">
+                <div className="text-xs italic">Click to set action and asset</div>
+            </div>
+        );
+    }
+
     if (data.protocol === "uniswap") {
         if (data.action === "addLiquidity") {
             const a = data.liquidityTokenA;
@@ -128,7 +153,17 @@ export function ProtocolNodeCompactView({ data }: ProtocolNodeCompactViewProps) 
                     </div>
                 );
             }
-        } else {
+        } else if (data.action === "removeLiquidity") {
+            const a = data.liquidityTokenA;
+            const b = data.liquidityTokenB;
+            if (a && b) {
+                return (
+                    <div className="text-sm text-gray-600 dark:text-gray-300">
+                        <div className="font-medium">Remove {a}/{b}</div>
+                    </div>
+                );
+            }
+        } else if (data.action === "swap") {
             const from = data.swapFrom;
             const to = data.swapTo;
             if (from || to) {

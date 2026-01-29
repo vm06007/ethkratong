@@ -336,13 +336,20 @@ export const prepareBatchedCalls = async (
     } else if (node.data.protocol === "custom") {
       calls.push(prepareCustomContractCall(node));
     } else if (node.data.protocol === "uniswap" && node.data.action === "swap" && account) {
-      try {
-        calls.push(await prepareUniswapSwapCall(node, chainId, account));
-      } catch (err) {
-        console.warn(`Skipping Uniswap node ${node.id}:`, err);
+      const versionAuto = node.data.uniswapVersionAuto !== false;
+      const version = node.data.uniswapVersion ?? "v2";
+      const useV2 = versionAuto || version === "v2";
+      if (!useV2) {
+        console.warn(`Uniswap ${version} swap execution not yet supported, skipping node ${node.id}`);
+      } else {
+        try {
+          calls.push(await prepareUniswapSwapCall(node, chainId, account));
+        } catch (err) {
+          console.warn(`Skipping Uniswap node ${node.id}:`, err);
+        }
       }
     }
-    // Skip wallet, condition, balanceLogic, and uniswap addLiquidity
+    // Skip wallet, condition, balanceLogic, uniswap addLiquidity and removeLiquidity
   }
   return calls;
 };

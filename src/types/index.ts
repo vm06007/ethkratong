@@ -22,7 +22,8 @@ export type ActionType =
   | "withdraw"
   | "swap"
   | "stake"
-  | "addLiquidity";
+  | "addLiquidity"
+  | "removeLiquidity";
 
 export interface ProtocolNodeData extends Record<string, unknown> {
   protocol: ProtocolType;
@@ -64,6 +65,10 @@ export interface ProtocolNodeData extends Record<string, unknown> {
   maxSlippageAuto?: boolean;
   /** Swap deadline in minutes (e.g. 30) */
   swapDeadlineMinutes?: number;
+  /** Uniswap version for swap / addLiquidity / removeLiquidity (v2 supported for execution; v3/v4 UI ready) */
+  uniswapVersion?: "v2" | "v3" | "v4";
+  /** When true, choose version automatically based on best route (default true) */
+  uniswapVersionAuto?: boolean;
 }
 
 export type ProtocolNode = Node<ProtocolNodeData>;

@@ -4,6 +4,7 @@ import { ProtocolNodeCustomBody } from "./ProtocolNodeCustomBody";
 import { ProtocolNodeConditionalBody } from "./ProtocolNodeConditionalBody";
 import { ProtocolNodeBalanceLogicBody } from "./ProtocolNodeBalanceLogicBody";
 import { ProtocolNodeUniswapBody } from "./ProtocolNodeUniswapBody";
+import { ProtocolNodeMorphoBody } from "./ProtocolNodeMorphoBody";
 
 interface ProtocolNodeExpandedBodyProps {
     data: ProtocolNodeData;
@@ -40,7 +41,9 @@ export function ProtocolNodeExpandedBody({
         data.protocol !== "transfer" &&
         data.protocol !== "custom" &&
         data.protocol !== "conditional" &&
-        data.protocol !== "balanceLogic";
+        data.protocol !== "balanceLogic" &&
+        data.protocol !== "morpho" &&
+        data.protocol !== "uniswap";
 
     return (
         <>
@@ -57,11 +60,19 @@ export function ProtocolNodeExpandedBody({
                         }}
                     >
                         <option value="">Select action</option>
-                        {template?.availableActions.map((action) => (
-                            <option key={action} value={action}>
-                                {action.charAt(0).toUpperCase() + action.slice(1)}
-                            </option>
-                        ))}
+                        {template?.availableActions.map((action) => {
+                            const label =
+                                action === "addLiquidity"
+                                    ? "Add liquidity"
+                                    : action === "removeLiquidity"
+                                        ? "Remove liquidity"
+                                        : action.charAt(0).toUpperCase() + action.slice(1);
+                            return (
+                                <option key={action} value={action}>
+                                    {label}
+                                </option>
+                            );
+                        })}
                     </select>
                 </div>
             )}
@@ -111,6 +122,15 @@ export function ProtocolNodeExpandedBody({
                 />
             )}
 
+            {data.protocol === "morpho" && (
+                <ProtocolNodeMorphoBody
+                    data={data}
+                    chainId={chainId}
+                    onUpdateData={onUpdateData}
+                    template={template}
+                />
+            )}
+
             {data.protocol === "transfer" ? (
                 <div>
                     <label className="text-xs text-gray-600 dark:text-gray-400 block mb-1">
@@ -141,6 +161,7 @@ export function ProtocolNodeExpandedBody({
                 </div>
             ) : (
                 data.protocol !== "uniswap" &&
+                data.protocol !== "morpho" &&
                 (data.action === "lend" ||
                     data.action === "deposit" ||
                     data.action === "borrow") && (
@@ -210,6 +231,7 @@ export function ProtocolNodeExpandedBody({
                 data.protocol !== "conditional" &&
                 data.protocol !== "balanceLogic" &&
                 data.protocol !== "uniswap" &&
+                data.protocol !== "morpho" &&
                 data.protocol !== "transfer" && (
                     <div>
                         <label className="text-xs text-gray-600 dark:text-gray-400 block mb-1">

@@ -124,7 +124,9 @@ function ProtocolNode({ data, selected, id }: NodeProps<ProtocolNodeType>) {
                         onOpenChange={setViewInFrameOpen}
                         chainId={state.chainId ?? undefined}
                         action={
-                            data.action === "addLiquidity" ? "addLiquidity" : "swap"
+                            data.action === "addLiquidity" || data.action === "removeLiquidity"
+                                ? "addLiquidity"
+                                : "swap"
                         }
                         swapFrom={data.swapFrom}
                         swapTo={data.swapTo}

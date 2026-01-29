@@ -63,6 +63,17 @@ export function getEffectiveBalances(
                 if (balances[d.asset] < 0) balances[d.asset] = 0;
             }
         }
+        if (d.protocol === "morpho" && d.asset && d.amount?.trim()) {
+            const amt = parseFloat(d.amount);
+            if (Number.isNaN(amt)) continue;
+            if (d.action === "lend" || d.action === "deposit") {
+                balances[d.asset] = (balances[d.asset] ?? 0) - amt;
+                if (balances[d.asset] < 0) balances[d.asset] = 0;
+            }
+            if (d.action === "withdraw" || d.action === "borrow") {
+                balances[d.asset] = (balances[d.asset] ?? 0) + amt;
+            }
+        }
     }
 
     return baseBalances.map((t) => {
