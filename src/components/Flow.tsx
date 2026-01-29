@@ -156,7 +156,7 @@ function FlowCanvas() {
   );
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [tabs, setTabs] = useState<Tab[]>([
-    { id: "1", name: "Strategy 1", nodes: initialNodes, edges: initialEdges },
+    { id: "1", name: "Kratong #1", nodes: initialNodes, edges: initialEdges },
   ]);
   const [activeTabId, setActiveTabId] = useState("1");
   const { theme } = useTheme();
@@ -382,10 +382,11 @@ function FlowCanvas() {
   );
 
   const handleSave = () => {
+    const tabName = tabs.find((t) => t.id === activeTabId)?.name || "Kratong #1";
     const strategy = {
       nodes,
       edges,
-      name: tabs.find((t) => t.id === activeTabId)?.name || "Strategy",
+      name: tabName,
     };
     const blob = new Blob([JSON.stringify(strategy, null, 2)], {
       type: "application/json",
@@ -409,8 +410,20 @@ function FlowCanvas() {
         reader.onload = (event) => {
           try {
             const data = JSON.parse(event.target?.result as string);
-            setNodes(data.nodes || []);
-            setEdges(data.edges || []);
+            const loadedNodes = data.nodes || [];
+            const loadedEdges = data.edges || [];
+            const nameFromFile = file.name.replace(/\.json$/i, "");
+            // Always add loaded flow as a new tab
+            const newTab: Tab = {
+              id: `${tabId++}`,
+              name: nameFromFile,
+              nodes: loadedNodes,
+              edges: loadedEdges,
+            };
+            setTabs((prev) => [...prev, newTab]);
+            setActiveTabId(newTab.id);
+            setNodes(newTab.nodes);
+            setEdges(newTab.edges);
           } catch (error) {
             console.error("Failed to load file:", error);
           }
@@ -447,7 +460,7 @@ function FlowCanvas() {
   const handleNewTab = () => {
     const newTab: Tab = {
       id: `${tabId++}`,
-      name: `Strategy ${tabId}`,
+      name: `Kratong #${tabs.length + 1}`,
       nodes: initialNodes,
       edges: initialEdges,
     };
