@@ -1,4 +1,5 @@
 import type { Node, Edge } from "@xyflow/react";
+import type { Abi } from "viem";
 
 export type ProtocolType =
   | "wallet"
@@ -31,6 +32,12 @@ export interface ProtocolNodeData extends Record<string, unknown> {
   targetAPY?: string;
   sequenceNumber?: number;
   recipientAddress?: string; // For transfer nodes
+  // Custom contract node
+  contractAddress?: string;
+  contractAbi?: Abi;
+  customContractVerified?: boolean;
+  selectedFunction?: string;
+  functionArgs?: Record<string, string>;
 }
 
 export type ProtocolNode = Node<ProtocolNodeData>;

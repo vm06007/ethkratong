@@ -3,13 +3,15 @@ import { Handle, Position, type NodeProps, useReactFlow } from "@xyflow/react";
 import type { ProtocolNodeData } from "@/types";
 import { cn } from "@/lib/utils";
 import { allProtocols } from "@/data/protocols";
-import { MoreVertical, Wallet, Trash2, ExternalLink } from "lucide-react";
-import { useActiveAccount, useReadContract, ConnectButton, useWalletBalance } from "thirdweb/react";
+import { MoreVertical, Wallet, Trash2, ExternalLink, Loader2, CheckCircle, AlertCircle } from "lucide-react";
+import { useActiveAccount, ConnectButton, useWalletBalance } from "thirdweb/react";
 import { client, chains } from "@/config/thirdweb";
 import { getContract } from "thirdweb";
 import { balanceOf, decimals } from "thirdweb/extensions/erc20";
 import { toTokens } from "thirdweb";
+import { useChainId } from "wagmi";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
+import { isContractAddress, fetchContractAbi, getAbiFunctions } from "@/services/contractService";
 
 // Token addresses for balance checking
 const TOKEN_ADDRESSES = {
@@ -39,8 +41,11 @@ function ProtocolNode({ data, selected, id }: NodeProps<ProtocolNodeData>) {
   const [isExpanded, setIsExpanded] = useState(false);
   const { deleteElements, setNodes } = useReactFlow();
   const activeAccount = useActiveAccount();
+  const chainId = useChainId();
   const [tokenBalances, setTokenBalances] = useState<TokenBalance[]>([]);
   const [transferBalances, setTransferBalances] = useState<TokenBalance[]>([]);
+  const [isVerifyingContract, setIsVerifyingContract] = useState(false);
+  const [contractVerifyError, setContractVerifyError] = useState<string | null>(null);
 
   const template = allProtocols.find((t) => t.protocol === data.protocol);
   const color = template?.color || "bg-gray-500";
@@ -49,7 +54,7 @@ function ProtocolNode({ data, selected, id }: NodeProps<ProtocolNodeData>) {
   const isTerminalNode = data.protocol === "transfer" || data.protocol === "custom";
 
   // Get ETH balance using useWalletBalance hook
-  const currentChain = activeAccount?.chain ? chains.find(c => c.id === activeAccount.chain.id) || chains[0] : chains[0];
+  const currentChain = chains.find((c) => c.id === (chainId || 1)) || chains[0];
   const { data: ethBalanceData, isLoading: isEthLoading } = useWalletBalance({
     client,
     chain: currentChain,
@@ -60,8 +65,8 @@ function ProtocolNode({ data, selected, id }: NodeProps<ProtocolNodeData>) {
   const fetchUserBalances = async (account: typeof activeAccount) => {
     if (!account) return [];
 
-    const chainId = account.chain?.id || 1;
-    const tokens = TOKEN_ADDRESSES[chainId as keyof typeof TOKEN_ADDRESSES];
+    const chainIdForBalances = chainId || 1;
+    const tokens = TOKEN_ADDRESSES[chainIdForBalances as keyof typeof TOKEN_ADDRESSES];
 
     if (!tokens) return [];
 
@@ -69,7 +74,7 @@ function ProtocolNode({ data, selected, id }: NodeProps<ProtocolNodeData>) {
       try {
         const contract = getContract({
           client,
-          chain: chains.find(c => c.id === chainId) || chains[0],
+          chain: chains.find((c) => c.id === chainIdForBalances) || chains[0],
           address,
         });
 
@@ -307,10 +312,10 @@ function ProtocolNode({ data, selected, id }: NodeProps<ProtocolNodeData>) {
                 )}
 
                 {/* Chain Info */}
-                {activeAccount.chain && (
+                {currentChain && (
                   <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
                     <div className="text-xs text-gray-500 dark:text-gray-400">
-                      <span className="font-medium">Network:</span> {activeAccount.chain.name}
+                      <span className="font-medium">Network:</span> {currentChain.name}
                     </div>
                   </div>
                 )}
@@ -322,8 +327,8 @@ function ProtocolNode({ data, selected, id }: NodeProps<ProtocolNodeData>) {
         {/* Regular protocol content */}
         {data.protocol !== "wallet" && isExpanded && (
           <>
-            {/* Action Selection - Skip for transfer nodes */}
-            {data.protocol !== "transfer" && (
+            {/* Action Selection - Skip for transfer and custom (custom uses function selector) */}
+            {data.protocol !== "transfer" && data.protocol !== "custom" && (
               <div>
                 <label className="text-xs text-gray-600 dark:text-gray-400 block mb-1">
                   Action:
@@ -343,6 +348,144 @@ function ProtocolNode({ data, selected, id }: NodeProps<ProtocolNodeData>) {
                   ))}
                 </select>
               </div>
+            )}
+
+            {/* Custom Contract: address, verify, then function selector + args */}
+            {data.protocol === "custom" && (
+              <>
+                <div>
+                  <label className="text-xs text-gray-600 dark:text-gray-400 block mb-1">
+                    Contract Address:
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="0x..."
+                      className="flex-1 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-sm font-mono bg-white dark:bg-gray-700 dark:text-gray-200 dark:placeholder-gray-500"
+                      value={data.contractAddress || ""}
+                      onChange={(e) => {
+                        updateNodeData({
+                          contractAddress: e.target.value.trim() || undefined,
+                          customContractVerified: false,
+                          contractAbi: undefined,
+                          selectedFunction: undefined,
+                          functionArgs: undefined,
+                        });
+                        setContractVerifyError(null);
+                      }}
+                    />
+                    <button
+                      type="button"
+                      disabled={!data.contractAddress?.trim() || isVerifyingContract}
+                      className={cn(
+                        "px-3 py-1 rounded text-sm font-medium shrink-0",
+                        data.customContractVerified
+                          ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400"
+                          : "bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-500 disabled:opacity-50"
+                      )}
+                      onClick={async () => {
+                        const addr = data.contractAddress?.trim();
+                        if (!addr) return;
+                        setIsVerifyingContract(true);
+                        setContractVerifyError(null);
+                        try {
+                          const isContract = await isContractAddress(chainId || 1, addr);
+                          if (!isContract) {
+                            setContractVerifyError("Address is not a contract (no bytecode)");
+                            return;
+                          }
+                          const abi = await fetchContractAbi(chainId || 1, addr);
+                          updateNodeData({
+                            contractAbi: abi,
+                            customContractVerified: true,
+                            selectedFunction: undefined,
+                            functionArgs: undefined,
+                          });
+                        } catch (err) {
+                          setContractVerifyError(err instanceof Error ? err.message : "Failed to verify or fetch ABI");
+                        } finally {
+                          setIsVerifyingContract(false);
+                        }
+                      }}
+                    >
+                      {isVerifyingContract ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : data.customContractVerified ? (
+                        <CheckCircle className="w-4 h-4" />
+                      ) : (
+                        "Verify"
+                      )}
+                    </button>
+                  </div>
+                  {contractVerifyError && (
+                    <div className="flex items-center gap-1 mt-1 text-xs text-red-600 dark:text-red-400">
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                      {contractVerifyError}
+                    </div>
+                  )}
+                </div>
+                {data.customContractVerified && data.contractAbi && (
+                  <>
+                    <div>
+                      <label className="text-xs text-gray-600 dark:text-gray-400 block mb-1">
+                        Function:
+                      </label>
+                      <select
+                        className="w-full border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-sm bg-white dark:bg-gray-700 dark:text-gray-200"
+                        value={data.selectedFunction || ""}
+                        onChange={(e) => {
+                          const name = e.target.value || undefined;
+                          updateNodeData({
+                            selectedFunction: name,
+                            functionArgs: undefined,
+                          });
+                        }}
+                      >
+                        <option value="">Select function</option>
+                        {getAbiFunctions(data.contractAbi).map((fn) => (
+                          <option key={fn.name} value={fn.name}>
+                            {fn.name}
+                            {fn.inputs?.length ? `(${fn.inputs.map((i) => i.type).join(", ")})` : "()"}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    {data.selectedFunction && (() => {
+                      const fns = getAbiFunctions(data.contractAbi);
+                      const fn = fns.find((f) => f.name === data.selectedFunction);
+                      const inputs = fn?.inputs || [];
+                      return inputs.length > 0 ? (
+                        <div className="space-y-2">
+                          <label className="text-xs text-gray-600 dark:text-gray-400 block">
+                            Arguments:
+                          </label>
+                          {inputs.map((input) => (
+                            <div key={input.name}>
+                              <label className="text-xs text-gray-500 dark:text-gray-500 block mb-0.5">
+                                {input.name} ({input.type})
+                              </label>
+                              <input
+                                type="text"
+                                placeholder={input.type}
+                                className="w-full border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-sm font-mono bg-white dark:bg-gray-700 dark:text-gray-200 dark:placeholder-gray-500"
+                                value={data.functionArgs?.[input.name] ?? ""}
+                                onChange={(e) => {
+                                  updateNodeData({
+                                    functionArgs: {
+                                      ...(data.functionArgs || {}),
+                                      [input.name]: e.target.value,
+                                    },
+                                  });
+                                }}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      ) : null;
+                    })()}
+                  </>
+                )}
+              </>
             )}
 
             {/* Asset Selection - For transfer nodes, show dropdown with user balances */}
@@ -398,8 +541,8 @@ function ProtocolNode({ data, selected, id }: NodeProps<ProtocolNodeData>) {
               )
             )}
 
-            {/* Amount Input */}
-            {(data.action || data.protocol === "transfer") && (
+            {/* Amount Input - not for custom (uses function args) */}
+            {(data.action || data.protocol === "transfer") && data.protocol !== "custom" && (
               <div>
                 <label className="text-xs text-gray-600 dark:text-gray-400 block mb-1">
                   Amount:
@@ -466,6 +609,20 @@ function ProtocolNode({ data, selected, id }: NodeProps<ProtocolNodeData>) {
                 // Initial state - not configured
                 <div className="text-sm text-gray-500 dark:text-gray-400">
                   <div className="text-xs italic">Click header to configure</div>
+                </div>
+              )
+            ) : data.protocol === "custom" ? (
+              // Custom contract compact view
+              data.customContractVerified && data.contractAddress && data.selectedFunction ? (
+                <div className="text-sm text-gray-600 dark:text-gray-300">
+                  <div className="font-mono text-xs truncate" title={data.contractAddress}>
+                    {data.contractAddress.slice(0, 8)}...{data.contractAddress.slice(-6)}
+                  </div>
+                  <div className="font-medium">{data.selectedFunction}</div>
+                </div>
+              ) : (
+                <div className="text-sm text-gray-500 dark:text-gray-400">
+                  <div className="text-xs italic">Click to set contract address</div>
                 </div>
               )
             ) : (

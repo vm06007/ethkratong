@@ -7,10 +7,12 @@ import { useActiveAccount } from "thirdweb/react";
 import { useChainId } from "wagmi";
 import { useWalletCapabilities } from "@/hooks/useWalletCapabilities";
 import {
-  prepareTransferCalls,
+  prepareBatchedCalls,
   executeBatchedTransaction,
-  trackBatchedTransactionStatus
+  trackBatchedTransactionStatus,
+  sendSingleTransaction,
 } from "@/services/batchedExecution";
+import { getAbiFunctions } from "@/services/contractService";
 import {
   DndContext,
   closestCenter,
@@ -125,6 +127,25 @@ function SortableStep({ node, isExecuted, isConfigured }: SortableStepProps) {
               ⚠ Action not configured
             </div>
           )
+        ) : node.data.protocol === "custom" ? (
+          node.data.contractAddress && node.data.customContractVerified && node.data.selectedFunction ? (
+            <>
+              <div className="flex justify-between">
+                <span className="font-medium">Contract:</span>
+                <span className="font-mono">
+                  {node.data.contractAddress.slice(0, 6)}...{node.data.contractAddress.slice(-4)}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="font-medium">Function:</span>
+                <span>{node.data.selectedFunction}</span>
+              </div>
+            </>
+          ) : (
+            <div className="text-orange-500 dark:text-orange-400">
+              ⚠ Set contract address and verify
+            </div>
+          )
         ) : node.data.action ? (
           <>
             <div className="flex justify-between">
@@ -154,7 +175,7 @@ function SortableStep({ node, isExecuted, isConfigured }: SortableStepProps) {
   );
 }
 
-export function RightDrawer({ isOpen, onClose, nodes, edges, onReorderNodes }: RightDrawerProps) {
+export function RightDrawer({ isOpen, onClose, nodes, edges: _edges, onReorderNodes }: RightDrawerProps) {
   const [isExecuting, setIsExecuting] = useState(false);
   const [executedSteps, setExecutedSteps] = useState<Set<string>>(new Set());
   const [executionError, setExecutionError] = useState<string | null>(null);
@@ -175,6 +196,18 @@ export function RightDrawer({ isOpen, onClose, nodes, edges, onReorderNodes }: R
     // For transfer nodes, check asset, amount, and recipient address (action is implicit)
     if (node.data.protocol === "transfer") {
       return !!(node.data.amount && node.data.asset && node.data.recipientAddress);
+    }
+    // For custom contract nodes, check contract verified + function + args
+    if (node.data.protocol === "custom") {
+      if (!node.data.contractAddress || !node.data.customContractVerified || !node.data.selectedFunction) {
+        return false;
+      }
+      const fns = node.data.contractAbi ? getAbiFunctions(node.data.contractAbi) : [];
+      const fn = fns.find((f) => f.name === node.data.selectedFunction);
+      const inputs = fn?.inputs || [];
+      const args = node.data.functionArgs || {};
+      const allArgsFilled = inputs.every((inp) => (args[inp.name] ?? "").trim() !== "");
+      return allArgsFilled;
     }
     return !!(node.data.action && node.data.amount);
   });
@@ -219,51 +252,34 @@ export function RightDrawer({ isOpen, onClose, nodes, edges, onReorderNodes }: R
         chainId: effectiveChainId,
       });
 
-      // Check if all nodes are transfers and we support batching
-      const allTransfers = sortedNodes.every((node) => node.data.protocol === "transfer");
+      // Prepare all calls (transfers + custom contract nodes) in order
+      const calls = await prepareBatchedCalls(sortedNodes, effectiveChainId);
 
-      if (allTransfers && supportsBatch) {
-        console.log("Using batched EIP-7702 execution");
-
-        // Prepare batched calls (async to handle ENS resolution)
-        const calls = await prepareTransferCalls(sortedNodes, effectiveChainId);
-
-        if (calls.length === 0) {
-          throw new Error("No valid transfers to execute");
-        }
-
-        console.log(`Prepared ${calls.length} batched calls`);
-
-        // Execute batched transaction
-        const result = await executeBatchedTransaction(calls, activeAccount.address, effectiveChainId);
-
-        console.log("Batch submitted:", result.id);
-
-        // Track the transaction
-        const txHash = await trackBatchedTransactionStatus(result.id);
-
-        console.log("Transaction confirmed:", txHash);
-
-        // Mark all steps as executed
-        sortedNodes.forEach((node) => {
-          setExecutedSteps((prev) => new Set(prev).add(node.id));
-        });
-
-        // Clear any previous errors on success
-        setExecutionError(null);
-      } else {
-        console.log("Falling back to sequential execution");
-
-        // Fallback to sequential execution
-        for (const node of sortedNodes) {
-          await new Promise((resolve) => setTimeout(resolve, 1000));
-          setExecutedSteps((prev) => new Set(prev).add(node.id));
-          console.log(`Executed node: ${node.data.label}`);
-        }
-
-        setExecutionError(null);
+      if (calls.length === 0) {
+        throw new Error("No valid actions to execute");
       }
 
+      console.log(`Prepared ${calls.length} call(s)`);
+
+      if (supportsBatch && calls.length > 0) {
+        console.log("Using batched EIP-7702 execution");
+        const result = await executeBatchedTransaction(calls, activeAccount.address, effectiveChainId);
+        console.log("Batch submitted:", result.id);
+        const txHash = await trackBatchedTransactionStatus(result.id);
+        console.log("Transaction confirmed:", txHash);
+      } else {
+        console.log("Sending transactions sequentially");
+        for (const call of calls) {
+          const txHash = await sendSingleTransaction(call, activeAccount.address, effectiveChainId);
+          console.log("Transaction submitted:", txHash);
+        }
+      }
+
+      // Mark all steps as executed
+      sortedNodes.forEach((node) => {
+        setExecutedSteps((prev) => new Set(prev).add(node.id));
+      });
+      setExecutionError(null);
       console.log("Execution completed successfully");
     } catch (error: any) {
       console.error("Execution failed:", error);
@@ -327,10 +343,20 @@ export function RightDrawer({ isOpen, onClose, nodes, edges, onReorderNodes }: R
                       const isExecuted = executedSteps.has(node.id);
 
                       // Check configuration based on node type
-                      // For transfer nodes, action is implicit, so we don't check for it
-                      const isConfigured = node.data.protocol === "transfer"
-                        ? !!(node.data.amount && node.data.asset && node.data.recipientAddress)
-                        : !!(node.data.action && node.data.amount);
+                      // Check configuration based on node type
+                      let isConfigured: boolean;
+                      if (node.data.protocol === "transfer") {
+                        isConfigured = !!(node.data.amount && node.data.asset && node.data.recipientAddress);
+                      } else if (node.data.protocol === "custom") {
+                        const hasBase = !!(node.data.contractAddress && node.data.customContractVerified && node.data.selectedFunction);
+                        const fns = node.data.contractAbi ? getAbiFunctions(node.data.contractAbi) : [];
+                        const fn = fns.find((f) => f.name === node.data.selectedFunction);
+                        const inputs = fn?.inputs || [];
+                        const args = node.data.functionArgs || {};
+                        isConfigured = hasBase && inputs.every((inp) => (args[inp.name] ?? "").trim() !== "");
+                      } else {
+                        isConfigured = !!(node.data.action && node.data.amount);
+                      }
 
                       return (
                         <SortableStep

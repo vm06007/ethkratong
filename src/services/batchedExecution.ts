@@ -53,6 +53,87 @@ export interface BatchedTransactionCall {
 }
 
 /**
+ * Parse a single ABI argument from string input to the type expected by encodeFunctionData.
+ */
+function parseAbiArgValue(type: string, value: string): unknown {
+  const t = type.toLowerCase().replace(/\s/g, "");
+  const v = value.trim();
+  if (t.startsWith("uint") || t.startsWith("int")) {
+    return BigInt(v);
+  }
+  if (t === "bool") {
+    return v === "1" || v.toLowerCase() === "true";
+  }
+  if (t === "address") {
+    if (!v.startsWith("0x")) return `0x${v}` as `0x${string}`;
+    return v as `0x${string}`;
+  }
+  if (t.startsWith("bytes")) {
+    return (v.startsWith("0x") ? v : `0x${v}`) as `0x${string}`;
+  }
+  return v;
+}
+
+/**
+ * Prepare a single batched call for a custom contract node (encode function + args).
+ */
+export function prepareCustomContractCall(node: Node<ProtocolNodeData>): BatchedTransactionCall {
+  const data = node.data;
+  if (data.protocol !== "custom") {
+    throw new Error("Node is not a custom contract node");
+  }
+  const { contractAddress, contractAbi, selectedFunction, functionArgs } = data;
+  if (!contractAddress || !contractAbi || !selectedFunction) {
+    throw new Error(`Custom contract node ${node.id}: missing contract address, ABI, or function`);
+  }
+  const fn = (contractAbi as Array<{ type: string; name: string; inputs?: Array<{ name: string; type: string }> }>).find(
+    (item) => item.type === "function" && item.name === selectedFunction
+  );
+  if (!fn?.inputs) {
+    return {
+      to: contractAddress,
+      data: encodeFunctionData({
+        abi: contractAbi,
+        functionName: selectedFunction,
+        args: [],
+      }),
+      value: toHex(0n),
+    };
+  }
+  const args = fn.inputs.map((inp) => parseAbiArgValue(inp.type, (functionArgs || {})[inp.name] ?? "0"));
+  const calldata = encodeFunctionData({
+    abi: contractAbi,
+    functionName: selectedFunction,
+    args,
+  });
+  return {
+    to: contractAddress,
+    data: calldata,
+    value: toHex(0n),
+  };
+}
+
+/**
+ * Prepare batched transaction calls for all nodes (transfers + custom contracts) in order.
+ */
+export const prepareBatchedCalls = async (
+  nodes: Node<ProtocolNodeData>[],
+  chainId: number
+): Promise<BatchedTransactionCall[]> => {
+  const calls: BatchedTransactionCall[] = [];
+  for (const node of nodes) {
+    if (node.data.protocol === "transfer") {
+      const transferCalls = await prepareTransferCalls([node], chainId);
+      calls.push(...transferCalls);
+    } else if (node.data.protocol === "custom") {
+      calls.push(prepareCustomContractCall(node));
+    }
+    // Skip wallet and other protocol nodes that don't produce a call
+  }
+  return calls;
+};
+
+/**
  * Resolve ENS name to address
  * @param addressOrENS - Address or ENS name
  * @param chainId - Chain ID for resolution
@@ -288,6 +369,35 @@ export const trackBatchedTransactionStatus = async (
     console.error('Error tracking batch status:', error);
     throw error;
   }
+};
+
+/**
+ * Send a single transaction via eth_sendTransaction (for wallets that don't support batching).
+ * Returns the transaction hash once the user has signed and the tx is submitted.
+ */
+export const sendSingleTransaction = async (
+  call: BatchedTransactionCall,
+  account: string,
+  chainId: number
+): Promise<string> => {
+  if (typeof window === 'undefined' || !window.ethereum) {
+    throw new Error('No ethereum provider found');
+  }
+  const chainIdHex = `0x${chainId.toString(16)}`;
+  const txHash = await window.ethereum.request<string>({
+    method: 'eth_sendTransaction',
+    params: [{
+      from: account,
+      to: call.to as `0x${string}`,
+      data: call.data as `0x${string}` | undefined,
+      value: call.value,
+      chainId: chainIdHex,
+    }],
+  });
+  if (!txHash || typeof txHash !== 'string') {
+    throw new Error('No transaction hash returned');
+  }
+  return txHash;
 };
 
 /**
