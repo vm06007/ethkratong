@@ -138,6 +138,9 @@ function FlowCanvas() {
   const [edgeType, setEdgeType] = useState<"default" | "straight" | "step" | "smoothstep">("default");
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
 
+  const executeFlowRef = useRef<(() => Promise<void>) | null>(null);
+  const [isExecutingFlow, setIsExecutingFlow] = useState(false);
+
   // Custom edge change handler to detect deletions
   const handleEdgesChange = useCallback(
     (changes: any[]) => {
@@ -581,6 +584,8 @@ function FlowCanvas() {
         onRedo={handleRedo}
         onReset={handleReset}
         onNewTab={handleNewTab}
+        onExecuteFlow={() => executeFlowRef.current?.()}
+        isExecutingFlow={isExecutingFlow}
         canUndo={historyIndex > 0}
         canRedo={historyIndex < history.length - 1}
       />
@@ -634,6 +639,10 @@ function FlowCanvas() {
           nodes={nodes}
           edges={edges}
           onReorderNodes={handleReorderNodes}
+          onRegisterExecute={(execute) => {
+            executeFlowRef.current = execute;
+          }}
+          onExecutionChange={setIsExecutingFlow}
         />
       </div>
     </div>

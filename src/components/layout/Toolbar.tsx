@@ -5,8 +5,6 @@ import {
   Undo2,
   Redo2,
   RotateCcw,
-  Palette,
-  Search,
   Map,
   Plus,
   Upload,
@@ -19,10 +17,14 @@ import {
   PanelRightOpen,
   Workflow,
   Trash2,
+  AlertTriangle,
+  Play,
 } from "lucide-react";
+import * as Dialog from "@radix-ui/react-dialog";
 import { useTheme } from "@/hooks/useTheme";
 import { useState } from "react";
 import { WalletConnect } from "../WalletConnect";
+import { cn } from "@/lib/utils";
 
 interface ToolbarProps {
   isSidebarOpen: boolean;
@@ -41,6 +43,8 @@ interface ToolbarProps {
   onRedo: () => void;
   onReset: () => void;
   onNewTab: () => void;
+  onExecuteFlow?: () => void;
+  isExecutingFlow?: boolean;
   canUndo: boolean;
   canRedo: boolean;
 }
@@ -62,11 +66,20 @@ export function Toolbar({
   onRedo,
   onReset,
   onNewTab,
+  onExecuteFlow,
+  isExecutingFlow,
   canUndo,
   canRedo,
 }: ToolbarProps) {
   const { theme, toggleTheme } = useTheme();
   const [showEdgeMenu, setShowEdgeMenu] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+
+  const handleResetClick = () => setShowResetConfirm(true);
+  const handleResetConfirm = () => {
+    onReset();
+    setShowResetConfirm(false);
+  };
 
   const iconButton = "p-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed";
   const iconClass = "w-5 h-5 text-gray-700 dark:text-gray-300";
@@ -127,19 +140,67 @@ export function Toolbar({
         >
           <Redo2 className={iconClass} />
         </button>
-        <button onClick={onReset} className={iconButton} aria-label="Reset">
+        <button onClick={handleResetClick} className={iconButton} aria-label="Reset">
           <RotateCcw className={iconClass} />
         </button>
+
+        {/* Reset confirmation dialog */}
+        <Dialog.Root open={showResetConfirm} onOpenChange={setShowResetConfirm}>
+            <Dialog.Portal>
+                <Dialog.Overlay
+                    className={cn(
+                        "fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm",
+                        "data-[state=open]:animate-in data-[state=closed]:animate-out",
+                        "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
+                    )}
+                />
+                <Dialog.Content
+                    className={cn(
+                        "fixed left-[50%] top-[50%] z-[101] w-[95vw] max-w-md translate-x-[-50%] translate-y-[-50%]",
+                        "rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-2xl",
+                        "p-5 space-y-4",
+                        "data-[state=open]:animate-in data-[state=closed]:animate-out",
+                        "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+                        "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95"
+                    )}
+                >
+                    <div className="flex items-start gap-3">
+                        <div className="shrink-0 p-1.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400">
+                            <AlertTriangle className="h-5 w-5" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <Dialog.Title className="text-base font-semibold text-gray-900 dark:text-gray-100">
+                                Reset current Kratong?
+                            </Dialog.Title>
+                            <Dialog.Description className="mt-1.5 text-sm text-gray-600 dark:text-gray-400">
+                                This will reset the current Kratong and clear all nodes and connections. Make sure you have saved your changes if you want to keep them. Do you wish to proceed?
+                            </Dialog.Description>
+                        </div>
+                    </div>
+                    <div className="flex justify-end gap-2 pt-2">
+                        <Dialog.Close asChild>
+                            <button
+                                type="button"
+                                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                            >
+                                No
+                            </button>
+                        </Dialog.Close>
+                        <button
+                            type="button"
+                            onClick={handleResetConfirm}
+                            className="px-4 py-2 text-sm font-medium text-white bg-amber-600 hover:bg-amber-700 rounded-lg transition-colors"
+                        >
+                            Yes
+                        </button>
+                    </div>
+                </Dialog.Content>
+            </Dialog.Portal>
+        </Dialog.Root>
 
         <div className="w-px h-6 bg-gray-300 dark:bg-gray-600" />
 
         {/* Tools */}
-        <button className={iconButton} aria-label="Color palette">
-          <Palette className={iconClass} />
-        </button>
-        <button className={iconButton} aria-label="Search">
-          <Search className={iconClass} />
-        </button>
         <button
           onClick={onToggleMiniMap}
           className={iconButton}
@@ -237,6 +298,22 @@ export function Toolbar({
             <Sun className={iconClass} />
           )}
         </button>
+
+        {/* Execute flow (same as drawer Launch button) */}
+        {onExecuteFlow && (
+          <button
+            onClick={onExecuteFlow}
+            disabled={isExecutingFlow}
+            className={iconButton}
+            aria-label={isExecutingFlow ? "Executing..." : "Launch Kratong"}
+          >
+            {isExecutingFlow ? (
+              <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <Play className={iconClass} />
+            )}
+          </button>
+        )}
 
         {/* Right Drawer Toggle */}
         <button

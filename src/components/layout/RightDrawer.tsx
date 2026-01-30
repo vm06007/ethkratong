@@ -2,7 +2,7 @@ import { X, Play, CheckCircle2, AlertCircle, GripVertical, Zap } from "lucide-re
 import { cn } from "@/lib/utils";
 import type { Node, Edge } from "@xyflow/react";
 import type { ProtocolNodeData } from "@/types";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useActiveAccount } from "thirdweb/react";
 import { useChainId } from "wagmi";
 import { useWalletCapabilities } from "@/hooks/useWalletCapabilities";
@@ -40,6 +40,10 @@ interface RightDrawerProps {
   nodes: Node<ProtocolNodeData>[];
   edges: Edge[];
   onReorderNodes: (newOrder: string[]) => void;
+  /** Register a function that runs the same execution as the drawer's Launch button (for header quick-execute). */
+  onRegisterExecute?: (execute: () => Promise<void>) => void;
+  /** Notify parent when execution starts or ends (so header button can show spinner). */
+  onExecutionChange?: (executing: boolean) => void;
 }
 
 /** Return node IDs reachable from the wallet node (BFS following edges). Nodes not connected to wallet are excluded from execution. */
@@ -405,11 +409,13 @@ function SortableStep({ node, isExecuted, isConfigured }: SortableStepProps) {
   );
 }
 
-export function RightDrawer({ isOpen, onClose, nodes, edges, onReorderNodes }: RightDrawerProps) {
+export function RightDrawer({ isOpen, onClose, nodes, edges, onReorderNodes, onRegisterExecute, onExecutionChange }: RightDrawerProps) {
   const [isExecuting, setIsExecuting] = useState(false);
   const [executedSteps, setExecutedSteps] = useState<Set<string>>(new Set());
   const [executionError, setExecutionError] = useState<string | null>(null);
   const [executionSkippedCount, setExecutionSkippedCount] = useState(0);
+
+  const handleExecuteRef = useRef<() => Promise<void>>(async () => {});
 
   const activeAccount = useActiveAccount();
   const chainId = useChainId();
@@ -515,6 +521,7 @@ export function RightDrawer({ isOpen, onClose, nodes, edges, onReorderNodes }: R
     }
 
     setIsExecuting(true);
+    onExecutionChange?.(true);
     setExecutionError(null);
     setExecutionSkippedCount(0);
 
@@ -652,8 +659,14 @@ export function RightDrawer({ isOpen, onClose, nodes, edges, onReorderNodes }: R
     } finally {
       // Always reset executing state
       setIsExecuting(false);
+      onExecutionChange?.(false);
     }
   };
+
+  handleExecuteRef.current = handleExecute;
+  useEffect(() => {
+    onRegisterExecute?.(() => handleExecuteRef.current());
+  }, [onRegisterExecute]);
 
   return (
     <aside
@@ -786,7 +799,7 @@ export function RightDrawer({ isOpen, onClose, nodes, edges, onReorderNodes }: R
                   className={cn(
                     "w-full py-3 px-4 rounded-lg font-semibold text-white transition-all flex items-center justify-center gap-2",
                     allActionsConfigured && !isExecuting && activeAccount
-                      ? "bg-gradient-to-r from-blue-600 to-purple-600 hover:shadow-lg hover:scale-105"
+                      ? "bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 cursor-pointer"
                       : "bg-gray-400 dark:bg-gray-700 cursor-not-allowed"
                   )}
                 >
@@ -798,7 +811,7 @@ export function RightDrawer({ isOpen, onClose, nodes, edges, onReorderNodes }: R
                   ) : (
                     <>
                       <Play className="w-5 h-5" />
-                      <span>Execute Strategy</span>
+                      <span>Launch Your Kratong</span>
                     </>
                   )}
                 </button>
