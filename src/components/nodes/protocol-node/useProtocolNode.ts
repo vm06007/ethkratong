@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useReactFlow, useStore } from "@xyflow/react";
+import type { Node } from "@xyflow/react";
 import type { ProtocolNodeData } from "@/types";
 import { allProtocols } from "@/data/protocols";
 import { client, chains } from "@/config/thirdweb";
@@ -25,7 +26,7 @@ function useEffectiveBalanceDeps() {
             .map(
                 (n) => {
                     const d = n.data as ProtocolNodeData;
-                    return `${n.id}:${d.sequenceNumber}:${d.amount}:${d.estimatedAmountOut}:${d.action}:${d.asset}`;
+                    return `${n.id}:${d.sequenceNumber}:${d.amount}:${d.estimatedAmountOut}:${d.estimatedAmountOutSymbol}:${d.swapFrom}:${d.swapTo}:${d.action}:${d.asset}`;
                 }
             )
             .join("|")
@@ -40,13 +41,17 @@ export function useProtocolNode(id: string, data: ProtocolNodeData) {
     const activeAccount = useActiveAccount();
 
     const [tokenBalances, setTokenBalances] = useState<TokenBalance[]>([]);
-    const [transferBalances, setTransferBalances] = useState<TokenBalance[]>([]);
+    const [baseBalancesForEffective, setBaseBalancesForEffective] = useState<TokenBalance[]>([]);
     const [isVerifyingContract, setIsVerifyingContract] = useState(false);
     const [contractVerifyError, setContractVerifyError] = useState<string | null>(null);
     const [currentViewValue, setCurrentViewValue] = useState<string | null>(null);
     const [currentViewLoading, setCurrentViewLoading] = useState(false);
     const [currentViewError, setCurrentViewError] = useState<string | null>(null);
     const [isExpanded, setIsExpanded] = useState(false);
+    const [isLoadingBaseBalances, setIsLoadingBaseBalances] = useState(false);
+
+    // Track previous incoming edges to detect when connections change
+    const prevIncomingEdgesRef = useRef<string>("");
 
     const template = allProtocols.find((t) => t.protocol === data.protocol);
     const color = template?.color || "bg-gray-500";
@@ -200,38 +205,55 @@ export function useProtocolNode(id: string, data: ProtocolNodeData) {
         };
     }, [data.protocol, data.balanceLogicAddress, chainId]);
 
+    const nodesFromStore = useStore((s) => s.nodes) as Node<ProtocolNodeData>[];
     useEffect(() => {
-        if (data.protocol === "transfer" && activeAccount && isExpanded) {
-            fetchUserBalances(activeAccount).then((baseBalances) => {
-                const nodes = getNodes();
-                const edges = getEdges();
-                const effective = getEffectiveBalances(
-                    nodes as import("@xyflow/react").Node<ProtocolNodeData>[],
-                    edges as import("@xyflow/react").Edge[],
-                    id,
-                    baseBalances
-                );
-                setTransferBalances(
-                    effective.filter(
-                        (token) => Number(token.balance) > 0 || token.symbol.endsWith(" LP")
-                    )
-                );
-            });
-        } else if (data.protocol === "transfer" && !activeAccount) {
-            setTransferBalances([]);
+        const useEffective = data.protocol === "transfer" || data.protocol === "morpho";
+        const runForMorpho = data.protocol === "morpho" && activeAccount;
+        const runForTransfer = data.protocol === "transfer" && activeAccount && isExpanded;
+        if (useEffective && (runForTransfer || runForMorpho)) {
+            setIsLoadingBaseBalances(true);
+            fetchUserBalances(activeAccount!)
+                .then(setBaseBalancesForEffective)
+                .finally(() => setIsLoadingBaseBalances(false));
+        } else if (useEffective && !activeAccount) {
+            setBaseBalancesForEffective([]);
+            setIsLoadingBaseBalances(false);
         }
     }, [
         data.protocol,
         activeAccount,
         isExpanded,
         fetchUserBalances,
-        getNodes,
-        getEdges,
+    ]);
+
+    const transferBalances = useMemo(() => {
+        if (data.protocol !== "transfer" && data.protocol !== "morpho") return [];
+        if (data.protocol === "transfer" && !isExpanded) return [];
+
+        // If still loading, return empty (will trigger loading state in UI)
+        if (isLoadingBaseBalances) return [];
+
+        // If no base balances loaded yet, return empty
+        if (!baseBalancesForEffective.length) return [];
+
+        const effective = getEffectiveBalances(
+            nodesFromStore,
+            edgesFromStore,
+            id,
+            baseBalancesForEffective
+        );
+        return effective.filter(
+            (token) => Number(token.balance) > 0 || token.symbol.endsWith(" LP")
+        );
+    }, [
+        data.protocol,
+        isExpanded,
         id,
-        data.asset,
-        data.amount,
-        edgesFromStore.length,
+        baseBalancesForEffective,
+        nodesFromStore,
+        edgesFromStore,
         effectiveBalanceDeps,
+        isLoadingBaseBalances,
     ]);
 
     // When this transfer node receives from swap(s), keep default amount in sync with combined estimated outputs
@@ -242,14 +264,18 @@ export function useProtocolNode(id: string, data: ProtocolNodeData) {
         const incomingSourceIds = edges
             .filter((e) => e.target === id)
             .map((e) => e.source);
+
+        // Track incoming edges to detect when they change
+        const edgeKey = incomingSourceIds.sort().join(",");
         const sumsBySymbol: Record<string, number> = {};
         let lpAsset: string | null = null;
         for (const sourceId of incomingSourceIds) {
             const src = nodes.find((n) => n.id === sourceId);
             const d = src?.data as ProtocolNodeData | undefined;
+            // Uniswap defaults to swap when action is undefined/null
             if (
                 d?.protocol === "uniswap" &&
-                d?.action === "swap" &&
+                (d?.action === "swap" || d?.action == null) &&
                 d?.estimatedAmountOutSymbol &&
                 d?.estimatedAmountOut != null
             ) {
@@ -290,14 +316,96 @@ export function useProtocolNode(id: string, data: ProtocolNodeData) {
         const total = sumsBySymbol[asset] ?? 0;
         const amountStr =
             total <= 0 ? "0" : total < 0.0001 ? total.toExponential(2) : total.toFixed(6);
+
+        // Check if incoming edges have changed
+        const edgesChanged = edgeKey !== prevIncomingEdgesRef.current;
+        if (edgesChanged) {
+            prevIncomingEdgesRef.current = edgeKey;
+        }
+
         setNodes((nds) =>
             nds.map((node) => {
                 if (node.id !== id) return node;
                 const current = node.data as ProtocolNodeData;
+                // Skip auto-sync if user has manually edited AND edges haven't changed
+                if (current.amountManuallyEdited && !edgesChanged) return node;
                 if (current.asset === asset && current.amount === amountStr) return node;
                 return {
                     ...node,
-                    data: { ...current, asset, amount: amountStr },
+                    data: { ...current, asset, amount: amountStr, amountManuallyEdited: false },
+                };
+            })
+        );
+    }, [data.protocol, id, getNodes, getEdges, setNodes, effectiveBalanceDeps, edgesFromStore.length]);
+
+    // When Morpho node receives from swap (or other upstream), pre-fill amount and asset from combined output
+    useEffect(() => {
+        if (data.protocol !== "morpho") return;
+        const edges = getEdges();
+        const nodes = getNodes() as import("@xyflow/react").Node<ProtocolNodeData>[];
+        const incomingSourceIds = edges
+            .filter((e) => e.target === id)
+            .map((e) => e.source);
+
+        // Track incoming edges to detect when they change
+        const edgeKey = incomingSourceIds.sort().join(",");
+
+        const sumsBySymbol: Record<string, number> = {};
+        for (const sourceId of incomingSourceIds) {
+            const src = nodes.find((n) => n.id === sourceId);
+            const d = src?.data as ProtocolNodeData | undefined;
+            // Uniswap defaults to swap when action is undefined/null
+            if (
+                d?.protocol === "uniswap" &&
+                (d?.action === "swap" || d?.action == null) &&
+                d?.estimatedAmountOutSymbol &&
+                d?.estimatedAmountOut != null
+            ) {
+                const sym = d.estimatedAmountOutSymbol;
+                const amt = parseFloat(d.estimatedAmountOut);
+                if (!Number.isNaN(amt)) {
+                    sumsBySymbol[sym] = (sumsBySymbol[sym] ?? 0) + amt;
+                }
+            }
+        }
+        const symbols = Object.keys(sumsBySymbol);
+        if (symbols.length === 0) return;
+        const asset = symbols.reduce((a, b) =>
+            (sumsBySymbol[a] ?? 0) >= (sumsBySymbol[b] ?? 0) ? a : b
+        );
+        const total = sumsBySymbol[asset] ?? 0;
+        const amountStr =
+            total <= 0 ? "0" : total < 0.0001 ? total.toExponential(2) : total.toFixed(6);
+
+        // Check if incoming edges have changed
+        const edgesChanged = edgeKey !== prevIncomingEdgesRef.current;
+        if (edgesChanged) {
+            prevIncomingEdgesRef.current = edgeKey;
+        }
+
+        setNodes((nds) =>
+            nds.map((node) => {
+                if (node.id !== id) return node;
+                const current = node.data as ProtocolNodeData;
+                // Skip auto-sync if user has manually edited AND edges haven't changed
+                if (current.amountManuallyEdited && !edgesChanged) return node;
+                if (current.asset === asset && current.amount === amountStr) return node;
+                const assetChanged = current.asset !== asset;
+                return {
+                    ...node,
+                    data: {
+                        ...current,
+                        asset,
+                        amount: amountStr,
+                        amountManuallyEdited: false,
+                        ...(assetChanged
+                            ? {
+                                  morphoVaultAddress: undefined,
+                                  morphoVaultName: undefined,
+                                  morphoVaultApy: undefined,
+                              }
+                            : {}),
+                    },
                 };
             })
         );
@@ -331,6 +439,7 @@ export function useProtocolNode(id: string, data: ProtocolNodeData) {
         isTerminalNode,
         tokenBalances,
         transferBalances,
+        isLoadingEffectiveBalances: isLoadingBaseBalances,
         isVerifyingContract,
         setIsVerifyingContract,
         contractVerifyError,

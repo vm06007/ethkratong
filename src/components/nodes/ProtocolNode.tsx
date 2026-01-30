@@ -1,4 +1,4 @@
-import { memo, useState } from "react";
+import { useState } from "react";
 import { Handle, Position, type NodeProps, useReactFlow } from "@xyflow/react";
 import type { ProtocolNode as ProtocolNodeType } from "@/types";
 import { cn } from "@/lib/utils";
@@ -24,6 +24,7 @@ function ProtocolNode({ data, selected, id }: NodeProps<ProtocolNodeType>) {
         isTerminalNode,
         tokenBalances,
         transferBalances,
+        isLoadingEffectiveBalances,
         isVerifyingContract,
         setIsVerifyingContract,
         contractVerifyError,
@@ -93,6 +94,7 @@ function ProtocolNode({ data, selected, id }: NodeProps<ProtocolNodeType>) {
                         chainId={state.chainId ?? undefined}
                         activeAccount={activeAccount}
                         transferBalances={transferBalances}
+                        isLoadingEffectiveBalances={isLoadingEffectiveBalances}
                         isVerifyingContract={isVerifyingContract}
                         contractVerifyError={contractVerifyError}
                         currentViewValue={currentViewValue}
@@ -146,4 +148,4 @@ function ProtocolNode({ data, selected, id }: NodeProps<ProtocolNodeType>) {
     );
 }
 
-export default memo(ProtocolNode);
+export default ProtocolNode;

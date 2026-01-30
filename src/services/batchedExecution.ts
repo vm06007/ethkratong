@@ -75,6 +75,35 @@ const ERC20_APPROVE_ABI = [
     },
 ] as const;
 
+// ERC-4626 / Morpho vault deposit (assets, receiver)
+const MORPHO_VAULT_DEPOSIT_ABI = [
+    {
+        type: "function",
+        name: "deposit",
+        inputs: [
+            { name: "assets", type: "uint256" },
+            { name: "receiver", type: "address" },
+        ],
+        outputs: [{ name: "shares", type: "uint256" }],
+        stateMutability: "nonpayable",
+    },
+] as const;
+
+// ERC-4626 withdraw (assets, receiver, owner)
+const MORPHO_VAULT_WITHDRAW_ABI = [
+    {
+        type: "function",
+        name: "withdraw",
+        inputs: [
+            { name: "assets", type: "uint256" },
+            { name: "receiver", type: "address" },
+            { name: "owner", type: "address" },
+        ],
+        outputs: [{ name: "shares", type: "uint256" }],
+        stateMutability: "nonpayable",
+    },
+] as const;
+
 const UNISWAP_ADD_LIQUIDITY_ETH_ABI = [
     {
         type: "function",
@@ -617,7 +646,59 @@ async function prepareUniswapAddLiquidityCalls(
 }
 
 /**
- * Prepare batched transaction calls for all nodes (transfers + custom + uniswap) in order.
+ * Prepare batched calls for Morpho vault deposit (lend) or withdraw.
+ * Deposit: approve asset for vault, then vault.deposit(assets, receiver).
+ * Withdraw: vault.withdraw(assets, receiver, owner).
+ */
+function prepareMorphoVaultCalls(
+  node: Node<ProtocolNodeData>,
+  chainId: number,
+  account: string
+): BatchedTransactionCall[] {
+  const { action, morphoVaultAddress, asset: assetSymbol, amount } = node.data;
+  if (!morphoVaultAddress || !assetSymbol || !amount?.trim()) {
+    throw new Error("Morpho: vault, asset and amount are required");
+  }
+  const tokens = TOKEN_ADDRESSES[chainId as keyof typeof TOKEN_ADDRESSES];
+  const assetAddress = tokens?.[assetSymbol as keyof typeof tokens];
+  if (!assetAddress) {
+    throw new Error(`Morpho: unsupported asset "${assetSymbol}" on this chain`);
+  }
+  const decimals = TOKEN_DECIMALS[assetSymbol] ?? 18;
+  const amountWei = parseUnits(amount.trim(), decimals);
+  const vaultAddress = getAddress(morphoVaultAddress);
+
+  if (action === "lend" || action === "deposit") {
+    const approveData = encodeFunctionData({
+      abi: ERC20_APPROVE_ABI,
+      functionName: "approve",
+      args: [vaultAddress, amountWei],
+    });
+    const depositData = encodeFunctionData({
+      abi: MORPHO_VAULT_DEPOSIT_ABI,
+      functionName: "deposit",
+      args: [amountWei, getAddress(account)],
+    });
+    return [
+      { to: assetAddress, data: approveData, value: toHex(0n) },
+      { to: vaultAddress, data: depositData, value: toHex(0n) },
+    ];
+  }
+
+  if (action === "withdraw") {
+    const withdrawData = encodeFunctionData({
+      abi: MORPHO_VAULT_WITHDRAW_ABI,
+      functionName: "withdraw",
+      args: [amountWei, getAddress(account), getAddress(account)],
+    });
+    return [{ to: vaultAddress, data: withdrawData, value: toHex(0n) }];
+  }
+
+  throw new Error(`Morpho: action "${action}" is not supported for execution`);
+}
+
+/**
+ * Prepare batched transaction calls for all nodes (transfers + custom + uniswap + morpho) in order.
  * Returns a flat list for EIP-7702 wallet_sendCalls (approve + addLiquidity are separate calls in the same batch).
  * @param account - Required for Uniswap swap/addLiquidity (recipient of output tokens)
  * @param edges - Optional edges so transfer nodes can resolve LP token from upstream addLiquidity
@@ -670,6 +751,20 @@ export const prepareBatchedCalls = async (
         }
       }
       // removeLiquidity not implemented for execution
+    } else if (node.data.protocol === "morpho" && account) {
+      const action = node.data.action;
+      const isVaultAction =
+        (action === "lend" || action === "deposit") && node.data.morphoVaultAddress;
+      const isWithdraw = action === "withdraw" && node.data.morphoVaultAddress;
+      if (isVaultAction || isWithdraw) {
+        try {
+          calls.push(...prepareMorphoVaultCalls(node, chainId, account));
+        } catch (err) {
+          lastError = err instanceof Error ? err : new Error(String(err));
+          console.warn(`Skipping Morpho node ${node.id}:`, err);
+        }
+      }
+      // borrow/repay not implemented for execution
     }
   }
   if (calls.length === 0 && lastError) {

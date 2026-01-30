@@ -12,6 +12,7 @@ interface ProtocolNodeExpandedBodyProps {
     chainId: number | undefined;
     activeAccount: { address: string } | undefined;
     transferBalances: TokenBalance[];
+    isLoadingEffectiveBalances?: boolean;
     isVerifyingContract: boolean;
     contractVerifyError: string | null;
     currentViewValue: string | null;
@@ -28,6 +29,7 @@ export function ProtocolNodeExpandedBody({
     chainId,
     activeAccount,
     transferBalances,
+    isLoadingEffectiveBalances,
     isVerifyingContract,
     contractVerifyError,
     currentViewValue,
@@ -128,6 +130,8 @@ export function ProtocolNodeExpandedBody({
                     chainId={chainId}
                     onUpdateData={onUpdateData}
                     template={template}
+                    effectiveBalances={transferBalances}
+                    isLoadingEffectiveBalances={isLoadingEffectiveBalances}
                 />
             )}
 
@@ -148,7 +152,7 @@ export function ProtocolNodeExpandedBody({
                         <select
                             className="w-full border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-sm bg-white dark:bg-gray-700 dark:text-gray-200"
                             value={data.asset || ""}
-                            onChange={(e) => onUpdateData({ asset: e.target.value })}
+                            onChange={(e) => onUpdateData({ asset: e.target.value, amountManuallyEdited: false })}
                         >
                             <option value="">Select asset</option>
                             {transferBalances.map((token) => (
@@ -221,7 +225,7 @@ export function ProtocolNodeExpandedBody({
                         placeholder="0.00"
                         className="w-full border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-sm bg-white dark:bg-gray-700 dark:text-gray-200 dark:placeholder-gray-500"
                         value={data.amount || ""}
-                        onChange={(e) => onUpdateData({ amount: e.target.value })}
+                        onChange={(e) => onUpdateData({ amount: e.target.value, amountManuallyEdited: true })}
                     />
                 </div>
             )}

@@ -259,15 +259,22 @@ function SortableStep({ node, isExecuted, isConfigured }: SortableStepProps) {
             </div>
           )
         ) : node.data.protocol === "morpho" ? (
-          node.data.action && node.data.asset ? (
+          node.data.action && (node.data.asset || node.data.morphoVaultAddress) ? (
             <>
               <div className="flex justify-between">
                 <span className="font-medium">Action:</span>
                 <span className="capitalize">{node.data.action}</span>
               </div>
               <div className="flex justify-between">
-                <span className="font-medium">Asset:</span>
-                <span>{node.data.asset}</span>
+                <span className="font-medium">{node.data.morphoVaultAddress ? "Vault:" : "Asset:"}</span>
+                <span>
+                  {node.data.morphoVaultName ?? node.data.asset}
+                  {node.data.morphoVaultApy != null && !Number.isNaN(node.data.morphoVaultApy) && (
+                    <span className="text-green-600 dark:text-green-400 ml-1">
+                      ({(node.data.morphoVaultApy * 100).toFixed(2)}% APY)
+                    </span>
+                  )}
+                </span>
               </div>
               {node.data.amount && (
                 <div className="flex justify-between">
@@ -278,7 +285,7 @@ function SortableStep({ node, isExecuted, isConfigured }: SortableStepProps) {
             </>
           ) : (
             <div className="text-orange-500 dark:text-orange-400">
-              ⚠ Set action and asset
+              ⚠ Set action and vault/asset
             </div>
           )
         ) : node.data.protocol === "uniswap" ? (

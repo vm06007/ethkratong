@@ -73,6 +73,14 @@ export interface ProtocolNodeData extends Record<string, unknown> {
   uniswapVersion?: "v2" | "v3" | "v4";
   /** When true, choose version automatically based on best route (default true) */
   uniswapVersionAuto?: boolean;
+  /** Morpho: vault contract address when action is deposit/withdraw (lend/redeem) */
+  morphoVaultAddress?: string;
+  /** Morpho: vault display name (for compact view) */
+  morphoVaultName?: string;
+  /** Morpho: vault APY as decimal (e.g. 0.05 for 5%) */
+  morphoVaultApy?: number;
+  /** Track if user has manually edited the amount field (to prevent auto-sync overwriting user input) */
+  amountManuallyEdited?: boolean;
 }
 
 export type ProtocolNode = Node<ProtocolNodeData>;

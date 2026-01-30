@@ -5,7 +5,6 @@ import type { TokenBalance } from "./types";
 /**
  * Get all action nodes that execute before targetId by sequence order.
  * Used for effective balance: max balance for step N = wallet + effects of steps 1..N-1.
- * Connection/linking does not change this — only sequence number does.
  */
 function getPredecessorsBySequence(
     nodes: Node<ProtocolNodeData>[],
@@ -20,58 +19,96 @@ function getPredecessorsBySequence(
 }
 
 /**
+ * Get direct predecessors by graph edges (sources that have an edge into targetId).
+ * Used as fallback so linked upstream outputs are always reflected even if sequence numbers lag.
+ */
+function getPredecessorsByEdges(
+    nodes: Node<ProtocolNodeData>[],
+    edges: Edge[],
+    targetId: string
+): Node<ProtocolNodeData>[] {
+    const sourceIds = new Set(edges.filter((e) => e.target === targetId).map((e) => e.source));
+    return nodes.filter((n) => n.data.protocol !== "wallet" && sourceIds.has(n.id));
+}
+
+/**
  * Compute effective token balances at a node after applying all prior steps in sequence.
  * E.g. for action #2: balance = wallet + effect of step #1 (e.g. swap adds USDC).
  * Linking only affects initial input value; max/25%/50%/75% use this sequence-based balance.
  */
 export function getEffectiveBalances(
     nodes: Node<ProtocolNodeData>[],
-    _edges: Edge[],
+    edges: Edge[],
     nodeId: string,
     baseBalances: TokenBalance[]
 ): TokenBalance[] {
-    const preds = getPredecessorsBySequence(nodes, nodeId);
+    const seqPreds = getPredecessorsBySequence(nodes, nodeId);
+    const edgePreds = getPredecessorsByEdges(nodes, edges, nodeId);
+    const seen = new Set<string>();
+    const preds: Node<ProtocolNodeData>[] = [];
+    for (const n of [...seqPreds, ...edgePreds]) {
+        if (!seen.has(n.id)) {
+            seen.add(n.id);
+            preds.push(n);
+        }
+    }
+    preds.sort((a, b) => (a.data.sequenceNumber ?? 0) - (b.data.sequenceNumber ?? 0));
+
     const balances: Record<string, number> = {};
     baseBalances.forEach((t) => {
         const n = parseFloat(t.balance);
         balances[t.symbol] = Number.isNaN(n) ? 0 : n;
     });
 
+    const canonicalKey = (sym: string) => sym?.toUpperCase() ?? "";
+    const resolveOutSymbol = (to: string) => {
+        const key = canonicalKey(to);
+        if (!key) return null;
+        const match = baseBalances.find((t) => canonicalKey(t.symbol) === key);
+        return match ? match.symbol : to;
+    };
+
     for (const node of preds) {
         const d = node.data;
-        if (d.protocol === "uniswap" && d.action === "swap") {
+        // Uniswap defaults to swap mode when action is undefined/null
+        const isUniswapSwap = d.protocol === "uniswap" && (d.action === "swap" || d.action == null);
+        if (isUniswapSwap) {
             const from = d.swapFrom;
-            const to = d.estimatedAmountOutSymbol;
+            const toRaw = d.estimatedAmountOutSymbol;
             const amountStr = d.amount?.trim();
             const outStr = d.estimatedAmountOut;
-            if (from && to && amountStr && outStr != null) {
+            if (from && toRaw && amountStr && outStr != null) {
                 const amount = parseFloat(amountStr);
                 const out = parseFloat(outStr);
                 if (!Number.isNaN(amount)) {
-                    balances[from] = (balances[from] ?? 0) - amount;
-                    if (balances[from] < 0) balances[from] = 0;
+                    const fromKey = baseBalances.find((t) => canonicalKey(t.symbol) === canonicalKey(from))?.symbol ?? from;
+                    balances[fromKey] = (balances[fromKey] ?? 0) - amount;
+                    if (balances[fromKey] < 0) balances[fromKey] = 0;
                 }
                 if (!Number.isNaN(out)) {
-                    balances[to] = (balances[to] ?? 0) + out;
+                    const toKey = resolveOutSymbol(toRaw) ?? toRaw;
+                    balances[toKey] = (balances[toKey] ?? 0) + out;
                 }
             }
         }
         if (d.protocol === "transfer" && d.asset && d.amount?.trim()) {
             const amt = parseFloat(d.amount);
             if (!Number.isNaN(amt) && d.asset) {
-                balances[d.asset] = (balances[d.asset] ?? 0) - amt;
-                if (balances[d.asset] < 0) balances[d.asset] = 0;
+                const assetKey = resolveOutSymbol(d.asset) ?? baseBalances.find((t) => canonicalKey(t.symbol) === canonicalKey(d.asset!))?.symbol ?? d.asset;
+                balances[assetKey] = (balances[assetKey] ?? 0) - amt;
+                if (balances[assetKey] < 0) balances[assetKey] = 0;
             }
         }
         if (d.protocol === "morpho" && d.asset && d.amount?.trim()) {
             const amt = parseFloat(d.amount);
             if (Number.isNaN(amt)) continue;
+            const assetKey = resolveOutSymbol(d.asset) ?? baseBalances.find((t) => canonicalKey(t.symbol) === canonicalKey(d.asset!))?.symbol ?? d.asset;
             if (d.action === "lend" || d.action === "deposit") {
-                balances[d.asset] = (balances[d.asset] ?? 0) - amt;
-                if (balances[d.asset] < 0) balances[d.asset] = 0;
+                balances[assetKey] = (balances[assetKey] ?? 0) - amt;
+                if (balances[assetKey] < 0) balances[assetKey] = 0;
             }
             if (d.action === "withdraw" || d.action === "borrow") {
-                balances[d.asset] = (balances[d.asset] ?? 0) + amt;
+                balances[assetKey] = (balances[assetKey] ?? 0) + amt;
             }
         }
         if (d.protocol === "uniswap" && d.action === "addLiquidity" && d.liquidityTokenA && d.liquidityTokenB) {

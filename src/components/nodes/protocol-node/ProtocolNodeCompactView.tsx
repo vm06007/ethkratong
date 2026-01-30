@@ -116,11 +116,23 @@ export function ProtocolNodeCompactView({ data }: ProtocolNodeCompactViewProps) 
         const action = data.action;
         const asset = data.asset;
         const amount = data.amount;
-        if (action && asset) {
+        const vaultLabel = data.morphoVaultName ?? asset;
+        const apyPct =
+            data.morphoVaultApy != null && !Number.isNaN(data.morphoVaultApy)
+                ? (data.morphoVaultApy * 100).toFixed(2)
+                : null;
+        if (action && (asset || data.morphoVaultAddress)) {
             return (
                 <div className="text-sm text-gray-600 dark:text-gray-300">
                     <div className="font-medium">
-                        {action.charAt(0).toUpperCase() + action.slice(1)} {asset}
+                        {action.charAt(0).toUpperCase() + action.slice(1)}{" "}
+                        {vaultLabel}
+                        {apyPct != null && (
+                            <span className="text-green-600 dark:text-green-400 font-normal">
+                                {" "}
+                                ({apyPct}% APY)
+                            </span>
+                        )}
                     </div>
                     {amount && (
                         <div className="text-xs text-gray-500 dark:text-gray-400">
@@ -132,7 +144,7 @@ export function ProtocolNodeCompactView({ data }: ProtocolNodeCompactViewProps) 
         }
         return (
             <div className="text-sm text-gray-500 dark:text-gray-400">
-                <div className="text-xs italic">Click to set action and asset</div>
+                <div className="text-xs italic">Click to set action and vault/asset</div>
             </div>
         );
     }
