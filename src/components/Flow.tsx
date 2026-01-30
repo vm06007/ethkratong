@@ -488,8 +488,24 @@ function FlowCanvas() {
 
   const handleSave = () => {
     const tabName = tabs.find((t) => t.id === activeTabId)?.name || "My Kratong #1";
+
+    // Normalize nodes before saving - ensure all Uniswap nodes have action field
+    const normalizedNodes = nodes.map((node) => {
+      if (node.data.protocol === "uniswap" && !node.data.action) {
+        // Default to "swap" if no action is set
+        return {
+          ...node,
+          data: {
+            ...node.data,
+            action: "swap" as const,
+          },
+        };
+      }
+      return node;
+    });
+
     const strategy = {
-      nodes,
+      nodes: normalizedNodes,
       edges,
       name: tabName,
     };
@@ -518,11 +534,39 @@ function FlowCanvas() {
             const loadedNodes = data.nodes || [];
             const loadedEdges = data.edges || [];
             const nameFromFile = file.name.replace(/\.json$/i, "");
+
+            // Normalize nodes - ensure Uniswap nodes have action field set
+            const normalizedNodes = loadedNodes.map((node: Node<ProtocolNodeData>) => {
+              if (node.data.protocol === "uniswap") {
+                // If action is missing but swapFrom/swapTo exist, set action to "swap"
+                if (!node.data.action && (node.data.swapFrom || node.data.swapTo)) {
+                  return {
+                    ...node,
+                    data: {
+                      ...node.data,
+                      action: "swap" as const,
+                    },
+                  };
+                }
+                // If action is missing and no swap data, default to "swap"
+                if (!node.data.action) {
+                  return {
+                    ...node,
+                    data: {
+                      ...node.data,
+                      action: "swap" as const,
+                    },
+                  };
+                }
+              }
+              return node;
+            });
+
             // Always add loaded flow as a new tab
             const newTab: Tab = {
               id: `${tabId++}`,
               name: nameFromFile,
-              nodes: loadedNodes,
+              nodes: normalizedNodes,
               edges: loadedEdges,
             };
             setTabs((prev) => [...prev, newTab]);
@@ -569,8 +613,23 @@ function FlowCanvas() {
     try {
       const tabName = tabs.find((t) => t.id === activeTabId)?.name || "My Kratong";
 
+      // Normalize nodes before sharing - ensure all Uniswap nodes have action field
+      const normalizedNodes = nodes.map((node) => {
+        if (node.data.protocol === "uniswap" && !node.data.action) {
+          // Default to "swap" if no action is set
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              action: "swap" as const,
+            },
+          };
+        }
+        return node;
+      });
+
       const flowData: FlowShareData = {
-        nodes: nodes,
+        nodes: normalizedNodes,
         edges: edges,
         name: tabName,
         timestamp: Date.now(),
@@ -604,11 +663,39 @@ function FlowCanvas() {
   };
 
   const handleLoadSharedFlow = useCallback((loadedNodes: Node[], loadedEdges: Edge[]) => {
+    // Normalize nodes - ensure Uniswap nodes have action field set
+    const normalizedNodes = loadedNodes.map((node: Node) => {
+      const nodeData = node.data as ProtocolNodeData;
+      if (nodeData.protocol === "uniswap") {
+        // If action is missing but swapFrom/swapTo exist, set action to "swap"
+        if (!nodeData.action && (nodeData.swapFrom || nodeData.swapTo)) {
+          return {
+            ...node,
+            data: {
+              ...nodeData,
+              action: "swap" as const,
+            },
+          };
+        }
+        // If action is missing and no swap data, default to "swap"
+        if (!nodeData.action) {
+          return {
+            ...node,
+            data: {
+              ...nodeData,
+              action: "swap" as const,
+            },
+          };
+        }
+      }
+      return node;
+    });
+
     // Create a new tab for the shared flow
     const newTab: Tab = {
       id: `${tabId++}`,
       name: "Shared Kratong",
-      nodes: loadedNodes as Node<ProtocolNodeData>[],
+      nodes: normalizedNodes as Node<ProtocolNodeData>[],
       edges: loadedEdges,
     };
     setTabs((prev) => [...prev, newTab]);

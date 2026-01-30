@@ -175,7 +175,8 @@ export function ProtocolNodeCompactView({ data }: ProtocolNodeCompactViewProps) 
                     </div>
                 );
             }
-        } else if (data.action === "swap") {
+        } else if (data.action === "swap" || (data.swapFrom && data.swapTo)) {
+            // Show swap details if action is swap OR if swapFrom/swapTo exist (for backwards compatibility)
             const from = data.swapFrom;
             const to = data.swapTo;
             if (from || to) {
