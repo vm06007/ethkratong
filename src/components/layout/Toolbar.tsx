@@ -272,7 +272,7 @@ export function Toolbar({
           alt=""
           className="h-[40px] w-auto object-contain"
         />
-        <h1 className="text-black dark:text-[#efeaea] font-medium text-[23px] tracking-normal font-mono [text-shadow:revert-layer]">
+        <h1 className="text-gray-700 dark:text-[#efeaea] font-light text-[20px] tracking-normal [text-shadow:revert-layer] font-sans">
           ETHKratong
         </h1>
       </div>

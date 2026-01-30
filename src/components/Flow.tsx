@@ -416,6 +416,52 @@ function FlowCanvas() {
     [reactFlowInstance, setNodes, nodes]
   );
 
+  const handleAddNodeFromSidebar = useCallback(
+    (protocol: string, label: string) => {
+      if (!reactFlowInstance || !reactFlowWrapper.current) return;
+
+      const rect = reactFlowWrapper.current.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+      const position = reactFlowInstance.screenToFlowPosition({
+        x: centerX,
+        y: centerY,
+      });
+
+      const existingIds = new Set(nodes.map((n) => n.id));
+      const maxN = nodes.reduce((max, n) => {
+        const m = n.id.match(/^node-(\d+)$/);
+        const num = m ? parseInt(m[1], 10) : 0;
+        return Math.max(max, num);
+      }, 0);
+      let nextNum = maxN + 1;
+      while (existingIds.has(`node-${nextNum}`)) nextNum++;
+      const nextNodeId = `node-${nextNum}`;
+
+      const maxSequence = Math.max(
+        0,
+        ...nodes
+          .filter((n) => n.data.sequenceNumber !== undefined)
+          .map((n) => n.data.sequenceNumber || 0)
+      );
+
+      const newNode: Node<ProtocolNodeData> = {
+        id: nextNodeId,
+        type: "protocol",
+        position,
+        data: {
+          protocol: protocol as any,
+          label: label,
+          sequenceNumber: maxSequence + 1,
+          ...(protocol === "uniswap" ? { action: "swap" as const } : {}),
+        },
+      };
+
+      setNodes((nds) => nds.concat(newNode));
+    },
+    [reactFlowInstance, setNodes, nodes]
+  );
+
   const handleSave = () => {
     const tabName = tabs.find((t) => t.id === activeTabId)?.name || "My Kratong #1";
     const strategy = {
@@ -622,7 +668,10 @@ function FlowCanvas() {
         onTabAdd={handleNewTab}
       />
       <div className="flex flex-1 overflow-hidden relative">
-        <Sidebar isOpen={isSidebarOpen} />
+        <Sidebar
+            isOpen={isSidebarOpen}
+            onAddNode={handleAddNodeFromSidebar}
+          />
         <div
           ref={reactFlowWrapper}
           className="flex-1 bg-gray-50 dark:bg-gray-950"

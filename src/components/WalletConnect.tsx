@@ -14,7 +14,7 @@ export function WalletConnect() {
         }}
         connectButton={{
           label: "Connect Wallet",
-          className: "!bg-gradient-to-r !from-blue-600 !to-purple-600 !text-white !font-semibold !px-4 !py-2 !rounded-lg !transition-all hover:!shadow-lg",
+          className: "!px-3 !py-2.5 !h-9 !rounded-lg !border !border-gray-300 dark:!border-gray-600 !bg-gray-100 dark:!bg-gray-800 hover:!bg-gray-200 dark:hover:!bg-gray-700 !transition-colors !text-gray-700 dark:!text-gray-300 !font-medium !text-sm !shadow-none !scale-100 hover:!scale-100 !min-w-0 !box-border",
         }}
         detailsButton={{
           displayBalanceToken: {

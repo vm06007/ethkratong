@@ -22,9 +22,11 @@ const iconMap = {
 
 interface SidebarProps {
   isOpen: boolean;
+  /** Double-click on a protocol card adds it to the canvas (e.g. for iPad). */
+  onAddNode?: (protocol: string, label: string) => void;
 }
 
-export function Sidebar({ isOpen }: SidebarProps) {
+export function Sidebar({ isOpen, onAddNode }: SidebarProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedCategories, setExpandedCategories] = useState<string[]>([
     "Wallet",
@@ -125,6 +127,13 @@ export function Sidebar({ isOpen }: SidebarProps) {
                           isComingSoon
                             ? undefined
                             : (e) => onDragStart(e, template.protocol, template.label)
+                        }
+                        onDoubleClick={
+                          isComingSoon
+                            ? undefined
+                            : onAddNode
+                              ? () => onAddNode(template.protocol, template.label)
+                              : undefined
                         }
                       >
                         <div className="flex items-center justify-between gap-2">
