@@ -140,6 +140,26 @@ function FlowCanvas() {
 
   const executeFlowRef = useRef<(() => Promise<void>) | null>(null);
   const [isExecutingFlow, setIsExecutingFlow] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  const fullscreenContainerRef = useRef<HTMLDivElement>(null);
+
+  const handleToggleFullscreen = useCallback(() => {
+    if (!fullscreenContainerRef.current) return;
+    if (document.fullscreenElement) {
+      document.exitFullscreen();
+    } else {
+      fullscreenContainerRef.current.requestFullscreen();
+    }
+  }, []);
+
+  useEffect(() => {
+    const onFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener("fullscreenchange", onFullscreenChange);
+    return () => document.removeEventListener("fullscreenchange", onFullscreenChange);
+  }, []);
 
   // Custom edge change handler to detect deletions
   const handleEdgesChange = useCallback(
@@ -562,7 +582,10 @@ function FlowCanvas() {
   };
 
   return (
-    <div className="flex flex-col h-full w-full bg-gray-50 dark:bg-gray-950">
+    <div
+      ref={fullscreenContainerRef}
+      className={`flex flex-col h-full w-full bg-gray-50 dark:bg-gray-950 ${isFullscreen ? "min-h-screen min-w-screen" : ""}`}
+    >
       <Toolbar
         isSidebarOpen={isSidebarOpen}
         onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
@@ -586,6 +609,8 @@ function FlowCanvas() {
         onNewTab={handleNewTab}
         onExecuteFlow={() => executeFlowRef.current?.()}
         isExecutingFlow={isExecutingFlow}
+        onToggleFullscreen={handleToggleFullscreen}
+        isFullscreen={isFullscreen}
         canUndo={historyIndex > 0}
         canRedo={historyIndex < history.length - 1}
       />

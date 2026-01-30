@@ -19,6 +19,8 @@ import {
   Trash2,
   AlertTriangle,
   Play,
+  Maximize2,
+  Minimize2,
 } from "lucide-react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { useTheme } from "@/hooks/useTheme";
@@ -45,6 +47,8 @@ interface ToolbarProps {
   onNewTab: () => void;
   onExecuteFlow?: () => void;
   isExecutingFlow?: boolean;
+  onToggleFullscreen?: () => void;
+  isFullscreen?: boolean;
   canUndo: boolean;
   canRedo: boolean;
 }
@@ -68,6 +72,8 @@ export function Toolbar({
   onNewTab,
   onExecuteFlow,
   isExecutingFlow,
+  onToggleFullscreen,
+  isFullscreen,
   canUndo,
   canRedo,
 }: ToolbarProps) {
@@ -282,6 +288,21 @@ export function Toolbar({
         <WalletConnect />
 
         <div className="w-px h-6 bg-gray-300 dark:bg-gray-600" />
+
+        {/* Fullscreen canvas */}
+        {onToggleFullscreen && (
+          <button
+            onClick={onToggleFullscreen}
+            className={iconButton}
+            aria-label={isFullscreen ? "Exit fullscreen" : "Fullscreen canvas"}
+          >
+            {isFullscreen ? (
+              <Minimize2 className={iconClass} />
+            ) : (
+              <Maximize2 className={iconClass} />
+            )}
+          </button>
+        )}
 
         {/* Theme Toggle */}
         <button
