@@ -212,7 +212,7 @@ export function ProtocolNodeExpandedBody({
                                                 : value < 0.0001
                                                   ? value.toExponential(2)
                                                   : value.toFixed(6);
-                                        onUpdateData({ amount: str });
+                                        onUpdateData({ amount: str, amountManuallyEdited: true });
                                     }}
                                 >
                                     {pct === 1 ? "Max" : `${pct * 100}%`}

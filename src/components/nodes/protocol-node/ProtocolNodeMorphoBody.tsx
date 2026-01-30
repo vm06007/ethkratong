@@ -86,7 +86,8 @@ export function ProtocolNodeMorphoBody({
         const value = pct === 1 ? num : num * pct;
         const str =
             value <= 0 ? "0" : value < 0.0001 ? value.toExponential(2) : value.toFixed(6);
-        onUpdateData({ amount: str });
+        // Mark as manually edited so it doesn't get overwritten by auto-sync
+        onUpdateData({ amount: str, amountManuallyEdited: true });
     };
 
     const handleVaultChange = (vaultAddress: string) => {

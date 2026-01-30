@@ -9,12 +9,16 @@ import { ProtocolNodeExpandedBody } from "./protocol-node/ProtocolNodeExpandedBo
 import { ProtocolNodeCompactView } from "./protocol-node/ProtocolNodeCompactView";
 import { UniswapExpandedModal } from "./protocol-node/UniswapExpandedModal";
 import { UniswapConfigModal } from "./protocol-node/UniswapConfigModal";
+import { MorphoExpandedModal } from "./protocol-node/MorphoExpandedModal";
+import { MorphoConfigModal } from "./protocol-node/MorphoConfigModal";
 
 function ProtocolNode({ data, selected, id }: NodeProps<ProtocolNodeType>) {
     const { deleteElements } = useReactFlow();
     const state = useProtocolNode(id, data);
     const [viewInFrameOpen, setViewInFrameOpen] = useState(false);
     const [expandedViewOpen, setExpandedViewOpen] = useState(false);
+    const [morphoViewInFrameOpen, setMorphoViewInFrameOpen] = useState(false);
+    const [morphoExpandedViewOpen, setMorphoExpandedViewOpen] = useState(false);
 
     const {
         isExpanded,
@@ -69,12 +73,16 @@ function ProtocolNode({ data, selected, id }: NodeProps<ProtocolNodeType>) {
                 onViewInFrame={
                     data.protocol === "uniswap"
                         ? () => setViewInFrameOpen(true)
-                        : undefined
+                        : data.protocol === "morpho"
+                          ? () => setMorphoViewInFrameOpen(true)
+                          : undefined
                 }
                 onExpandedView={
                     data.protocol === "uniswap"
                         ? () => setExpandedViewOpen(true)
-                        : undefined
+                        : data.protocol === "morpho"
+                          ? () => setMorphoExpandedViewOpen(true)
+                          : undefined
                 }
             />
 
@@ -141,6 +149,27 @@ function ProtocolNode({ data, selected, id }: NodeProps<ProtocolNodeType>) {
                         data={data}
                         chainId={state.chainId ?? undefined}
                         onUpdateData={updateNodeData}
+                    />
+                </>
+            )}
+
+            {data.protocol === "morpho" && (
+                <>
+                    <MorphoExpandedModal
+                        open={morphoViewInFrameOpen}
+                        onOpenChange={setMorphoViewInFrameOpen}
+                        chainId={state.chainId ?? undefined}
+                        action={data.action}
+                        vaultAddress={data.morphoVaultAddress}
+                    />
+                    <MorphoConfigModal
+                        open={morphoExpandedViewOpen}
+                        onOpenChange={setMorphoExpandedViewOpen}
+                        data={data}
+                        chainId={state.chainId ?? undefined}
+                        onUpdateData={updateNodeData}
+                        effectiveBalances={state.transferBalances}
+                        isLoadingEffectiveBalances={state.isLoadingEffectiveBalances}
                     />
                 </>
             )}
