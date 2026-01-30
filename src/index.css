@@ -133,6 +133,11 @@ html, body, #root {
   fill: #2563eb;
 }
 
+.react-flow__handle.connectionindicator {
+  border-color: white;
+  border-width: 1px !important;
+}
+
 .dark\:bg-gray-900:is(.dark *) {
   background-color: #071c1f !important;
 }
