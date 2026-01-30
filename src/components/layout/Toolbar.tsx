@@ -21,12 +21,21 @@ import {
   Play,
   Maximize2,
   Minimize2,
+  Github,
+  Twitter,
+  Mail,
 } from "lucide-react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { useTheme } from "@/hooks/useTheme";
 import { useState } from "react";
 import { WalletConnect } from "../WalletConnect";
 import { cn } from "@/lib/utils";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface ToolbarProps {
   isSidebarOpen: boolean;
@@ -257,9 +266,14 @@ export function Toolbar({
       </div>
 
       {/* Center Section - Title */}
-      <div className="flex items-center gap-3">
-        <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-          ETH Kratong
+      <div className="flex items-center gap-2">
+        <img
+          src="/loy-krathong.svg"
+          alt=""
+          className="h-[40px] w-auto object-contain"
+        />
+        <h1 className="text-black dark:text-[#efeaea] font-medium text-[23px] tracking-normal font-mono [text-shadow:revert-layer]">
+          ETHKratong
         </h1>
       </div>
 
@@ -278,9 +292,48 @@ export function Toolbar({
         </button>
 
         {/* Globe Menu */}
-        <button className={iconButton} aria-label="Links">
-          <Globe className={iconClass} />
-        </button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className={iconButton} aria-label="Community & Links">
+              <Globe className={iconClass} />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" side="bottom">
+            <DropdownMenuItem asChild>
+              <a
+                href="https://github.com/ethkratong/ethkratong"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2"
+              >
+                <Github className="h-4 w-4" />
+                <span>GitHub</span>
+              </a>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <a
+                href="https://x.com/ethkratong"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2"
+              >
+                <Twitter className="h-4 w-4" />
+                <span>X (Twitter)</span>
+              </a>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <a
+                href="mailto:hi@ethkratong.io"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2"
+              >
+                <Mail className="h-4 w-4" />
+                <span>Email</span>
+              </a>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
 
         <div className="w-px h-6 bg-gray-300 dark:bg-gray-600" />
 

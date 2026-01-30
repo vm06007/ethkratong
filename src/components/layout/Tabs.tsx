@@ -1,4 +1,4 @@
-import { X, Plus, Zap } from "lucide-react";
+import { X, Plus, Zap, Plug } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useWalletCapabilities } from "@/hooks/useWalletCapabilities";
 
@@ -59,7 +59,8 @@ export function Tabs({
         <Plus className="w-4 h-4 dark:text-gray-400" />
       </button>
       <div className="ml-auto flex items-center gap-2">
-        <span className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">
+        <span className="flex items-center gap-1 text-xs text-purple-600 dark:text-purple-400 bg-purple-100 dark:bg-purple-900/30 px-2 py-1 rounded">
+          <Plug className="w-3.5 h-3.5" />
           EIP-7702 Powered
         </span>
         {!isLoading && supportsBatch && (

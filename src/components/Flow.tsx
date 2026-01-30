@@ -178,7 +178,7 @@ function FlowCanvas() {
   );
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [tabs, setTabs] = useState<Tab[]>([
-    { id: "1", name: "Kratong #1", nodes: initialNodes, edges: initialEdges },
+    { id: "1", name: "My Kratong #1", nodes: initialNodes, edges: initialEdges },
   ]);
   const [activeTabId, setActiveTabId] = useState("1");
   const { theme } = useTheme();
@@ -417,7 +417,7 @@ function FlowCanvas() {
   );
 
   const handleSave = () => {
-    const tabName = tabs.find((t) => t.id === activeTabId)?.name || "Kratong #1";
+    const tabName = tabs.find((t) => t.id === activeTabId)?.name || "My Kratong #1";
     const strategy = {
       nodes,
       edges,
@@ -495,7 +495,7 @@ function FlowCanvas() {
   const handleNewTab = () => {
     const newTab: Tab = {
       id: `${tabId++}`,
-      name: `Kratong #${tabs.length + 1}`,
+      name: `My Kratong #${tabs.length + 1}`,
       nodes: initialNodes,
       edges: initialEdges,
     };
