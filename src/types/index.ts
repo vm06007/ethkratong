@@ -93,4 +93,6 @@ export interface NodeTemplate {
   color?: string;
   availableActions: ActionType[];
   url?: string;
+  /** When true, protocol is not yet available - shown as non-draggable with "coming soon" in sidebar */
+  comingSoon?: boolean;
 }

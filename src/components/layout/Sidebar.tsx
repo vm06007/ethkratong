@@ -106,27 +106,43 @@ export function Sidebar({ isOpen }: SidebarProps) {
               {/* Protocols */}
               {isExpanded && (
                 <div className="mt-2 space-y-2 ml-2">
-                  {category.protocols.map((template) => (
-                    <div
-                      key={template.protocol}
-                      className={cn(
-                        "p-3 rounded-lg border-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 cursor-move",
-                        "hover:shadow-md transition-shadow",
-                        template.color?.replace("bg-", "hover:border-") ?? "hover:border-gray-400"
-                      )}
-                      draggable
-                      onDragStart={(e) =>
-                        onDragStart(e, template.protocol, template.label)
-                      }
-                    >
-                      <div className="font-semibold text-sm dark:text-gray-100">
-                        {template.label}
+                  {category.protocols.map((template) => {
+                    const isComingSoon = template.comingSoon === true;
+                    return (
+                      <div
+                        key={template.protocol}
+                        className={cn(
+                          "p-3 rounded-lg border-2 bg-white dark:bg-gray-800 transition-all",
+                          isComingSoon
+                            ? "border-gray-300 dark:border-gray-600 opacity-60 cursor-not-allowed hover:opacity-70 hover:shadow-none"
+                            : cn(
+                                "border-gray-300 dark:border-gray-600 cursor-move hover:shadow-md",
+                                template.color?.replace("bg-", "hover:border-") ?? "hover:border-gray-400"
+                              )
+                        )}
+                        draggable={!isComingSoon}
+                        onDragStart={
+                          isComingSoon
+                            ? undefined
+                            : (e) => onDragStart(e, template.protocol, template.label)
+                        }
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-semibold text-sm dark:text-gray-100">
+                            {template.label}
+                          </span>
+                          {isComingSoon && (
+                            <span className="shrink-0 text-[8px] font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400 bg-gray-200 dark:bg-gray-700 px-1 py-0.5 rounded">
+                              coming soon
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                          {template.description}
+                        </div>
                       </div>
-                      <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                        {template.description}
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>

@@ -39,6 +39,7 @@ export const protocolCategories: ProtocolCategory[] = [
         color: "bg-pink-500",
         availableActions: ["lend", "borrow", "deposit", "withdraw"],
         url: "https://aave.com",
+        comingSoon: true,
       },
       {
         protocol: "compound",
@@ -47,6 +48,7 @@ export const protocolCategories: ProtocolCategory[] = [
         color: "bg-green-500",
         availableActions: ["lend", "borrow", "deposit", "withdraw"],
         url: "https://compound.finance",
+        comingSoon: true,
       },
       {
         protocol: "spark",
@@ -55,6 +57,7 @@ export const protocolCategories: ProtocolCategory[] = [
         color: "bg-orange-500",
         availableActions: ["lend", "borrow", "deposit", "withdraw"],
         url: "https://spark.fi",
+        comingSoon: true,
       },
     ],
   },
@@ -77,6 +80,7 @@ export const protocolCategories: ProtocolCategory[] = [
         color: "bg-yellow-500",
         availableActions: ["swap", "stake"],
         url: "https://curve.fi",
+        comingSoon: true,
       },
     ],
   },
