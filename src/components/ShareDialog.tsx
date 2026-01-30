@@ -1,17 +1,8 @@
 import { useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Copy, Check, Loader2 } from "lucide-react";
+import * as Dialog from "@radix-ui/react-dialog";
+import { Copy, Check, Loader2, X } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface ShareDialogProps {
   open: boolean;
@@ -61,100 +52,181 @@ export function ShareDialog({
   // If we don't have a share URL yet, show the create share screen
   if (!shareUrl) {
     return (
-      <Dialog open={open} onOpenChange={(o) => !o && handleClose()}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Share Kratong Flow</DialogTitle>
-            <DialogDescription>
-              This will upload your current flow to IPFS and create a shareable
-              link with QR code. Anyone with the link can view and load your
-              flow.
-            </DialogDescription>
-          </DialogHeader>
-
-          {error && (
-            <div className="rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-3">
-              <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+      <Dialog.Root open={open} onOpenChange={(o) => !o && handleClose()}>
+        <Dialog.Portal>
+          <Dialog.Overlay
+            className={cn(
+              "fixed inset-0 z-[100] bg-black/60 dark:bg-black/60 backdrop-blur-sm",
+              "data-[state=open]:animate-in data-[state=closed]:animate-out",
+              "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
+            )}
+          />
+          <Dialog.Content
+            className={cn(
+              "fixed left-[50%] top-[50%] z-[101] w-[95vw] max-w-md translate-x-[-50%] translate-y-[-50%]",
+              "rounded-2xl border shadow-2xl",
+              "border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900",
+              "flex flex-col overflow-hidden max-h-[90vh]",
+              "data-[state=open]:animate-in data-[state=closed]:animate-out",
+              "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+              "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95"
+            )}
+          >
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+              <Dialog.Title className="text-lg font-semibold text-gray-900 dark:text-white">
+                Share Kratong Flow
+              </Dialog.Title>
+              <Dialog.Close asChild>
+                <button
+                  type="button"
+                  className="rounded p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white transition-colors"
+                  aria-label="Close"
+                  disabled={isSharing}
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </Dialog.Close>
             </div>
-          )}
 
-          <DialogFooter>
-            <Button variant="outline" onClick={handleClose} disabled={isSharing}>
-              Cancel
-            </Button>
-            <Button onClick={handleShare} disabled={isSharing}>
-              {isSharing ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Uploading to IPFS...
-                </>
-              ) : (
-                "Create Share Link"
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <div className="flex flex-col overflow-y-auto">
+              <div className="px-6 py-4 space-y-4">
+                <p className="text-sm text-gray-600 dark:text-gray-300">
+                  This will upload your current flow to IPFS and create a
+                  shareable link with QR code. Anyone with the link can view and
+                  load your flow.
+                </p>
+
+                {error && (
+                  <div className="rounded-lg bg-red-50 border border-red-200 dark:bg-red-900/30 dark:border-red-700 p-3">
+                    <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+                  </div>
+                )}
+
+                <div className="flex justify-end gap-2 pt-4">
+                  <button
+                    onClick={handleClose}
+                    disabled={isSharing}
+                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 dark:text-gray-300 dark:bg-gray-800 dark:hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleShare}
+                    disabled={isSharing}
+                    className="px-4 py-2 text-sm font-medium text-white bg-teal-600 hover:bg-teal-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  >
+                    {isSharing ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Uploading to IPFS...
+                      </>
+                    ) : (
+                      "Create Share Link"
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
     );
   }
 
   // Show the share URL and QR code
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && handleClose()}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>Share Kratong Flow</DialogTitle>
-          <DialogDescription>
-            Your flow has been uploaded to IPFS. Share this link or scan the QR
-            code to open it on another device.
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-6">
-          {/* QR Code */}
-          <div className="flex justify-center p-4 bg-white rounded-lg">
-            <QRCodeSVG value={shareUrl} size={200} level="M" />
+    <Dialog.Root open={open} onOpenChange={(o) => !o && handleClose()}>
+      <Dialog.Portal>
+        <Dialog.Overlay
+          className={cn(
+            "fixed inset-0 z-[100] bg-black/60 dark:bg-black/60 backdrop-blur-sm",
+            "data-[state=open]:animate-in data-[state=closed]:animate-out",
+            "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
+          )}
+        />
+        <Dialog.Content
+          className={cn(
+            "fixed left-[50%] top-[50%] z-[101] w-[95vw] max-w-md translate-x-[-50%] translate-y-[-50%]",
+            "rounded-2xl border shadow-2xl",
+            "border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900",
+            "flex flex-col overflow-hidden max-h-[90vh]",
+            "data-[state=open]:animate-in data-[state=closed]:animate-out",
+            "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+            "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95"
+          )}
+        >
+          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+            <Dialog.Title className="text-lg font-semibold text-gray-900 dark:text-white">
+              Share Kratong Flow
+            </Dialog.Title>
+            <Dialog.Close asChild>
+              <button
+                type="button"
+                className="rounded p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white transition-colors"
+                aria-label="Close"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </Dialog.Close>
           </div>
 
-          {/* Share URL */}
-          <div className="space-y-2">
-            <Label htmlFor="share-url">Share Link</Label>
-            <div className="flex gap-2">
-              <Input
-                id="share-url"
-                value={shareUrl}
-                readOnly
-                onClick={(e) => e.currentTarget.select()}
-                className="font-mono text-xs"
-              />
-              <Button
-                onClick={copyToClipboard}
-                variant="outline"
-                size="icon"
-                className="shrink-0"
-              >
-                {copied ? (
-                  <Check className="h-4 w-4 text-green-600" />
-                ) : (
-                  <Copy className="h-4 w-4" />
-                )}
-              </Button>
+          <div className="flex flex-col overflow-y-auto">
+            <div className="px-6 py-4 space-y-6">
+              <p className="text-sm text-gray-600 dark:text-gray-300">
+                Your flow has been uploaded to IPFS. Share this link or scan the
+                QR code to open it on another device.
+              </p>
+
+              {/* QR Code */}
+              <div className="flex justify-center p-4 bg-white rounded-lg">
+                <QRCodeSVG value={shareUrl} size={200} level="M" />
+              </div>
+
+              {/* Share URL */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Share Link
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    value={shareUrl}
+                    readOnly
+                    onClick={(e) => e.currentTarget.select()}
+                    className="flex-1 h-9 px-3 py-2 text-sm bg-gray-50 border border-gray-300 rounded-lg text-gray-900 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200 font-mono focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  />
+                  <button
+                    onClick={copyToClipboard}
+                    className="px-3 h-9 bg-gray-100 hover:bg-gray-200 border border-gray-300 dark:bg-gray-800 dark:hover:bg-gray-700 dark:border-gray-600 rounded-lg transition-colors flex items-center justify-center"
+                  >
+                    {copied ? (
+                      <Check className="h-4 w-4 text-green-600 dark:text-green-500" />
+                    ) : (
+                      <Copy className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* IPFS Info */}
+              <div className="rounded-lg bg-teal-50 border border-teal-200 dark:bg-teal-900/30 dark:border-teal-700/50 p-3">
+                <p className="text-xs text-teal-700 dark:text-teal-400">
+                  This flow is stored on IPFS via Pinata, a decentralized storage
+                  network. The link will work permanently and can't be modified.
+                </p>
+              </div>
+
+              <div className="flex justify-end pt-2">
+                <button
+                  onClick={handleClose}
+                  className="px-4 py-2 text-sm font-medium text-white bg-teal-600 hover:bg-teal-700 rounded-lg transition-colors"
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
-
-          {/* IPFS Info */}
-          <div className="rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 p-3">
-            <p className="text-xs text-blue-600 dark:text-blue-400">
-              This flow is stored on IPFS via Pinata, a decentralized storage
-              network. The link will work permanently and can't be modified.
-            </p>
-          </div>
-        </div>
-
-        <DialogFooter>
-          <Button onClick={handleClose}>Close</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
   );
 }

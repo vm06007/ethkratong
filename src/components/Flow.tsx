@@ -192,6 +192,21 @@ function FlowCanvas() {
   const [isSharing, setIsSharing] = useState(false);
   const [shareError, setShareError] = useState<string | null>(null);
 
+  // Loading shared flow state
+  const [isLoadingSharedFlow, setIsLoadingSharedFlow] = useState(false);
+
+  // Check if we should load a shared flow on mount
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const cid = params.get("s") || params.get("share");
+    if (cid) {
+      setIsLoadingSharedFlow(true);
+      // Clear default nodes when loading shared flow
+      setNodes([]);
+      setEdges([]);
+    }
+  }, []);
+
   // Calculate sequence numbers based on graph topology when edges change
   useEffect(() => {
     const orderMap = calculateExecutionOrder(nodes, edges);
@@ -600,12 +615,17 @@ function FlowCanvas() {
     setActiveTabId(newTab.id);
     setNodes(newTab.nodes);
     setEdges(newTab.edges);
+    setIsLoadingSharedFlow(false);
   }, [setNodes, setEdges]);
 
   const handleLoadError = useCallback((message: string) => {
     console.error("Failed to load shared flow:", message);
     alert(`Failed to load shared flow: ${message}`);
-  }, []);
+    setIsLoadingSharedFlow(false);
+    // Restore default nodes on error
+    setNodes(initialNodes);
+    setEdges(initialEdges);
+  }, [setNodes, setEdges]);
 
   // Load shared flows from URL parameters
   useSharedFlowLoader({
@@ -802,6 +822,26 @@ function FlowCanvas() {
         shareUrl={shareUrl}
         isSharing={isSharing}
       />
+
+      {/* Loading overlay for shared flows */}
+      {isLoadingSharedFlow && (
+        <div className="fixed inset-0 z-[200] bg-gray-50/95 dark:bg-gray-950/95 backdrop-blur-sm flex items-center justify-center">
+          <div className="flex flex-col items-center gap-4">
+            <div className="relative">
+              <div className="w-16 h-16 border-4 border-gray-200 dark:border-gray-700 rounded-full"></div>
+              <div className="absolute top-0 left-0 w-16 h-16 border-4 border-teal-600 border-t-transparent rounded-full animate-spin"></div>
+            </div>
+            <div className="text-center">
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+                Receiving Kratong
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                Loading flow from IPFS...
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

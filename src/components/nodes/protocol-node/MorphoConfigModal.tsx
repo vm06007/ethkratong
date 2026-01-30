@@ -45,7 +45,7 @@ export function MorphoConfigModal({
             <Dialog.Portal>
                 <Dialog.Overlay
                     className={cn(
-                        "fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm",
+                        "fixed inset-0 z-[100] bg-black/60 dark:bg-black/60 backdrop-blur-sm",
                         "data-[state=open]:animate-in data-[state=closed]:animate-out",
                         "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
                     )}
@@ -53,21 +53,22 @@ export function MorphoConfigModal({
                 <Dialog.Content
                     className={cn(
                         "fixed left-[50%] top-[50%] z-[101] w-[95vw] max-w-lg translate-x-[-50%] translate-y-[-50%]",
-                        "rounded-xl border border-gray-700 bg-gray-900 shadow-2xl",
+                        "rounded-xl border shadow-2xl",
+                        "border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900",
                         "flex flex-col max-h-[85vh]",
                         "data-[state=open]:animate-in data-[state=closed]:animate-out",
                         "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
                         "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95"
                     )}
                 >
-                    <div className="flex items-center justify-between border-b border-gray-700 px-4 py-3">
-                        <Dialog.Title className="text-lg font-semibold text-white">
+                    <div className="flex items-center justify-between border-b px-4 py-3 border-gray-200 dark:border-gray-700">
+                        <Dialog.Title className="text-lg font-semibold text-gray-900 dark:text-white">
                             Morpho — Expanded View
                         </Dialog.Title>
                         <Dialog.Close asChild>
                             <button
                                 type="button"
-                                className="rounded p-2 text-gray-400 hover:bg-gray-700 hover:text-white transition-colors"
+                                className="rounded p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white transition-colors"
                                 aria-label="Close"
                             >
                                 <X className="h-5 w-5" />
@@ -77,8 +78,8 @@ export function MorphoConfigModal({
 
                     <div className="flex-1 overflow-y-auto p-4 space-y-4">
                         {/* Protocol info */}
-                        <div className="rounded-lg bg-blue-900/20 border border-blue-700/30 p-3">
-                            <div className="text-sm text-blue-200">
+                        <div className="rounded-lg border p-3 bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-700/30">
+                            <div className="text-sm text-blue-900 dark:text-blue-200">
                                 <strong>Morpho</strong> — Optimized lending and borrowing protocol
                             </div>
                         </div>
@@ -96,11 +97,11 @@ export function MorphoConfigModal({
                         </div>
 
                         {/* Details section */}
-                        <div className="rounded-lg border border-gray-700 bg-gray-800/50">
+                        <div className="rounded-lg border bg-gray-50 border-gray-300 dark:border-gray-700 dark:bg-gray-800/50">
                             <button
                                 type="button"
                                 onClick={() => setShowDetails(!showDetails)}
-                                className="w-full flex items-center justify-between px-4 py-3 text-gray-200 hover:bg-gray-700/30 transition-colors"
+                                className="w-full flex items-center justify-between px-4 py-3 text-gray-900 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700/30 transition-colors"
                             >
                                 <span className="font-medium">Details</span>
                                 {showDetails ? (
@@ -114,21 +115,21 @@ export function MorphoConfigModal({
                                 <div className="px-4 pb-4 space-y-3 text-sm">
                                     {selectedVault && (
                                         <>
-                                            <div className="flex justify-between py-2 border-t border-gray-700">
-                                                <span className="text-gray-400">Vault:</span>
-                                                <span className="text-gray-200 font-medium">
+                                            <div className="flex justify-between py-2 border-t border-gray-300 dark:border-gray-700">
+                                                <span className="text-gray-600 dark:text-gray-400">Vault:</span>
+                                                <span className="text-gray-900 dark:text-gray-200 font-medium">
                                                     {selectedVault.name}
                                                 </span>
                                             </div>
-                                            <div className="flex justify-between py-2 border-t border-gray-700">
-                                                <span className="text-gray-400">Asset:</span>
-                                                <span className="text-gray-200">
+                                            <div className="flex justify-between py-2 border-t border-gray-300 dark:border-gray-700">
+                                                <span className="text-gray-600 dark:text-gray-400">Asset:</span>
+                                                <span className="text-gray-900 dark:text-gray-200">
                                                     {selectedVault.asset?.symbol ?? selectedVault.symbol ?? "—"}
                                                 </span>
                                             </div>
-                                            <div className="flex justify-between py-2 border-t border-gray-700">
-                                                <span className="text-gray-400">APY:</span>
-                                                <span className="text-green-400 font-semibold">
+                                            <div className="flex justify-between py-2 border-t border-gray-300 dark:border-gray-700">
+                                                <span className="text-gray-600 dark:text-gray-400">APY:</span>
+                                                <span className="text-green-600 dark:text-green-400 font-semibold">
                                                     {selectedVault.state?.netApy != null
                                                         ? `${(selectedVault.state.netApy * 100).toFixed(2)}%`
                                                         : selectedVault.state?.apy != null
@@ -136,9 +137,9 @@ export function MorphoConfigModal({
                                                           : "—"}
                                                 </span>
                                             </div>
-                                            <div className="flex justify-between py-2 border-t border-gray-700">
-                                                <span className="text-gray-400">Contract:</span>
-                                                <span className="text-gray-200 font-mono text-xs">
+                                            <div className="flex justify-between py-2 border-t border-gray-300 dark:border-gray-700">
+                                                <span className="text-gray-600 dark:text-gray-400">Contract:</span>
+                                                <span className="text-gray-900 dark:text-gray-200 font-mono text-xs">
                                                     {selectedVault.address.slice(0, 6)}...
                                                     {selectedVault.address.slice(-4)}
                                                 </span>
