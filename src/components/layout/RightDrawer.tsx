@@ -289,7 +289,7 @@ function SortableStep({ node, isExecuted, isConfigured }: SortableStepProps) {
             </div>
           )
         ) : node.data.protocol === "uniswap" ? (
-          node.data.action === "swap" &&
+          (node.data.action === "swap" || node.data.action == null) &&
           (node.data.swapFrom || node.data.swapTo) ? (
             <>
               <div className="flex justify-between">
@@ -459,7 +459,8 @@ export function RightDrawer({ isOpen, onClose, nodes, edges, onReorderNodes }: R
       );
     }
     if (node.data.protocol === "uniswap") {
-      if (node.data.action === "swap") {
+      // Uniswap defaults to swap mode when action is undefined/null
+      if (node.data.action === "swap" || node.data.action == null) {
         return !!(
           node.data.swapFrom &&
           node.data.swapTo &&
@@ -733,7 +734,8 @@ export function RightDrawer({ isOpen, onClose, nodes, edges, onReorderNodes }: R
                           (node.data.balanceLogicCompareValue ?? "").trim() !== ""
                         );
                       } else if (node.data.protocol === "uniswap") {
-                        if (node.data.action === "swap") {
+                        // Uniswap defaults to swap mode when action is undefined/null
+                        if (node.data.action === "swap" || node.data.action == null) {
                           isConfigured = !!(
                             node.data.swapFrom &&
                             node.data.swapTo &&

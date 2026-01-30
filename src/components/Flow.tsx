@@ -383,6 +383,8 @@ function FlowCanvas() {
           protocol: protocol as any,
           label: label,
           sequenceNumber: maxSequence + 1, // Add to the end
+          // Set default action for Uniswap nodes
+          ...(protocol === "uniswap" ? { action: "swap" as const } : {}),
         },
       };
 

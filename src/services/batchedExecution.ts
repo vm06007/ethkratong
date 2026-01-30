@@ -60,6 +60,19 @@ const UNISWAP_SWAP_ABI = [
         outputs: [{ type: "uint256[]" }],
         stateMutability: "payable",
     },
+    {
+        type: "function",
+        name: "swapExactTokensForTokens",
+        inputs: [
+            { name: "amountIn", type: "uint256" },
+            { name: "amountOutMin", type: "uint256" },
+            { name: "path", type: "address[]" },
+            { name: "to", type: "address" },
+            { name: "deadline", type: "uint256" },
+        ],
+        outputs: [{ type: "uint256[]" }],
+        stateMutability: "nonpayable",
+    },
 ] as const;
 
 const ERC20_APPROVE_ABI = [
@@ -346,53 +359,127 @@ async function prepareUniswapSwapCall(
   node: Node<ProtocolNodeData>,
   chainId: number,
   account: string
-): Promise<BatchedTransactionCall> {
+): Promise<BatchedTransactionCall[]> {
   const data = node.data;
-  if (data.protocol !== "uniswap" || data.action !== "swap") {
+  // Uniswap defaults to swap mode when action is undefined/null
+  if (data.protocol !== "uniswap" || (data.action !== "swap" && data.action != null)) {
     throw new Error("Node is not a Uniswap swap node");
   }
-  if (data.swapFrom !== "ETH") {
-    throw new Error("Execution only supports ETH → token swap for now");
-  }
+
+  const swapFrom = data.swapFrom;
   const swapTo = data.swapTo;
   const chainTokens = TOKEN_ADDRESSES[chainId as keyof typeof TOKEN_ADDRESSES];
-  if (!chainTokens || !swapTo || swapTo === "ETH") {
-    throw new Error(`Uniswap: select a token to swap to (e.g. USDC)`);
+
+  if (!swapFrom || !swapTo) {
+    throw new Error(`Uniswap: select both swap from and swap to tokens`);
   }
-  const outputTokenAddress = chainTokens[swapTo as keyof typeof chainTokens];
-  if (!outputTokenAddress) {
-    throw new Error(`Token ${swapTo} not supported on chain ${chainId}`);
-  }
+
   const router = UNISWAP_V2_ROUTER[chainId as keyof typeof UNISWAP_V2_ROUTER];
   const weth = WETH_ADDRESS[chainId as keyof typeof WETH_ADDRESS];
   if (!router || !weth) {
     throw new Error(`Uniswap execution not supported on chain ${chainId}`);
   }
-  const amountStr = data.amount?.trim() || "0";
-  const amountWei = parseEther(amountStr);
-  const path = [weth as `0x${string}`, outputTokenAddress as `0x${string}`];
 
-  const quoteResult = await getUniswapSwapQuote(chainId, amountWei, swapTo);
+  const amountStr = data.amount?.trim() || "0";
+  const deadlineMinutes = data.swapDeadlineMinutes ?? 30;
+  const deadline = BigInt(Math.floor(Date.now() / 1000) + deadlineMinutes * 60);
   const slippagePercent = data.maxSlippageAuto !== false
     ? 0.5
     : Math.min(50, Math.max(0, parseFloat(data.maxSlippagePercent ?? "0.5") || 0.5));
-  const amountOutMin = quoteResult
-    ? (quoteResult.amountOutRaw * BigInt(Math.floor(100 - slippagePercent) * 100)) / BigInt(10000)
-    : 0n;
 
-  const deadlineMinutes = data.swapDeadlineMinutes ?? 30;
-  const deadline = BigInt(Math.floor(Date.now() / 1000) + deadlineMinutes * 60);
+  const calls: BatchedTransactionCall[] = [];
 
-  const dataEncoded = encodeFunctionData({
-    abi: UNISWAP_SWAP_ABI,
-    functionName: "swapExactETHForTokens",
-    args: [amountOutMin, path, account as `0x${string}`, deadline],
-  });
-  return {
-    to: router,
-    data: dataEncoded,
-    value: toHex(amountWei),
-  };
+  // ETH → Token swap
+  if (swapFrom === "ETH") {
+    if (!chainTokens || swapTo === "ETH") {
+      throw new Error(`Uniswap: select a token to swap to (e.g. USDC)`);
+    }
+    const outputTokenAddress = chainTokens[swapTo as keyof typeof chainTokens];
+    if (!outputTokenAddress) {
+      throw new Error(`Token ${swapTo} not supported on chain ${chainId}`);
+    }
+
+    const amountWei = parseEther(amountStr);
+    const path = [weth as `0x${string}`, outputTokenAddress as `0x${string}`];
+
+    const quoteResult = await getUniswapSwapQuote(chainId, amountWei, swapTo);
+    const amountOutMin = quoteResult
+      ? (quoteResult.amountOutRaw * BigInt(Math.floor((100 - slippagePercent) * 100))) / BigInt(10000)
+      : 0n;
+
+    const dataEncoded = encodeFunctionData({
+      abi: UNISWAP_SWAP_ABI,
+      functionName: "swapExactETHForTokens",
+      args: [amountOutMin, path, account as `0x${string}`, deadline],
+    });
+
+    calls.push({
+      to: router,
+      data: dataEncoded,
+      value: toHex(amountWei),
+    });
+  }
+  // Token → Token swap
+  else {
+    if (!chainTokens) {
+      throw new Error(`Tokens not configured for chain ${chainId}`);
+    }
+
+    const inputTokenAddress = chainTokens[swapFrom as keyof typeof chainTokens];
+    const outputTokenAddress = swapTo === "ETH"
+      ? weth
+      : chainTokens[swapTo as keyof typeof chainTokens];
+
+    if (!inputTokenAddress) {
+      throw new Error(`Token ${swapFrom} not supported on chain ${chainId}`);
+    }
+    if (!outputTokenAddress) {
+      throw new Error(`Token ${swapTo} not supported on chain ${chainId}`);
+    }
+
+    // Get token decimals for parsing amount
+    const inputDecimals = TOKEN_DECIMALS[swapFrom] ?? 18;
+    const outputDecimals = TOKEN_DECIMALS[swapTo] ?? 18;
+    const amountIn = parseUnits(amountStr, inputDecimals);
+
+    // Build path
+    const path = [inputTokenAddress as `0x${string}`, outputTokenAddress as `0x${string}`];
+
+    // Get quote (we can reuse the existing function, though it expects ETH input)
+    // For simplicity, we'll calculate amountOutMin with slippage on the estimated output
+    const estimatedOut = data.estimatedAmountOut ? parseUnits(data.estimatedAmountOut, outputDecimals) : 0n;
+    const amountOutMin = estimatedOut > 0n
+      ? (estimatedOut * BigInt(Math.floor((100 - slippagePercent) * 100))) / BigInt(10000)
+      : 0n;
+
+    // Step 1: Approve input token
+    const approveData = encodeFunctionData({
+      abi: ERC20_APPROVE_ABI,
+      functionName: "approve",
+      args: [router as `0x${string}`, amountIn],
+    });
+
+    calls.push({
+      to: inputTokenAddress,
+      data: approveData,
+      value: "0x0",
+    });
+
+    // Step 2: Swap tokens
+    const swapData = encodeFunctionData({
+      abi: UNISWAP_SWAP_ABI,
+      functionName: "swapExactTokensForTokens",
+      args: [amountIn, amountOutMin, path, account as `0x${string}`, deadline],
+    });
+
+    calls.push({
+      to: router,
+      data: swapData,
+      value: "0x0",
+    });
+  }
+
+  return calls;
 }
 
 /** Buffer on top of expected token amount for addLiquidity to avoid tx failure from small rate changes (2%). */
@@ -721,7 +808,8 @@ export const prepareBatchedCalls = async (
     } else if (node.data.protocol === "custom") {
       calls.push(prepareCustomContractCall(node));
     } else if (node.data.protocol === "uniswap" && account) {
-      if (node.data.action === "swap") {
+      // Uniswap defaults to swap mode when action is undefined/null
+      if (node.data.action === "swap" || node.data.action == null) {
         const versionAuto = node.data.uniswapVersionAuto !== false;
         const version = node.data.uniswapVersion ?? "v2";
         const useV2 = versionAuto || version === "v2";
@@ -729,7 +817,7 @@ export const prepareBatchedCalls = async (
           console.warn(`Uniswap ${version} swap execution not yet supported, skipping node ${node.id}`);
         } else {
           try {
-            calls.push(await prepareUniswapSwapCall(node, chainId, account));
+            calls.push(...(await prepareUniswapSwapCall(node, chainId, account)));
           } catch (err) {
             lastError = err instanceof Error ? err : new Error(String(err));
             console.warn(`Skipping Uniswap node ${node.id}:`, err);
