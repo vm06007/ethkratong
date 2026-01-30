@@ -255,9 +255,6 @@ export function Toolbar({
         <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
           ETH Kratong
         </h1>
-        <span className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">
-          EIP-7702 Powered
-        </span>
       </div>
 
       {/* Right Section */}

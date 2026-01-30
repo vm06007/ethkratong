@@ -1,5 +1,6 @@
-import { X, Plus } from "lucide-react";
+import { X, Plus, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useWalletCapabilities } from "@/hooks/useWalletCapabilities";
 
 interface Tab {
   id: string;
@@ -21,6 +22,8 @@ export function Tabs({
   onTabClose,
   onTabAdd,
 }: TabsProps) {
+  const { supportsBatch, isLoading } = useWalletCapabilities();
+
   return (
     <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-900 border-b border-gray-300 dark:border-gray-700 px-2 py-1">
       {tabs.map((tab) => (
@@ -55,6 +58,17 @@ export function Tabs({
       >
         <Plus className="w-4 h-4 dark:text-gray-400" />
       </button>
+      <div className="ml-auto flex items-center gap-2">
+        <span className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">
+          EIP-7702 Powered
+        </span>
+        {!isLoading && supportsBatch && (
+          <div className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded font-medium">
+            <Zap className="w-3.5 h-3.5" />
+            <span>Atomic</span>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

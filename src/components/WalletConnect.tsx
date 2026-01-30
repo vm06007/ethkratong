@@ -1,19 +1,9 @@
 import { ConnectButton } from "thirdweb/react";
 import { client, wallets, thirdwebTheme, chains } from "@/config/thirdweb";
-import { useWalletCapabilities } from "@/hooks/useWalletCapabilities";
-import { Zap } from "lucide-react";
 
 export function WalletConnect() {
-  const { supportsBatch, isLoading } = useWalletCapabilities();
-
   return (
     <div className="flex items-center gap-2">
-      {!isLoading && supportsBatch && (
-        <div className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded">
-          <Zap className="w-3.5 h-3.5" />
-          <span className="font-medium">Atomic</span>
-        </div>
-      )}
       <ConnectButton
         client={client}
         chains={chains}
