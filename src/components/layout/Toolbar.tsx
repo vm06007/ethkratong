@@ -50,6 +50,7 @@ interface ToolbarProps {
   onDeleteEdge: () => void;
   onSave: () => void;
   onLoad: () => void;
+  onShare: () => void;
   onUndo: () => void;
   onRedo: () => void;
   onReset: () => void;
@@ -75,6 +76,7 @@ export function Toolbar({
   onDeleteEdge,
   onSave,
   onLoad,
+  onShare,
   onUndo,
   onRedo,
   onReset,
@@ -132,7 +134,7 @@ export function Toolbar({
         <button onClick={onLoad} className={iconButton} aria-label="Load">
           <FolderOpen className={iconClass} />
         </button>
-        <button className={iconButton} aria-label="Share">
+        <button onClick={onShare} className={iconButton} aria-label="Share">
           <Share2 className={iconClass} />
         </button>
 
@@ -270,7 +272,7 @@ export function Toolbar({
         <img
           src="/loy-krathong.svg"
           alt=""
-          className="h-[40px] w-auto object-contain"
+          className="h-[40px] w-auto object-contain [filter:hue-rotate(-445deg)]"
         />
         <h1 className="text-gray-700 dark:text-[#efeaea] font-light text-[20px] tracking-normal [text-shadow:revert-layer] font-sans">
           ETHKratong

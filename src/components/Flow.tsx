@@ -20,7 +20,10 @@ import { Sidebar } from "./layout/Sidebar";
 import { Toolbar } from "./layout/Toolbar";
 import { Tabs } from "./layout/Tabs";
 import { RightDrawer } from "./layout/RightDrawer";
+import { ShareDialog } from "./ShareDialog";
 import { useTheme } from "@/hooks/useTheme";
+import { useSharedFlowLoader } from "@/hooks/useSharedFlowLoader";
+import { uploadFlowToIPFS, getShareUrl, type FlowShareData } from "@/lib/ipfs";
 import type { ProtocolNodeData } from "@/types";
 
 // Helper function to calculate execution order starting from wallet
@@ -182,6 +185,12 @@ function FlowCanvas() {
   ]);
   const [activeTabId, setActiveTabId] = useState("1");
   const { theme } = useTheme();
+
+  // Share functionality state
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [shareUrl, setShareUrl] = useState<string | undefined>(undefined);
+  const [isSharing, setIsSharing] = useState(false);
+  const [shareError, setShareError] = useState<string | null>(null);
 
   // Calculate sequence numbers based on graph topology when edges change
   useEffect(() => {
@@ -538,6 +547,72 @@ function FlowCanvas() {
     setEdges(initialEdges);
   };
 
+  const handleShare = async (): Promise<string> => {
+    setIsSharing(true);
+    setShareError(null);
+
+    try {
+      const tabName = tabs.find((t) => t.id === activeTabId)?.name || "My Kratong";
+
+      const flowData: FlowShareData = {
+        nodes: nodes,
+        edges: edges,
+        name: tabName,
+        timestamp: Date.now(),
+      };
+
+      const cid = await uploadFlowToIPFS(flowData);
+      const url = getShareUrl(cid);
+
+      setShareUrl(url);
+      setIsSharing(false);
+
+      return cid;
+    } catch (error) {
+      console.error("Failed to share flow:", error);
+      setIsSharing(false);
+      setShareError(error instanceof Error ? error.message : "Failed to share flow");
+      throw error;
+    }
+  };
+
+  const handleOpenShareDialog = () => {
+    setShareUrl(undefined);
+    setShareError(null);
+    setShareDialogOpen(true);
+  };
+
+  const handleCloseShareDialog = () => {
+    setShareDialogOpen(false);
+    setShareUrl(undefined);
+    setShareError(null);
+  };
+
+  const handleLoadSharedFlow = useCallback((loadedNodes: Node[], loadedEdges: Edge[]) => {
+    // Create a new tab for the shared flow
+    const newTab: Tab = {
+      id: `${tabId++}`,
+      name: "Shared Kratong",
+      nodes: loadedNodes as Node<ProtocolNodeData>[],
+      edges: loadedEdges,
+    };
+    setTabs((prev) => [...prev, newTab]);
+    setActiveTabId(newTab.id);
+    setNodes(newTab.nodes);
+    setEdges(newTab.edges);
+  }, [setNodes, setEdges]);
+
+  const handleLoadError = useCallback((message: string) => {
+    console.error("Failed to load shared flow:", message);
+    alert(`Failed to load shared flow: ${message}`);
+  }, []);
+
+  // Load shared flows from URL parameters
+  useSharedFlowLoader({
+    onLoadSharedFlow: handleLoadSharedFlow,
+    onError: handleLoadError,
+  });
+
   const handleNewTab = () => {
     const newTab: Tab = {
       id: `${tabId++}`,
@@ -649,6 +724,7 @@ function FlowCanvas() {
         onDeleteEdge={handleDeleteEdge}
         onSave={handleSave}
         onLoad={handleLoad}
+        onShare={handleOpenShareDialog}
         onUndo={handleUndo}
         onRedo={handleRedo}
         onReset={handleReset}
@@ -719,6 +795,13 @@ function FlowCanvas() {
           onExecutionChange={setIsExecutingFlow}
         />
       </div>
+      <ShareDialog
+        open={shareDialogOpen}
+        onClose={handleCloseShareDialog}
+        onShare={handleShare}
+        shareUrl={shareUrl}
+        isSharing={isSharing}
+      />
     </div>
   );
 }
