@@ -5,6 +5,7 @@ import { ProtocolNodeConditionalBody } from "./ProtocolNodeConditionalBody";
 import { ProtocolNodeBalanceLogicBody } from "./ProtocolNodeBalanceLogicBody";
 import { ProtocolNodeUniswapBody } from "./ProtocolNodeUniswapBody";
 import { ProtocolNodeMorphoBody } from "./ProtocolNodeMorphoBody";
+import { ProtocolNodeAaveBody } from "./ProtocolNodeAaveBody";
 
 interface ProtocolNodeExpandedBodyProps {
     data: ProtocolNodeData;
@@ -45,7 +46,8 @@ export function ProtocolNodeExpandedBody({
         data.protocol !== "conditional" &&
         data.protocol !== "balanceLogic" &&
         data.protocol !== "morpho" &&
-        data.protocol !== "uniswap";
+        data.protocol !== "uniswap" &&
+        data.protocol !== "aave";
 
     return (
         <>
@@ -135,6 +137,17 @@ export function ProtocolNodeExpandedBody({
                 />
             )}
 
+            {data.protocol === "aave" && (
+                <ProtocolNodeAaveBody
+                    data={data}
+                    chainId={chainId}
+                    onUpdateData={onUpdateData}
+                    template={template}
+                    effectiveBalances={transferBalances}
+                    isLoadingEffectiveBalances={isLoadingEffectiveBalances}
+                />
+            )}
+
             {data.protocol === "transfer" ? (
                 <div>
                     <label className="text-xs text-gray-600 dark:text-gray-400 block mb-1">
@@ -166,6 +179,7 @@ export function ProtocolNodeExpandedBody({
             ) : (
                 data.protocol !== "uniswap" &&
                 data.protocol !== "morpho" &&
+                data.protocol !== "aave" &&
                 (data.action === "lend" ||
                     data.action === "deposit" ||
                     data.action === "borrow") && (
@@ -236,6 +250,7 @@ export function ProtocolNodeExpandedBody({
                 data.protocol !== "balanceLogic" &&
                 data.protocol !== "uniswap" &&
                 data.protocol !== "morpho" &&
+                data.protocol !== "aave" &&
                 data.protocol !== "transfer" && (
                     <div>
                         <label className="text-xs text-gray-600 dark:text-gray-400 block mb-1">

@@ -5,6 +5,7 @@ import { UNISWAP_TOKEN_OPTIONS } from "./constants";
 import { useWalletBalancesForModal } from "./useWalletBalancesForModal";
 import { useMorphoVaults } from "./useMorphoVaults";
 import { useMorphoVaultShareBalances } from "./useMorphoVaultShareBalances";
+import { useMaxBorrow } from "./useMaxBorrow";
 import { readMorphoVaultPreviewDeposit } from "@/services/batchedExecution";
 import type { TokenBalance } from "./types";
 
@@ -57,15 +58,13 @@ export function ProtocolNodeMorphoBody({
 
     const { balances: walletBalances } = useWalletBalancesForModal(true);
     const { vaults, isLoading: vaultsLoading } = useMorphoVaults();
-    const { hasAnyVaultShares } = useMorphoVaultShareBalances(true);
-
+    const { hasAnyVaultShares, vaultShareBalances } = useMorphoVaultShareBalances(true);
     const action = data.action || "";
     const useVaultSelector = isVaultAction(action);
     const needsWalletBalance = action === "lend" || action === "repay";
     const balances =
         effectiveBalances && effectiveBalances.length > 0 ? effectiveBalances : walletBalances;
 
-    // Redeem / Borrow: available if user has vault receipt (share) tokens – from wallet or from upstream Lend in this flow
     const norm = (s: string) => (s ?? "").trim().toLowerCase();
     const hasEffectiveVaultShares =
         (effectiveBalances?.length ?? 0) > 0 &&
@@ -80,11 +79,48 @@ export function ProtocolNodeMorphoBody({
     const canBorrow = canRedeem;
     const hasBorrowed = false; // TODO: fetch user's Morpho debt to enable Repay
 
-    // Determine if we should show loading indicator
+    const effectiveShareByVaultName: Record<string, number> = {};
+    if (effectiveBalances?.length) {
+        for (const v of vaults) {
+            const entry = effectiveBalances.find(
+                (b) => parseFloat(b.balance) > 0 && (b.symbol === v.name || norm(b.symbol) === norm(v.name))
+            );
+            if (entry) effectiveShareByVaultName[v.name] = parseFloat(entry.balance);
+        }
+    }
+    const walletShareByAddress: Record<string, string> = {};
+    for (const vb of vaultShareBalances) {
+        walletShareByAddress[vb.vaultAddress.toLowerCase()] = vb.balance;
+    }
+    const getTotalShareBalance = (vaultAddress: string, vaultName: string): string => {
+        const wallet = walletShareByAddress[vaultAddress.toLowerCase()] ?? "0";
+        const effective = effectiveShareByVaultName[vaultName] ?? 0;
+        const total = parseFloat(wallet) + effective;
+        if (total <= 0) return "0.00";
+        return total < 0.01 ? total.toFixed(6) : total.toFixed(2);
+    };
+
+    const selectedVaultForBorrow =
+        action === "borrow" && data.morphoVaultAddress
+            ? vaults.find((v) => v.address.toLowerCase() === data.morphoVaultAddress!.toLowerCase())
+            : null;
+    const effectiveShareBalanceForBorrow =
+        selectedVaultForBorrow
+            ? getTotalShareBalance(selectedVaultForBorrow.address, selectedVaultForBorrow.name)
+            : null;
+    const { maxBorrow, isLoading: maxBorrowLoading } = useMaxBorrow(
+        action === "borrow" && !!data.morphoVaultAddress,
+        data.morphoVaultAddress,
+        effectiveShareBalanceForBorrow
+    );
+
+    const vaultsWithShares = vaults.filter(
+        (v) => parseFloat(getTotalShareBalance(v.address, v.name)) > 0
+    );
+    const redeemCurrencyOptions = [...new Set(vaultsWithShares.map((v) => v.asset?.symbol ?? v.symbol ?? "").filter(Boolean))];
+
     const showLoading = isLoadingEffectiveBalances &&
                        (!effectiveBalances || effectiveBalances.length === 0);
-
-    const assetBalance = data.asset ? getBalanceForSymbol(balances, data.asset) : null;
 
     const assetMatchesVault = (asset: string, vaultSymbol: string): boolean => {
         const a = (asset ?? "").toUpperCase();
@@ -104,8 +140,29 @@ export function ProtocolNodeMorphoBody({
     const selectedVault = useVaultSelector && data.morphoVaultAddress
         ? vaults.find((v) => v.address.toLowerCase() === data.morphoVaultAddress!.toLowerCase())
         : null;
+
     const vaultOptions =
-        useVaultSelector && data.asset ? vaultsForAsset : vaults;
+        action === "redeem"
+            ? (data.asset
+                  ? vaultsWithShares.filter((v) =>
+                        assetMatchesVault(data.asset!, v.asset?.symbol ?? v.symbol ?? "")
+                    )
+                  : vaultsWithShares)
+            : useVaultSelector && data.asset
+              ? vaultsForAsset
+              : vaults;
+
+    const currencyOptions =
+        action === "redeem"
+            ? redeemCurrencyOptions
+            : tokenOptions;
+
+    const assetBalance = data.asset ? getBalanceForSymbol(balances, data.asset) : null;
+    const shareBalanceForRedeem =
+        action === "redeem" && selectedVault
+            ? getTotalShareBalance(selectedVault.address, selectedVault.name)
+            : null;
+    const amountBalanceForBorrow = action === "borrow" ? maxBorrow : null;
 
     const prevPreviewKey = useRef("");
     useEffect(() => {
@@ -154,13 +211,30 @@ export function ProtocolNodeMorphoBody({
     ]);
 
     const setAmountFromBalancePct = (pct: number) => {
+        if (action === "redeem" && shareBalanceForRedeem != null) {
+            const num = parseFloat(shareBalanceForRedeem);
+            if (Number.isNaN(num)) return;
+            const value = pct === 1 ? num : num * pct;
+            const str =
+                value <= 0 ? "0" : value < 0.0001 ? value.toExponential(2) : value.toFixed(6);
+            onUpdateData({ amount: str, amountManuallyEdited: true });
+            return;
+        }
+        if (action === "borrow" && amountBalanceForBorrow != null) {
+            const num = parseFloat(amountBalanceForBorrow);
+            if (Number.isNaN(num)) return;
+            const value = pct === 1 ? num : num * pct;
+            const str =
+                value <= 0 ? "0" : value < 0.0001 ? value.toExponential(2) : value.toFixed(6);
+            onUpdateData({ amount: str, amountManuallyEdited: true });
+            return;
+        }
         if (!data.asset || !assetBalance) return;
         const num = parseFloat(assetBalance);
         if (Number.isNaN(num)) return;
         const value = pct === 1 ? num : num * pct;
         const str =
             value <= 0 ? "0" : value < 0.0001 ? value.toExponential(2) : value.toFixed(6);
-        // Mark as manually edited so it doesn't get overwritten by auto-sync
         onUpdateData({ amount: str, amountManuallyEdited: true });
     };
 
@@ -266,15 +340,25 @@ export function ProtocolNodeMorphoBody({
             {action && useVaultSelector && (
                 <div>
                     <label className="text-xs text-gray-600 dark:text-gray-400 block mb-1">
-                        Deposit currency:
+                        {action === "redeem"
+                            ? "Currency to receive:"
+                            : action === "borrow"
+                              ? "Borrow currency:"
+                              : "Deposit currency:"}
                     </label>
                     <select
                         className="w-full border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-sm bg-white dark:bg-gray-700 dark:text-gray-200"
                         value={data.asset ?? ""}
                         onChange={(e) => handleDepositCurrencyChange(e.target.value)}
                     >
-                        <option value="">Select currency</option>
-                        {tokenOptions.map((symbol) => {
+                        <option value="">
+                            {action === "redeem"
+                                ? (redeemCurrencyOptions.length > 0 ? "Select currency to receive" : "No vault shares")
+                                : action === "borrow"
+                                  ? "Select borrow currency"
+                                  : "Select currency"}
+                        </option>
+                        {currencyOptions.map((symbol) => {
                             const bal = showLoading ? "..." : getBalanceForSymbol(balances, symbol);
                             return (
                                 <option key={symbol} value={symbol}>
@@ -289,7 +373,13 @@ export function ProtocolNodeMorphoBody({
             {action && (
                 <div>
                     <label className="text-xs text-gray-600 dark:text-gray-400 block mb-1">
-                        {useVaultSelector ? "Vault (deposit options + APY):" : "Asset:"}
+                        {useVaultSelector
+                            ? action === "redeem"
+                                ? "Vault to redeem from:"
+                                : action === "borrow"
+                                  ? "Vault (collateral + APY):"
+                                  : "Vault (deposit options + APY):"
+                            : "Asset:"}
                     </label>
                     {useVaultSelector ? (
                         <>
@@ -303,13 +393,21 @@ export function ProtocolNodeMorphoBody({
                                     {vaultsLoading
                                         ? "Loading vaults…"
                                         : data.asset
-                                          ? `Select vault for ${data.asset}`
-                                          : "Select deposit currency first"}
+                                          ? action === "redeem"
+                                              ? `Select vault for ${data.asset} (with shares)`
+                                              : `Select vault for ${data.asset}`
+                                          : action === "redeem"
+                                            ? "Select currency to receive first"
+                                            : "Select deposit currency first"}
                                 </option>
                                 {vaultOptions.map((v) => {
                                     const apy = v.state?.netApy ?? v.state?.apy;
                                     const apyStr = formatApy(apy ?? undefined);
-                                    const label = `${v.name} (${v.asset?.symbol ?? v.symbol}) — ${apyStr} APY`;
+                                    const shareBal = action === "redeem" ? getTotalShareBalance(v.address, v.name) : null;
+                                    const label =
+                                        action === "redeem" && shareBal != null && parseFloat(shareBal) > 0
+                                            ? `${v.name} (${v.asset?.symbol ?? v.symbol}) — ${apyStr} APY · ${shareBal} shares`
+                                            : `${v.name} (${v.asset?.symbol ?? v.symbol}) — ${apyStr} APY`;
                                     return (
                                         <option key={v.address} value={v.address}>
                                             {label}
@@ -317,9 +415,11 @@ export function ProtocolNodeMorphoBody({
                                     );
                                 })}
                             </select>
-                            {data.asset && vaultsForAsset.length < vaults.length && (
+                            {data.asset && (action === "redeem" ? vaultsWithShares.length < vaults.length : vaultsForAsset.length < vaults.length) && (
                                 <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                                    Showing vaults for {data.asset} only
+                                    {action === "redeem"
+                                        ? `Showing vaults for ${data.asset} where you have shares`
+                                        : `Showing vaults for ${data.asset} only`}
                                 </div>
                             )}
                         </>
@@ -352,15 +452,27 @@ export function ProtocolNodeMorphoBody({
             {action && (
                 <div>
                     <label className="text-xs text-gray-600 dark:text-gray-400 block mb-1">
-                        Amount:
+                        {action === "redeem"
+                            ? "Shares to redeem:"
+                            : action === "borrow"
+                              ? "Amount to borrow:"
+                              : "Amount:"}
                     </label>
                     <div className="flex gap-1.5 mb-1.5">
                         {([0.25, 0.5, 0.75, 1] as const).map((pct) => {
-                            const balance = assetBalance ? parseFloat(assetBalance) : 0;
+                            const balance =
+                                action === "redeem" && shareBalanceForRedeem != null
+                                    ? parseFloat(shareBalanceForRedeem)
+                                    : action === "borrow" && amountBalanceForBorrow != null
+                                      ? parseFloat(amountBalanceForBorrow)
+                                      : assetBalance
+                                        ? parseFloat(assetBalance)
+                                        : 0;
                             const disabled =
                                 !data.asset ||
                                 Number.isNaN(balance) ||
-                                (needsWalletBalance && balance <= 0);
+                                (needsWalletBalance && balance <= 0) ||
+                                (action === "borrow" && pct === 1 && (amountBalanceForBorrow == null || maxBorrowLoading));
                             return (
                                 <button
                                     key={pct}
@@ -389,13 +501,43 @@ export function ProtocolNodeMorphoBody({
                                 {data.morphoEstimatedSharesSymbol}
                             </div>
                         )}
+                    {action === "borrow" && selectedVault && (
+                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            {maxBorrowLoading
+                                ? "Loading max borrow…"
+                                : amountBalanceForBorrow != null
+                                  ? `Max borrow: ${amountBalanceForBorrow} ${selectedVault.asset?.symbol ?? selectedVault.symbol ?? ""} (≈80% LTV of collateral)`
+                                  : "Max borrow not available (no vault shares as collateral or error)"}
+                        </div>
+                    )}
                 </div>
             )}
 
+            {action === "redeem" &&
+                selectedVault &&
+                data.amount?.trim() &&
+                shareBalanceForRedeem != null &&
+                (() => {
+                    const balance = parseFloat(shareBalanceForRedeem);
+                    const amount = parseFloat(data.amount);
+                    if (
+                        !Number.isNaN(amount) &&
+                        !Number.isNaN(balance) &&
+                        amount > balance
+                    ) {
+                        return (
+                            <div className="text-xs text-red-600 dark:text-red-400 font-medium">
+                                Amount exceeds vault shares ({shareBalanceForRedeem} shares)
+                            </div>
+                        );
+                    }
+                    return null;
+                })()}
             {needsWalletBalance &&
                 data.asset &&
                 data.amount?.trim() &&
-                assetBalance != null && (() => {
+                assetBalance != null &&
+                (() => {
                     const balance = parseFloat(assetBalance);
                     const amount = parseFloat(data.amount);
                     if (

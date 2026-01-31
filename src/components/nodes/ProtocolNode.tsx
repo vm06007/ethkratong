@@ -11,6 +11,7 @@ import { UniswapExpandedModal } from "./protocol-node/UniswapExpandedModal";
 import { UniswapConfigModal } from "./protocol-node/UniswapConfigModal";
 import { MorphoExpandedModal } from "./protocol-node/MorphoExpandedModal";
 import { MorphoConfigModal } from "./protocol-node/MorphoConfigModal";
+import { AaveConfigModal } from "./protocol-node/AaveConfigModal";
 
 function ProtocolNode({ data, selected, id }: NodeProps<ProtocolNodeType>) {
     const { deleteElements } = useReactFlow();
@@ -19,6 +20,7 @@ function ProtocolNode({ data, selected, id }: NodeProps<ProtocolNodeType>) {
     const [expandedViewOpen, setExpandedViewOpen] = useState(false);
     const [morphoViewInFrameOpen, setMorphoViewInFrameOpen] = useState(false);
     const [morphoExpandedViewOpen, setMorphoExpandedViewOpen] = useState(false);
+    const [aaveExpandedViewOpen, setAaveExpandedViewOpen] = useState(false);
 
     const {
         isExpanded,
@@ -82,7 +84,9 @@ function ProtocolNode({ data, selected, id }: NodeProps<ProtocolNodeType>) {
                         ? () => setExpandedViewOpen(true)
                         : data.protocol === "morpho"
                           ? () => setMorphoExpandedViewOpen(true)
-                          : undefined
+                          : data.protocol === "aave"
+                            ? () => setAaveExpandedViewOpen(true)
+                            : undefined
                 }
             />
 
@@ -172,6 +176,18 @@ function ProtocolNode({ data, selected, id }: NodeProps<ProtocolNodeType>) {
                         isLoadingEffectiveBalances={state.isLoadingEffectiveBalances}
                     />
                 </>
+            )}
+
+            {data.protocol === "aave" && (
+                <AaveConfigModal
+                    open={aaveExpandedViewOpen}
+                    onOpenChange={setAaveExpandedViewOpen}
+                    data={data}
+                    chainId={state.chainId ?? undefined}
+                    onUpdateData={updateNodeData}
+                    effectiveBalances={state.transferBalances}
+                    isLoadingEffectiveBalances={state.isLoadingEffectiveBalances}
+                />
             )}
         </div>
     );

@@ -117,6 +117,64 @@ const MORPHO_VAULT_WITHDRAW_ABI = [
     },
 ] as const;
 
+// Aave V3 Pool addresses per chain
+const AAVE_V3_POOL: Record<number, string> = {
+    1: "0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2", // Ethereum Mainnet
+    42161: "0x794a61358D6845594F94dc1DB02A252b5b4814aD", // Arbitrum
+};
+
+// Aave V3 Pool ABI (deposit, withdraw, borrow, repay)
+const AAVE_V3_POOL_ABI = [
+    {
+        type: "function",
+        name: "supply",
+        inputs: [
+            { name: "asset", type: "address" },
+            { name: "amount", type: "uint256" },
+            { name: "onBehalfOf", type: "address" },
+            { name: "referralCode", type: "uint16" },
+        ],
+        outputs: [],
+        stateMutability: "nonpayable",
+    },
+    {
+        type: "function",
+        name: "withdraw",
+        inputs: [
+            { name: "asset", type: "address" },
+            { name: "amount", type: "uint256" },
+            { name: "to", type: "address" },
+        ],
+        outputs: [{ name: "", type: "uint256" }],
+        stateMutability: "nonpayable",
+    },
+    {
+        type: "function",
+        name: "borrow",
+        inputs: [
+            { name: "asset", type: "address" },
+            { name: "amount", type: "uint256" },
+            { name: "interestRateMode", type: "uint256" },
+            { name: "referralCode", type: "uint16" },
+            { name: "onBehalfOf", type: "address" },
+        ],
+        outputs: [],
+        stateMutability: "nonpayable",
+    },
+    {
+        type: "function",
+        name: "repay",
+        inputs: [
+            { name: "asset", type: "address" },
+            { name: "amount", type: "uint256" },
+            { name: "interestRateMode", type: "uint256" },
+            { name: "onBehalfOf", type: "address" },
+        ],
+        outputs: [{ name: "", type: "uint256" }],
+        stateMutability: "nonpayable",
+    },
+] as const;
+
 const ERC4626_PREVIEW_DEPOSIT_ABI = [
     {
         type: "function",
@@ -125,6 +183,41 @@ const ERC4626_PREVIEW_DEPOSIT_ABI = [
         outputs: [{ name: "shares", type: "uint256" }],
         stateMutability: "view",
     },
+] as const;
+
+const ERC4626_VAULT_ABI = [
+    {
+        type: "function",
+        name: "balanceOf",
+        inputs: [{ name: "account", type: "address" }],
+        outputs: [{ name: "", type: "uint256" }],
+        stateMutability: "view",
+    },
+    {
+        type: "function",
+        name: "decimals",
+        inputs: [],
+        outputs: [{ name: "", type: "uint8" }],
+        stateMutability: "view",
+    },
+    {
+        type: "function",
+        name: "previewRedeem",
+        inputs: [{ name: "shares", type: "uint256" }],
+        outputs: [{ name: "assets", type: "uint256" }],
+        stateMutability: "view",
+    },
+    {
+        type: "function",
+        name: "asset",
+        inputs: [],
+        outputs: [{ name: "", type: "address" }],
+        stateMutability: "view",
+    },
+] as const;
+
+const ERC20_DECIMALS_ABI = [
+    { type: "function", name: "decimals", inputs: [], outputs: [{ name: "", type: "uint8" }], stateMutability: "view" },
 ] as const;
 
 const UNISWAP_ADD_LIQUIDITY_ETH_ABI = [
@@ -795,6 +888,107 @@ function prepareMorphoVaultCalls(
 }
 
 /**
+ * Prepare Aave V3 transaction calls for deposit, withdraw, borrow, repay
+ */
+function prepareAaveCalls(
+  node: Node<ProtocolNodeData>,
+  chainId: number,
+  account: string
+): BatchedTransactionCall[] {
+  const { action, asset: assetSymbol, amount, aaveInterestRateMode } = node.data;
+
+  if (!assetSymbol || !amount?.trim()) {
+    throw new Error("Aave: asset and amount are required");
+  }
+
+  const poolAddress = AAVE_V3_POOL[chainId];
+  if (!poolAddress) {
+    throw new Error(`Aave: chain ${chainId} not supported`);
+  }
+
+  // Get asset address (handle ETH -> WETH conversion)
+  const tokens = TOKEN_ADDRESSES[chainId as keyof typeof TOKEN_ADDRESSES];
+  let assetAddress: string;
+
+  if (assetSymbol === "ETH") {
+    assetAddress = WETH_ADDRESS[chainId];
+    if (!assetAddress) {
+      throw new Error(`Aave: WETH not configured for chain ${chainId}`);
+    }
+  } else {
+    const tokenAddr = tokens?.[assetSymbol as keyof typeof tokens];
+    if (!tokenAddr) {
+      throw new Error(`Aave: unsupported asset "${assetSymbol}" on this chain`);
+    }
+    assetAddress = tokenAddr;
+  }
+
+  const decimals = TOKEN_DECIMALS[assetSymbol] ?? 18;
+  const amountWei = parseUnits(amount.trim(), decimals);
+  const pool = getAddress(poolAddress);
+
+  if (action === "deposit") {
+    // Deposit (supply) requires approval first
+    const approveData = encodeFunctionData({
+      abi: ERC20_APPROVE_ABI,
+      functionName: "approve",
+      args: [pool, amountWei],
+    });
+    const supplyData = encodeFunctionData({
+      abi: AAVE_V3_POOL_ABI,
+      functionName: "supply",
+      args: [getAddress(assetAddress), amountWei, getAddress(account), 0], // referralCode = 0
+    });
+    return [
+      { to: getAddress(assetAddress), data: approveData, value: toHex(0n) },
+      { to: pool, data: supplyData, value: toHex(0n) },
+    ];
+  }
+
+  if (action === "withdraw") {
+    // Withdraw: pass max uint256 to withdraw all, or specific amount
+    const withdrawData = encodeFunctionData({
+      abi: AAVE_V3_POOL_ABI,
+      functionName: "withdraw",
+      args: [getAddress(assetAddress), amountWei, getAddress(account)],
+    });
+    return [{ to: pool, data: withdrawData, value: toHex(0n) }];
+  }
+
+  if (action === "borrow") {
+    // Borrow requires interest rate mode (1 = stable, 2 = variable)
+    const rateMode = BigInt(aaveInterestRateMode ?? 2); // default to variable
+    const borrowData = encodeFunctionData({
+      abi: AAVE_V3_POOL_ABI,
+      functionName: "borrow",
+      args: [getAddress(assetAddress), amountWei, rateMode, 0, getAddress(account)], // referralCode = 0
+    });
+    return [{ to: pool, data: borrowData, value: toHex(0n) }];
+  }
+
+  if (action === "repay") {
+    // Repay requires approval first
+    const rateMode = BigInt(aaveInterestRateMode ?? 2); // default to variable
+    const approveData = encodeFunctionData({
+      abi: ERC20_APPROVE_ABI,
+      functionName: "approve",
+      args: [pool, amountWei],
+    });
+    const repayData = encodeFunctionData({
+      abi: AAVE_V3_POOL_ABI,
+      functionName: "repay",
+      args: [getAddress(assetAddress), amountWei, rateMode, getAddress(account)],
+    });
+    return [
+      { to: getAddress(assetAddress), data: approveData, value: toHex(0n) },
+      { to: pool, data: repayData, value: toHex(0n) },
+    ];
+  }
+
+  throw new Error(`Aave: action "${action}" is not supported for execution`);
+}
+
+/**
  * Prepare batched transaction calls for all nodes (transfers + custom + uniswap + morpho) in order.
  * Returns a flat list for EIP-7702 wallet_sendCalls (approve + addLiquidity are separate calls in the same batch).
  * @param account - Required for Uniswap swap/addLiquidity (recipient of output tokens)
@@ -863,6 +1057,21 @@ export const prepareBatchedCalls = async (
         }
       }
       // borrow/repay not implemented for execution
+    } else if (node.data.protocol === "aave" && account) {
+      const action = node.data.action;
+      const isSupported =
+        action === "deposit" ||
+        action === "withdraw" ||
+        action === "borrow" ||
+        action === "repay";
+      if (isSupported) {
+        try {
+          calls.push(...prepareAaveCalls(node, chainId, account));
+        } catch (err) {
+          lastError = err instanceof Error ? err : new Error(String(err));
+          console.warn(`Skipping Aave node ${node.id}:`, err);
+        }
+      }
     }
   }
   if (calls.length === 0 && lastError) {
@@ -1119,6 +1328,97 @@ export async function readMorphoVaultPreviewDeposit(
           ? formatUnits(shares, shareDecimals)
           : Number(formatUnits(shares, shareDecimals)).toFixed(6);
     return { sharesFormatted: formatted, sharesRaw: shares };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Read max borrowable amount based on vault share balance (collateral).
+ * Collateral = wallet share balance, or effective share balance from flow (previous Lend step).
+ * Uses previewRedeem(shares) = collateral value in underlying, then LTV 0.8.
+ * Returns formatted string (e.g. "100.00") or null on error.
+ */
+const ESTIMATED_LTV = 0.8;
+
+export async function readMorphoMaxBorrow(
+  chainId: number,
+  vaultAddress: string,
+  userAddress: string,
+  effectiveSharesFormatted?: string | null
+): Promise<string | null> {
+  if (!vaultAddress?.trim()) return null;
+  const chain = CHAINS[chainId as keyof typeof CHAINS];
+  if (!chain) return null;
+  try {
+    const publicClient = createPublicClient({ chain, transport: http() });
+    const vault = vaultAddress.trim() as `0x${string}`;
+    const user = (userAddress != null && userAddress.trim() !== "") ? (userAddress.trim() as `0x${string}`) : undefined;
+
+    const effectiveNum = effectiveSharesFormatted != null ? parseFloat(effectiveSharesFormatted) : NaN;
+    const useEffective = !Number.isNaN(effectiveNum) && effectiveNum > 0;
+
+    const [shareDecimals, assetAddress, onChainBalance] = await Promise.all([
+      publicClient.readContract({
+        address: vault,
+        abi: ERC4626_VAULT_ABI,
+        functionName: "decimals",
+      }),
+      publicClient.readContract({
+        address: vault,
+        abi: ERC4626_VAULT_ABI,
+        functionName: "asset",
+      }),
+      user
+        ? publicClient.readContract({
+            address: vault,
+            abi: ERC4626_VAULT_ABI,
+            functionName: "balanceOf",
+            args: [user],
+          })
+        : 0n,
+    ]);
+
+    const shareDec = typeof shareDecimals === "number" ? shareDecimals : 18;
+    let sharesWei: bigint;
+    if (useEffective) {
+      try {
+        sharesWei = parseUnits(effectiveSharesFormatted!.trim(), shareDec);
+      } catch {
+        sharesWei = onChainBalance ?? 0n;
+      }
+    } else {
+      sharesWei = onChainBalance ?? 0n;
+    }
+
+    if (sharesWei === 0n) return "0.00";
+    if (assetAddress == null || typeof assetAddress !== "string") return null;
+
+    const collateralAssets = await publicClient.readContract({
+      address: vault,
+      abi: ERC4626_VAULT_ABI,
+      functionName: "previewRedeem",
+      args: [sharesWei],
+    });
+    if (collateralAssets == null || typeof collateralAssets !== "bigint") return null;
+
+    const assetDecimals = await publicClient.readContract({
+      address: assetAddress as `0x${string}`,
+      abi: ERC20_DECIMALS_ABI,
+      functionName: "decimals",
+    });
+    const decimals = typeof assetDecimals === "number" ? assetDecimals : 18;
+
+    const collateralValue = Number(formatUnits(collateralAssets, decimals));
+    const maxBorrowValue = collateralValue * ESTIMATED_LTV;
+    if (maxBorrowValue <= 0) return "0.00";
+    const formatted =
+      maxBorrowValue < 0.0001
+        ? maxBorrowValue.toExponential(2)
+        : maxBorrowValue < 0.01
+          ? maxBorrowValue.toFixed(6)
+          : maxBorrowValue.toFixed(2);
+    return formatted;
   } catch {
     return null;
   }

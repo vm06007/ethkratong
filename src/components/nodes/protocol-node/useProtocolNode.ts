@@ -26,7 +26,7 @@ function useEffectiveBalanceDeps() {
             .map(
                 (n) => {
                     const d = n.data as ProtocolNodeData;
-                    return `${n.id}:${d.sequenceNumber}:${d.amount}:${d.estimatedAmountOut}:${d.estimatedAmountOutSymbol}:${d.swapFrom}:${d.swapTo}:${d.action}:${d.asset}`;
+                    return `${n.id}:${d.sequenceNumber}:${d.amount}:${d.estimatedAmountOut}:${d.estimatedAmountOutSymbol}:${d.swapFrom}:${d.swapTo}:${d.action}:${d.asset}:${d.morphoEstimatedShares}:${d.morphoEstimatedSharesSymbol}:${d.aaveEstimatedATokens}:${d.aaveEstimatedATokenSymbol}`;
                 }
             )
             .join("|")
@@ -207,10 +207,11 @@ export function useProtocolNode(id: string, data: ProtocolNodeData) {
 
     const nodesFromStore = useStore((s) => s.nodes) as Node<ProtocolNodeData>[];
     useEffect(() => {
-        const useEffective = data.protocol === "transfer" || data.protocol === "morpho";
+        const useEffective = data.protocol === "transfer" || data.protocol === "morpho" || data.protocol === "aave";
         const runForMorpho = data.protocol === "morpho" && activeAccount;
+        const runForAave = data.protocol === "aave" && activeAccount;
         const runForTransfer = data.protocol === "transfer" && activeAccount && isExpanded;
-        if (useEffective && (runForTransfer || runForMorpho)) {
+        if (useEffective && (runForTransfer || runForMorpho || runForAave)) {
             setIsLoadingBaseBalances(true);
             fetchUserBalances(activeAccount!)
                 .then(setBaseBalancesForEffective)
@@ -227,11 +228,11 @@ export function useProtocolNode(id: string, data: ProtocolNodeData) {
     ]);
 
     const transferBalances = useMemo(() => {
-        if (data.protocol !== "transfer" && data.protocol !== "morpho") return [];
+        if (data.protocol !== "transfer" && data.protocol !== "morpho" && data.protocol !== "aave") return [];
         if (data.protocol === "transfer" && !isExpanded) return [];
 
         if (isLoadingBaseBalances) return [];
-        // Transfer needs wallet base balances; morpho can use empty base so upstream vault shares still flow
+        // Transfer needs wallet base balances; morpho/aave can use empty base so upstream vault shares still flow
         if (data.protocol === "transfer" && !baseBalancesForEffective.length) return [];
 
         const base = baseBalancesForEffective.length ? baseBalancesForEffective : [];

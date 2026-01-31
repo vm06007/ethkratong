@@ -107,7 +107,8 @@ function getInitialWorkspace() {
 
 function FlowCanvas() {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
-  const initialWorkspace = getInitialWorkspace();
+  // Use useState with lazy initializer to only call getInitialWorkspace() once on mount
+  const [initialWorkspace] = useState(() => getInitialWorkspace());
 
   // ReactFlow state
   const [nodes, setNodes, onNodesChange] = useNodesState(initialWorkspace.nodes);

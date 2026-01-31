@@ -85,6 +85,24 @@ export interface ProtocolNodeData extends Record<string, unknown> {
   morphoEstimatedShares?: string;
   /** Morpho lend: label for receipt tokens (e.g. vault name or "shares") */
   morphoEstimatedSharesSymbol?: string;
+  /** Aave: collateral asset being deposited */
+  aaveCollateralAsset?: string;
+  /** Aave: asset being borrowed */
+  aaveBorrowAsset?: string;
+  /** Aave: available borrows in base currency (from getUserAccountData) */
+  aaveAvailableBorrows?: string;
+  /** Aave: health factor (e.g. "1.5") */
+  aaveHealthFactor?: string;
+  /** Aave: total collateral in base currency */
+  aaveTotalCollateral?: string;
+  /** Aave: total debt in base currency */
+  aaveTotalDebt?: string;
+  /** Aave: interest rate mode for borrowing (1 = stable, 2 = variable) */
+  aaveInterestRateMode?: 1 | 2;
+  /** Aave deposit: estimated aTokens received (for Est. out display) */
+  aaveEstimatedATokens?: string;
+  /** Aave deposit: aToken symbol (e.g. "aUSDC") */
+  aaveEstimatedATokenSymbol?: string;
   /** Track if user has manually edited the amount field (to prevent auto-sync overwriting user input) */
   amountManuallyEdited?: boolean;
 }

@@ -607,7 +607,8 @@ export function RightDrawer({ isOpen, onClose, nodes, edges, onReorderNodes, onR
           (n.data.protocol === "transfer" ||
             n.data.protocol === "custom" ||
             n.data.protocol === "uniswap" ||
-            n.data.protocol === "morpho") &&
+            n.data.protocol === "morpho" ||
+            n.data.protocol === "aave") &&
           !actionSkipSet.has(n.id)
       );
 

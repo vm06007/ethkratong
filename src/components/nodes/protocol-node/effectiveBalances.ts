@@ -126,6 +126,35 @@ export function getEffectiveBalances(
                 balances[lpSymbol] += estLp;
             }
         }
+        if (d.protocol === "aave" && d.asset && d.amount?.trim()) {
+            const amt = parseFloat(d.amount);
+            if (Number.isNaN(amt)) continue;
+            const assetKey = resolveOutSymbol(d.asset) ?? baseBalances.find((t) => canonicalKey(t.symbol) === canonicalKey(d.asset!))?.symbol ?? d.asset;
+            if (d.action === "deposit") {
+                // Deposit: reduce balance (locked as collateral)
+                balances[assetKey] = (balances[assetKey] ?? 0) - amt;
+                if (balances[assetKey] < 0) balances[assetKey] = 0;
+                // Track as aToken (Aave collateral receipt token)
+                const aTokenKey = `a${assetKey}`;
+                balances[aTokenKey] = (balances[aTokenKey] ?? 0) + amt;
+            }
+            if (d.action === "withdraw") {
+                // Withdraw: reduce aToken balance and add base asset back
+                const aTokenKey = `a${assetKey}`;
+                balances[aTokenKey] = (balances[aTokenKey] ?? 0) - amt;
+                if (balances[aTokenKey] < 0) balances[aTokenKey] = 0;
+                balances[assetKey] = (balances[assetKey] ?? 0) + amt;
+            }
+            if (d.action === "borrow") {
+                // Borrow: add borrowed asset to balance
+                balances[assetKey] = (balances[assetKey] ?? 0) + amt;
+            }
+            if (d.action === "repay") {
+                // Repay: reduce balance (paying back debt)
+                balances[assetKey] = (balances[assetKey] ?? 0) - amt;
+                if (balances[assetKey] < 0) balances[assetKey] = 0;
+            }
+        }
     }
 
     const lpSymbols = Object.keys(balances).filter((s) => s.endsWith(" LP"));
