@@ -324,27 +324,6 @@ export function ProtocolNodeAaveBody({
                             {action === "deposit" ? "Supply" : "Borrow"} APY: {formatApy(apyToShow)}
                         </div>
                     )}
-                    {action === "borrow" && borrowableBalances.length > 0 && (() => {
-                        // Show LTV values from deposited collateral
-                        const ltvInfo: string[] = [];
-                        if (effectiveBalances) {
-                            effectiveBalances.forEach((bal) => {
-                                if (bal.symbol.startsWith("a") && bal.symbol.length > 1) {
-                                    const underlyingSymbol = bal.symbol.substring(1);
-                                    const ltv = assetLTV[bal.symbol] ?? assetLTV[underlyingSymbol];
-                                    if (ltv != null) {
-                                        ltvInfo.push(`${underlyingSymbol}: ${(ltv * 100).toFixed(1)}%`);
-                                    }
-                                }
-                            });
-                        }
-                        const ltvStr = ltvInfo.length > 0 ? ` (${ltvInfo.join(", ")})` : "";
-                        return (
-                            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                💡 Max borrow based on collateral LTV{ltvStr}
-                            </div>
-                        );
-                    })()}
                     {action === "withdraw" && withdrawableBalances.length > 0 && (
                         <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                             💡 Showing deposited collateral from previous Aave deposits

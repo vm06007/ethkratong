@@ -250,12 +250,14 @@ export function ProtocolNodeMorphoBody({
         const v = vaults.find((x) => x.address.toLowerCase() === vaultAddress.toLowerCase());
         if (v) {
             const assetSymbol = v.asset?.symbol ?? v.symbol ?? "?";
+            // Normalize WETH → ETH to match currency dropdown options
+            const normalizedSymbol = assetSymbol === "WETH" ? "ETH" : assetSymbol;
             const apy = v.state?.netApy ?? v.state?.apy ?? undefined;
             onUpdateData({
                 morphoVaultAddress: v.address,
                 morphoVaultName: v.name,
                 morphoVaultApy: apy,
-                asset: assetSymbol,
+                asset: normalizedSymbol,
             });
         }
     };
@@ -415,13 +417,6 @@ export function ProtocolNodeMorphoBody({
                                     );
                                 })}
                             </select>
-                            {data.asset && (action === "redeem" ? vaultsWithShares.length < vaults.length : vaultsForAsset.length < vaults.length) && (
-                                <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                                    {action === "redeem"
-                                        ? `Showing vaults for ${data.asset} where you have shares`
-                                        : `Showing vaults for ${data.asset} only`}
-                                </div>
-                            )}
                         </>
                     ) : (
                         <select
@@ -444,8 +439,8 @@ export function ProtocolNodeMorphoBody({
             )}
 
             {useVaultSelector && selectedVault && (
-                <div className="text-xs text-gray-500 dark:text-gray-400">
-                    APY: {formatApy(selectedVault.state?.netApy ?? selectedVault.state?.apy ?? undefined)}
+                <div className="text-xs text-green-600 dark:text-green-400">
+                    Supply APY: {formatApy(selectedVault.state?.netApy ?? selectedVault.state?.apy ?? undefined)}
                 </div>
             )}
 

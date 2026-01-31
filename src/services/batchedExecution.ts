@@ -11,6 +11,7 @@ const CHAINS: Record<number, Chain> = { 1: mainnet, 42161: arbitrum };
 const TOKEN_ADDRESSES = {
     // Ethereum Mainnet
     1: {
+        WETH: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
         USDC: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
         USDT: "0xdAC17F958D2ee523a2206206994597C13D831ec7",
         DAI: "0x6B175474E89094C44Da98b954EedeAC495271d0F",
@@ -18,6 +19,7 @@ const TOKEN_ADDRESSES = {
     },
     // Arbitrum One
     42161: {
+        WETH: "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1",
         USDC: "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
         USDT: "0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9",
         DAI: "0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1",
@@ -85,6 +87,17 @@ const ERC20_APPROVE_ABI = [
         ],
         outputs: [{ type: "bool" }],
         stateMutability: "nonpayable",
+    },
+] as const;
+
+// WETH deposit (wrap ETH into WETH)
+const WETH_DEPOSIT_ABI = [
+    {
+        type: "function",
+        name: "deposit",
+        inputs: [],
+        outputs: [],
+        stateMutability: "payable",
     },
 ] as const;
 
@@ -257,6 +270,7 @@ const UNISWAP_ROUTER_QUOTE_ABI = [
 // Token decimals mapping
 const TOKEN_DECIMALS: Record<string, number> = {
     ETH: 18,
+    WETH: 18,
     USDC: 6,
     USDT: 6,
     DAI: 18,
@@ -849,30 +863,47 @@ function prepareMorphoVaultCalls(
   if (!morphoVaultAddress || !assetSymbol || !amount?.trim()) {
     throw new Error("Morpho: vault, asset and amount are required");
   }
+  // Normalize ETH → WETH for token address lookup (ETH is not an ERC20)
+  const normalizedAsset = assetSymbol === "ETH" ? "WETH" : assetSymbol;
   const tokens = TOKEN_ADDRESSES[chainId as keyof typeof TOKEN_ADDRESSES];
-  const assetAddress = tokens?.[assetSymbol as keyof typeof tokens];
+  const assetAddress = tokens?.[normalizedAsset as keyof typeof tokens];
   if (!assetAddress) {
-    throw new Error(`Morpho: unsupported asset "${assetSymbol}" on this chain`);
+    throw new Error(`Morpho: unsupported asset "${normalizedAsset}" on this chain`);
   }
-  const decimals = TOKEN_DECIMALS[assetSymbol] ?? 18;
+  const decimals = TOKEN_DECIMALS[normalizedAsset] ?? 18;
   const amountWei = parseUnits(amount.trim(), decimals);
   const vaultAddress = getAddress(morphoVaultAddress);
 
   if (action === "lend" || action === "deposit") {
+    const calls: BatchedTransactionCall[] = [];
+
+    // If depositing ETH, first wrap it to WETH
+    if (assetSymbol === "ETH") {
+      const wrapData = encodeFunctionData({
+        abi: WETH_DEPOSIT_ABI,
+        functionName: "deposit",
+        args: [],
+      });
+      calls.push({ to: assetAddress, data: wrapData, value: toHex(amountWei) });
+    }
+
+    // Approve WETH for vault
     const approveData = encodeFunctionData({
       abi: ERC20_APPROVE_ABI,
       functionName: "approve",
       args: [vaultAddress, amountWei],
     });
+    calls.push({ to: assetAddress, data: approveData, value: toHex(0n) });
+
+    // Deposit to vault
     const depositData = encodeFunctionData({
       abi: MORPHO_VAULT_DEPOSIT_ABI,
       functionName: "deposit",
       args: [amountWei, getAddress(account)],
     });
-    return [
-      { to: assetAddress, data: approveData, value: toHex(0n) },
-      { to: vaultAddress, data: depositData, value: toHex(0n) },
-    ];
+    calls.push({ to: vaultAddress, data: depositData, value: toHex(0n) });
+
+    return calls;
   }
 
   if (action === "withdraw" || action === "redeem") {
