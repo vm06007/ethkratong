@@ -139,6 +139,14 @@ export function ProtocolNodeCompactView({ data }: ProtocolNodeCompactViewProps) 
                             {amount}
                         </div>
                     )}
+                    {action === "lend" &&
+                        data.morphoEstimatedShares != null &&
+                        data.morphoEstimatedSharesSymbol && (
+                            <div className="text-xs text-green-600 dark:text-green-400">
+                                Est. out: ~{data.morphoEstimatedShares}{" "}
+                                {data.morphoEstimatedSharesSymbol}
+                            </div>
+                        )}
                 </div>
             );
         }

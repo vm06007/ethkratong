@@ -286,6 +286,17 @@ function SortableStep({ node, isExecuted, isConfigured }: SortableStepProps) {
                   <span>{node.data.amount}</span>
                 </div>
               )}
+              {node.data.action === "lend" &&
+                node.data.morphoEstimatedShares != null &&
+                node.data.morphoEstimatedSharesSymbol && (
+                  <div className="flex justify-between text-green-600 dark:text-green-400">
+                    <span className="font-medium">Est. out:</span>
+                    <span>
+                      ~{node.data.morphoEstimatedShares}{" "}
+                      {node.data.morphoEstimatedSharesSymbol}
+                    </span>
+                  </div>
+                )}
             </>
           ) : (
             <div className="text-orange-500 dark:text-orange-400">

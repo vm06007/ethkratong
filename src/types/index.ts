@@ -18,6 +18,8 @@ export type ProtocolType =
 export type ActionType =
   | "lend"
   | "borrow"
+  | "redeem"
+  | "repay"
   | "deposit"
   | "withdraw"
   | "swap"
@@ -79,6 +81,10 @@ export interface ProtocolNodeData extends Record<string, unknown> {
   morphoVaultName?: string;
   /** Morpho: vault APY as decimal (e.g. 0.05 for 5%) */
   morphoVaultApy?: number;
+  /** Morpho lend: estimated vault shares received (for Est. out display) */
+  morphoEstimatedShares?: string;
+  /** Morpho lend: label for receipt tokens (e.g. vault name or "shares") */
+  morphoEstimatedSharesSymbol?: string;
   /** Track if user has manually edited the amount field (to prevent auto-sync overwriting user input) */
   amountManuallyEdited?: boolean;
 }

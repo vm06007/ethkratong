@@ -29,7 +29,7 @@ export const protocolCategories: ProtocolCategory[] = [
         label: "Morpho",
         description: "Optimized lending and borrowing",
         color: "bg-blue-500",
-        availableActions: ["lend", "borrow", "deposit", "withdraw"],
+        availableActions: ["lend", "redeem", "borrow", "repay"],
         url: "https://morpho.org",
       },
       {

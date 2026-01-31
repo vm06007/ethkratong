@@ -1,7 +1,7 @@
 import type { Node } from "@xyflow/react";
 import type { ProtocolNodeData } from "@/types";
 import type { WalletGetCallsStatusResult, WalletSendCallsResult } from "@/types/global";
-import { parseEther, parseUnits, encodeFunctionData, isAddress, getAddress, toHex, createPublicClient, http, type Abi, type Chain } from "viem";
+import { parseEther, parseUnits, formatUnits, encodeFunctionData, isAddress, getAddress, toHex, createPublicClient, http, type Abi, type Chain } from "viem";
 import { normalize } from "viem/ens";
 import { mainnet, arbitrum } from "viem/chains";
 
@@ -114,6 +114,16 @@ const MORPHO_VAULT_WITHDRAW_ABI = [
         ],
         outputs: [{ name: "shares", type: "uint256" }],
         stateMutability: "nonpayable",
+    },
+] as const;
+
+const ERC4626_PREVIEW_DEPOSIT_ABI = [
+    {
+        type: "function",
+        name: "previewDeposit",
+        inputs: [{ name: "assets", type: "uint256" }],
+        outputs: [{ name: "shares", type: "uint256" }],
+        stateMutability: "view",
     },
 ] as const;
 
@@ -772,7 +782,7 @@ function prepareMorphoVaultCalls(
     ];
   }
 
-  if (action === "withdraw") {
+  if (action === "withdraw" || action === "redeem") {
     const withdrawData = encodeFunctionData({
       abi: MORPHO_VAULT_WITHDRAW_ABI,
       functionName: "withdraw",
@@ -1078,6 +1088,40 @@ export async function readBalanceResult(chainId: number, address: string): Promi
   const balance = await publicClient.getBalance({ address: address.trim() as `0x${string}` });
   const ethValue = Number(balance) / 1e18;
   return ethValue === 0 ? "0" : ethValue.toFixed(6);
+}
+
+/**
+ * Read Morpho/ERC-4626 vault previewDeposit(assets) for Est. out display.
+ * Returns { sharesFormatted, sharesRaw } or null on error.
+ */
+export async function readMorphoVaultPreviewDeposit(
+  chainId: number,
+  vaultAddress: string,
+  assetsWei: bigint,
+  shareDecimals: number = 18
+): Promise<{ sharesFormatted: string; sharesRaw: bigint } | null> {
+  if (!vaultAddress || assetsWei <= 0n) return null;
+  const chain = CHAINS[chainId];
+  if (!chain) return null;
+  try {
+    const publicClient = createPublicClient({ chain, transport: http() });
+    const shares = await publicClient.readContract({
+      address: vaultAddress.trim() as `0x${string}`,
+      abi: ERC4626_PREVIEW_DEPOSIT_ABI,
+      functionName: "previewDeposit",
+      args: [assetsWei],
+    });
+    if (shares == null || typeof shares !== "bigint") return null;
+    const formatted =
+      shares === 0n
+        ? "0"
+        : Number(formatUnits(shares, shareDecimals)) < 0.0001
+          ? formatUnits(shares, shareDecimals)
+          : Number(formatUnits(shares, shareDecimals)).toFixed(6);
+    return { sharesFormatted: formatted, sharesRaw: shares };
+  } catch {
+    return null;
+  }
 }
 
 /**
