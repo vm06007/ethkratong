@@ -434,6 +434,7 @@ function FlowCanvas() {
         onShare={share.handleShare}
         shareUrl={share.shareUrl}
         isSharing={share.isSharing}
+        isPrivate={share.isPrivateShare}
       />
 
       <TabCloseConfirmDialog

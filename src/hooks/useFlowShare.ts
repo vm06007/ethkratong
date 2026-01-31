@@ -25,10 +25,12 @@ export function useFlowShare(
   const [isSharing, setIsSharing] = useState(false);
   const [shareError, setShareError] = useState<string | null>(null);
   const [isLoadingSharedFlow, setIsLoadingSharedFlow] = useState(false);
+  const [isPrivateShare, setIsPrivateShare] = useState(false);
 
-  const handleShare = useCallback(async (): Promise<string> => {
+  const handleShare = useCallback(async (makePrivate: boolean = false): Promise<string> => {
     setIsSharing(true);
     setShareError(null);
+    setIsPrivateShare(makePrivate);
 
     try {
       const tabName = tabs.find((t) => t.id === activeTabId)?.name || "My Kratong";
@@ -43,8 +45,8 @@ export function useFlowShare(
         timestamp: Date.now(),
       };
 
-      const cid = await uploadFlowToIPFS(flowData);
-      const url = getShareUrl(cid);
+      const { cid, encryptionKey } = await uploadFlowToIPFS(flowData, makePrivate);
+      const url = getShareUrl(cid, encryptionKey);
 
       setShareUrl(url);
       setIsSharing(false);
@@ -61,6 +63,7 @@ export function useFlowShare(
   const handleOpenShareDialog = useCallback(() => {
     setShareUrl(undefined);
     setShareError(null);
+    setIsPrivateShare(false);
     setShareDialogOpen(true);
   }, []);
 
@@ -68,6 +71,7 @@ export function useFlowShare(
     setShareDialogOpen(false);
     setShareUrl(undefined);
     setShareError(null);
+    setIsPrivateShare(false);
   }, []);
 
   const handleLoadSharedFlow = useCallback((loadedNodes: Node[], loadedEdges: Edge[]) => {
@@ -103,6 +107,7 @@ export function useFlowShare(
     isSharing,
     shareError,
     isLoadingSharedFlow,
+    isPrivateShare,
     setIsLoadingSharedFlow,
     handleShare,
     handleOpenShareDialog,

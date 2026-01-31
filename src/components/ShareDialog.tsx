@@ -7,9 +7,10 @@ import { cn } from "@/lib/utils";
 interface ShareDialogProps {
   open: boolean;
   onClose: () => void;
-  onShare: () => Promise<string>; // Returns the CID
+  onShare: (makePrivate: boolean) => Promise<string>; // Returns the CID
   shareUrl?: string;
   isSharing?: boolean;
+  isPrivate?: boolean;
 }
 
 export function ShareDialog({
@@ -18,14 +19,16 @@ export function ShareDialog({
   onShare,
   shareUrl,
   isSharing = false,
+  isPrivate = false,
 }: ShareDialogProps) {
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [makePrivate, setMakePrivate] = useState(false);
 
   const handleShare = async () => {
     try {
       setError(null);
-      await onShare();
+      await onShare(makePrivate);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to share flow");
     }
@@ -95,6 +98,26 @@ export function ShareDialog({
                   shareable link with QR code. Anyone with the link can view and
                   load your flow.
                 </p>
+
+                {/* Privacy Toggle */}
+                <label className="flex items-start gap-3 p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={makePrivate}
+                    onChange={(e) => setMakePrivate(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 rounded border-gray-300 text-teal-600 focus:ring-teal-500 dark:border-gray-600 dark:bg-gray-700"
+                  />
+                  <div className="flex-1 text-sm">
+                    <div className="font-medium text-gray-900 dark:text-white mb-1">
+                      Make Private (Encrypted)
+                    </div>
+                    <div className="text-xs text-gray-600 dark:text-gray-400">
+                      Encrypt your flow before uploading. Only people with the full link
+                      (including the encryption key) can view it. The encrypted data is
+                      stored on IPFS, but unreadable without the key.
+                    </div>
+                  </div>
+                </label>
 
                 {error && (
                   <div className="rounded-lg bg-red-50 border border-red-200 dark:bg-red-900/30 dark:border-red-700 p-3">
@@ -173,8 +196,13 @@ export function ShareDialog({
           <div className="flex flex-col overflow-y-auto">
             <div className="px-6 py-4 space-y-6">
               <p className="text-sm text-gray-600 dark:text-gray-300">
-                Your flow has been uploaded to IPFS. Share this link or scan the
+                Your flow has been uploaded to IPFS{isPrivate ? ' (encrypted)' : ''}. Share this link or scan the
                 QR code to open it on another device.
+                {isPrivate && (
+                  <span className="block mt-2 text-teal-600 dark:text-teal-400 font-medium">
+                    🔒 This is a private share. The encryption key is included in the link.
+                  </span>
+                )}
               </p>
 
               {/* QR Code */}
@@ -208,10 +236,30 @@ export function ShareDialog({
               </div>
 
               {/* IPFS Info */}
-              <div className="rounded-lg bg-teal-50 border border-teal-200 dark:bg-teal-900/30 dark:border-teal-700/50 p-3">
-                <p className="text-xs text-teal-700 dark:text-teal-400">
-                  This flow is stored on IPFS via Pinata, a decentralized storage
-                  network. The link will work permanently and can't be modified.
+              <div className={cn(
+                "rounded-lg border p-3",
+                isPrivate
+                  ? "bg-purple-50 border-purple-200 dark:bg-purple-900/30 dark:border-purple-700/50"
+                  : "bg-teal-50 border-teal-200 dark:bg-teal-900/30 dark:border-teal-700/50"
+              )}>
+                <p className={cn(
+                  "text-xs",
+                  isPrivate
+                    ? "text-purple-700 dark:text-purple-400"
+                    : "text-teal-700 dark:text-teal-400"
+                )}>
+                  {isPrivate ? (
+                    <>
+                      🔐 <strong>Private Flow:</strong> Your flow is encrypted and stored on IPFS via Pinata.
+                      The encrypted data is publicly accessible, but only readable with the encryption key
+                      included in the link. Don't lose the link - the key cannot be recovered!
+                    </>
+                  ) : (
+                    <>
+                      This flow is stored on IPFS via Pinata, a decentralized storage
+                      network. The link will work permanently and can't be modified.
+                    </>
+                  )}
                 </p>
               </div>
 

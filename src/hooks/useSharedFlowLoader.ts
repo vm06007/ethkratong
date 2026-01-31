@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { downloadFlowFromIPFS, type FlowShareData } from "@/lib/ipfs";
+import { downloadFlowFromIPFS, getEncryptionKeyFromUrl, type FlowShareData } from "@/lib/ipfs";
 import type { Node, Edge } from "@xyflow/react";
 
 interface UseSharedFlowLoaderOptions {
@@ -41,8 +41,12 @@ export function useSharedFlowLoader({
 
     (async () => {
       try {
-        console.log(`Loading shared flow from IPFS: ${cid}`);
-        const flowData: FlowShareData = await downloadFlowFromIPFS(cid);
+        // Extract encryption key from URL fragment if present
+        const encryptionKey = getEncryptionKeyFromUrl();
+        const isEncrypted = !!encryptionKey;
+
+        console.log(`Loading shared flow from IPFS: ${cid}${isEncrypted ? ' (encrypted)' : ''}`);
+        const flowData: FlowShareData = await downloadFlowFromIPFS(cid, encryptionKey);
 
         if (cancelled) return;
 
@@ -65,10 +69,11 @@ export function useSharedFlowLoader({
         // Mark as loaded
         loadedCidRef.current = cid;
 
-        // Optionally remove the ?s parameter from URL to clean it up
+        // Optionally remove the ?s parameter and hash fragment from URL to clean it up
         const newUrl = new URL(window.location.href);
         newUrl.searchParams.delete("s");
         newUrl.searchParams.delete("share");
+        newUrl.hash = ''; // Remove encryption key from URL
         window.history.replaceState({}, "", newUrl.toString());
       } catch (err) {
         if (cancelled) return;

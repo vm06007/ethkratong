@@ -1,4 +1,5 @@
 import { PinataSDK } from "pinata-web3";
+import { encryptData, decryptData, generateEncryptionKey } from "./crypto";
 
 // Get API credentials from environment variables
 const PINATA_JWT = import.meta.env.VITE_PINATA_JWT || '';
@@ -28,27 +29,51 @@ export interface FlowShareData {
   timestamp: number;
 }
 
+export interface UploadResult {
+  cid: string;
+  encryptionKey?: string;
+}
+
 /**
  * Upload flow data to IPFS via Pinata
  * @param flowData The flow data to upload
- * @returns The CID (Content Identifier) for the uploaded flow
+ * @param encrypted Whether to encrypt the data before uploading
+ * @returns The CID and encryption key (if encrypted)
  */
-export async function uploadFlowToIPFS(flowData: FlowShareData): Promise<string> {
+export async function uploadFlowToIPFS(
+  flowData: FlowShareData,
+  encrypted: boolean = false
+): Promise<UploadResult> {
   try {
     const client = getClient();
 
     // Convert flow data to JSON
     const jsonContent = JSON.stringify(flowData, null, 2);
-    const blob = new Blob([jsonContent], { type: 'application/json' });
-    const file = new File([blob], 'flow.json', { type: 'application/json' });
+
+    let fileContent: string;
+    let encryptionKey: string | undefined;
+
+    if (encrypted) {
+      // Generate encryption key and encrypt the data
+      encryptionKey = generateEncryptionKey();
+      fileContent = await encryptData(jsonContent, encryptionKey);
+      console.log('Encrypted flow data before upload');
+    } else {
+      fileContent = jsonContent;
+    }
+
+    const blob = new Blob([fileContent], { type: encrypted ? 'application/octet-stream' : 'application/json' });
+    const file = new File([blob], encrypted ? 'flow.encrypted' : 'flow.json', {
+      type: encrypted ? 'application/octet-stream' : 'application/json'
+    });
 
     // Upload to Pinata
     const upload = await client.upload.file(file);
 
     const cid = upload.IpfsHash;
-    console.log('Uploaded to IPFS with CID:', cid);
+    console.log('Uploaded to IPFS with CID:', cid, encrypted ? '(encrypted)' : '(public)');
 
-    return cid;
+    return { cid, encryptionKey };
   } catch (error) {
     console.error('Failed to upload flow to IPFS:', error);
     throw new Error(`Failed to upload flow: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -58,9 +83,13 @@ export async function uploadFlowToIPFS(flowData: FlowShareData): Promise<string>
 /**
  * Download flow data from IPFS using CID
  * @param cid The Content Identifier for the flow
+ * @param encryptionKey Optional encryption key for private flows
  * @returns The flow data
  */
-export async function downloadFlowFromIPFS(cid: string): Promise<FlowShareData> {
+export async function downloadFlowFromIPFS(
+  cid: string,
+  encryptionKey?: string
+): Promise<FlowShareData> {
   try {
     // Use Pinata gateway to fetch the content
     const gatewayUrl = `https://${PINATA_GATEWAY}/ipfs/${cid}`;
@@ -71,7 +100,18 @@ export async function downloadFlowFromIPFS(cid: string): Promise<FlowShareData> 
       throw new Error(`Failed to fetch from IPFS: ${response.status} ${response.statusText}`);
     }
 
-    const flowData = await response.json();
+    let flowData: FlowShareData;
+
+    if (encryptionKey) {
+      // Encrypted flow - fetch as text and decrypt
+      const encryptedContent = await response.text();
+      const decryptedJson = await decryptData(encryptedContent, encryptionKey);
+      flowData = JSON.parse(decryptedJson);
+      console.log('Decrypted private flow from IPFS');
+    } else {
+      // Public flow - parse JSON directly
+      flowData = await response.json();
+    }
 
     // Validate the flow data structure
     if (!flowData.nodes || !Array.isArray(flowData.nodes)) {
@@ -85,6 +125,12 @@ export async function downloadFlowFromIPFS(cid: string): Promise<FlowShareData> 
     return flowData as FlowShareData;
   } catch (error) {
     console.error('Failed to download flow from IPFS:', error);
+
+    // Provide more specific error message if decryption fails
+    if (error instanceof Error && error.message.includes('decrypt')) {
+      throw new Error('Failed to decrypt flow. The link may be incomplete or corrupted.');
+    }
+
     throw new Error(`Failed to load flow: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
@@ -92,10 +138,36 @@ export async function downloadFlowFromIPFS(cid: string): Promise<FlowShareData> 
 /**
  * Get the shareable URL for a flow CID
  * @param cid The Content Identifier
+ * @param encryptionKey Optional encryption key for private flows
  * @returns The full URL to share
  */
-export function getShareUrl(cid: string): string {
+export function getShareUrl(cid: string, encryptionKey?: string): string {
   // Use custom base URL from env if provided, otherwise use current origin
   const baseUrl = import.meta.env.VITE_SHARE_BASE_URL || window.location.origin;
-  return `${baseUrl}?s=${cid}`;
+  const url = `${baseUrl}?s=${cid}`;
+
+  // For private flows, add the encryption key in the URL fragment
+  // Fragment (after #) is never sent to the server, stays client-side only
+  if (encryptionKey) {
+    return `${url}#key=${encodeURIComponent(encryptionKey)}`;
+  }
+
+  return url;
+}
+
+/**
+ * Parse encryption key from URL fragment
+ * @returns The encryption key if present in URL fragment
+ */
+export function getEncryptionKeyFromUrl(): string | undefined {
+  if (typeof window === 'undefined') return undefined;
+
+  const fragment = window.location.hash;
+  if (!fragment) return undefined;
+
+  // Parse fragment as query string (format: #key=abc123)
+  const params = new URLSearchParams(fragment.slice(1)); // Remove the # prefix
+  const key = params.get('key');
+
+  return key ? decodeURIComponent(key) : undefined;
 }
