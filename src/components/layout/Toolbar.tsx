@@ -143,28 +143,28 @@ export function Toolbar({
           <Share2 className={iconClass} />
         </button>
 
-        <div className="w-px h-6 bg-gray-300 dark:bg-gray-600" />
-
-        {/* Undo/Redo */}
-        <button
-          onClick={onUndo}
-          disabled={!canUndo}
-          className={iconButton}
-          aria-label="Undo"
-        >
-          <Undo2 className={iconClass} />
-        </button>
-        <button
-          onClick={onRedo}
-          disabled={!canRedo}
-          className={iconButton}
-          aria-label="Redo"
-        >
-          <Redo2 className={iconClass} />
-        </button>
-        <button onClick={handleResetClick} className={iconButton} aria-label="Reset">
-          <RotateCcw className={iconClass} />
-        </button>
+        <div className="hidden md:flex md:items-center gap-2">
+          <div className="w-px h-6 bg-gray-300 dark:bg-gray-600 shrink-0" />
+          <button
+            onClick={onUndo}
+            disabled={!canUndo}
+            className={iconButton}
+            aria-label="Undo"
+          >
+            <Undo2 className={iconClass} />
+          </button>
+          <button
+            onClick={onRedo}
+            disabled={!canRedo}
+            className={iconButton}
+            aria-label="Redo"
+          >
+            <Redo2 className={iconClass} />
+          </button>
+          <button onClick={handleResetClick} className={iconButton} aria-label="Reset">
+            <RotateCcw className={iconClass} />
+          </button>
+        </div>
 
         {/* Reset confirmation dialog */}
         <Dialog.Root open={showResetConfirm} onOpenChange={setShowResetConfirm}>
