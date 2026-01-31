@@ -13,8 +13,8 @@ export interface MorphoExpandedModalProps {
 }
 
 function buildMorphoUrl(
-    chainId: number | undefined,
-    action?: string,
+    _chainId: number | undefined,
+    _action?: string,
     vaultAddress?: string
 ): string {
     // Morpho is primarily on Ethereum mainnet (chainId 1)

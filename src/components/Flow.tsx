@@ -14,8 +14,6 @@ import {
   ReactFlowProvider,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import * as Dialog from "@radix-ui/react-dialog";
-import { AlertTriangle } from "lucide-react";
 
 import ProtocolNode from "./nodes/ProtocolNode";
 import { Sidebar } from "./layout/Sidebar";
@@ -23,89 +21,22 @@ import { Toolbar } from "./layout/Toolbar";
 import { Tabs } from "./layout/Tabs";
 import { RightDrawer } from "./layout/RightDrawer";
 import { ShareDialog } from "./ShareDialog";
+import { TabCloseConfirmDialog } from "./dialogs/TabCloseConfirmDialog";
+import { SharedFlowLoadingOverlay } from "./overlays/SharedFlowLoadingOverlay";
 import { useTheme } from "@/hooks/useTheme";
 import { useSharedFlowLoader } from "@/hooks/useSharedFlowLoader";
-import { uploadFlowToIPFS, getShareUrl, type FlowShareData } from "@/lib/ipfs";
+import { useFlowToast } from "@/hooks/useFlowToast";
+import { useFlowUI } from "@/hooks/useFlowUI";
+import { useFlowHistory } from "@/hooks/useFlowHistory";
+import { useFlowWorkspace } from "@/hooks/useFlowWorkspace";
+import { useFlowExecution } from "@/hooks/useFlowExecution";
+import { useFlowSequence } from "@/hooks/useFlowSequence";
+import { useFlowEditor } from "@/hooks/useFlowEditor";
+import { useFlowFileOperations } from "@/hooks/useFlowFileOperations";
+import { useFlowShare } from "@/hooks/useFlowShare";
 import type { ProtocolNodeData } from "@/types";
-import { cn } from "@/lib/utils";
-import { ToastContainer, type Toast } from "./ui/toast";
+import { ToastContainer } from "./ui/toast";
 import { useActiveAccount } from "thirdweb/react";
-
-// Helper function to calculate execution order starting from wallet
-// Uses topological sort to create a linear execution sequence
-function calculateExecutionOrder(nodes: Node[], edges: Edge[]): Map<string, number> {
-  const orderMap = new Map<string, number>();
-  const walletNode = nodes.find((n) => n.data.protocol === "wallet");
-
-  if (!walletNode) return orderMap;
-
-  // Build adjacency list and in-degree map
-  const adjList = new Map<string, string[]>();
-  const inDegree = new Map<string, number>();
-
-  // Initialize all nodes
-  nodes.forEach((node) => {
-    adjList.set(node.id, []);
-    inDegree.set(node.id, 0);
-  });
-
-  // Build graph
-  edges.forEach((edge) => {
-    adjList.get(edge.source)?.push(edge.target);
-    inDegree.set(edge.target, (inDegree.get(edge.target) || 0) + 1);
-  });
-
-  // Topological sort using Kahn's algorithm
-  const queue: string[] = [walletNode.id];
-  const result: string[] = [];
-  let sequenceCounter = 0;
-
-  orderMap.set(walletNode.id, 0); // Wallet is always 0
-
-  while (queue.length > 0) {
-    // Sort queue by existing sequence numbers to preserve manual ordering
-    queue.sort((a, b) => {
-      const nodeA = nodes.find((n) => n.id === a);
-      const nodeB = nodes.find((n) => n.id === b);
-      if (!nodeA || !nodeB) return 0;
-
-      // Use existing sequence numbers if available
-      const seqA = typeof nodeA.data.sequenceNumber === "number" ? nodeA.data.sequenceNumber : 999999;
-      const seqB = typeof nodeB.data.sequenceNumber === "number" ? nodeB.data.sequenceNumber : 999999;
-      return seqA - seqB;
-    });
-
-    const nodeId = queue.shift()!;
-    result.push(nodeId);
-
-    // Process all neighbors
-    const neighbors = adjList.get(nodeId) || [];
-
-    // Sort neighbors by existing sequence numbers
-    const sortedNeighbors = neighbors.sort((a, b) => {
-      const nodeA = nodes.find((n) => n.id === a);
-      const nodeB = nodes.find((n) => n.id === b);
-      if (!nodeA || !nodeB) return 0;
-
-      const seqA = typeof nodeA.data.sequenceNumber === "number" ? nodeA.data.sequenceNumber : 999999;
-      const seqB = typeof nodeB.data.sequenceNumber === "number" ? nodeB.data.sequenceNumber : 999999;
-      return seqA - seqB;
-    });
-
-    sortedNeighbors.forEach((neighborId) => {
-      const currentInDegree = inDegree.get(neighborId) || 0;
-      inDegree.set(neighborId, currentInDegree - 1);
-
-      if (inDegree.get(neighborId) === 0) {
-        sequenceCounter++;
-        orderMap.set(neighborId, sequenceCounter);
-        queue.push(neighborId);
-      }
-    });
-  }
-
-  return orderMap;
-}
 
 const nodeTypes = {
   protocol: ProtocolNode,
@@ -127,13 +58,6 @@ const initialNodes: Node<ProtocolNodeData>[] = [
 const initialEdges: Edge[] = [];
 
 let tabId = 2;
-
-interface Tab {
-  id: string;
-  name: string;
-  nodes: Node<ProtocolNodeData>[];
-  edges: Edge[];
-}
 
 // Helper function to get initial workspace from localStorage or defaults
 function getInitialWorkspace() {
@@ -158,7 +82,7 @@ function getInitialWorkspace() {
     if (saved) {
       const workspace = JSON.parse(saved);
       if (workspace.tabs && workspace.tabs.length > 0) {
-        const activeTab = workspace.tabs.find((t: Tab) => t.id === workspace.activeTabId) || workspace.tabs[0];
+        const activeTab = workspace.tabs.find((t: any) => t.id === workspace.activeTabId) || workspace.tabs[0];
         console.log("Workspace restored from localStorage");
         return {
           tabs: workspace.tabs,
@@ -184,198 +108,62 @@ function getInitialWorkspace() {
 function FlowCanvas() {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const initialWorkspace = getInitialWorkspace();
+
+  // ReactFlow state
   const [nodes, setNodes, onNodesChange] = useNodesState(initialWorkspace.nodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialWorkspace.edges);
   const [reactFlowInstance, setReactFlowInstance] = useState<any>(null);
-    const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth > 768);
-    const [isRightDrawerOpen, setIsRightDrawerOpen] = useState(false);
-    const [isMiniMapVisible, setIsMiniMapVisible] = useState(window.innerWidth > 768);
-
-    useEffect(() => {
-        const handleResize = () => {
-            if (window.innerWidth <= 768) {
-                setIsSidebarOpen(false);
-                setIsRightDrawerOpen(false);
-                setIsMiniMapVisible(false);
-            }
-        };
-        window.addEventListener("resize", handleResize);
-        return () => window.removeEventListener("resize", handleResize);
-    }, []);
   const [edgeType, setEdgeType] = useState<"default" | "straight" | "step" | "smoothstep">("default");
-  const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
-
-  const executeFlowRef = useRef<(() => Promise<void>) | null>(null);
-  const [isExecutingFlow, setIsExecutingFlow] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(false);
 
   // Get active account for execution validation
   const activeAccount = useActiveAccount();
-
-  // Toast notifications state (needs to be before callbacks that use it)
-  const [toasts, setToasts] = useState<Toast[]>([]);
-
-  // Toast helper functions
-  const addToast = useCallback((message: string, type: "success" | "error" | "info" = "success") => {
-    const id = `toast-${Date.now()}-${Math.random()}`;
-    const toast: Toast = { id, message, type, duration: 3000 };
-    setToasts((prev) => [...prev, toast]);
-  }, []);
-
-  const dismissToast = useCallback((id: string) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id));
-  }, []);
-
-  // Function to check if flow can be executed
-  const canExecuteFlow = useCallback(() => {
-    // Check if wallet is connected
-    if (!activeAccount?.address) {
-      return { canExecute: false, reason: "Please connect your wallet first" };
-    }
-
-    // Check if there are any nodes connected to wallet
-    const walletNode = nodes.find((n) => n.data.protocol === "wallet");
-    if (!walletNode) {
-      return { canExecute: false, reason: "No wallet node found" };
-    }
-
-    // Check if there are any action nodes
-    const actionNodes = nodes.filter(
-      (n) => n.data.protocol !== "wallet" && n.data.sequenceNumber !== undefined && n.data.sequenceNumber > 0
-    );
-    if (actionNodes.length === 0) {
-      return { canExecute: false, reason: "No actions configured. Add and connect nodes to create a flow." };
-    }
-
-    // Check if all actions are properly configured
-    const unconfiguredNode = actionNodes.find((node) => {
-      if (node.data.protocol === "transfer") {
-        return !(node.data.amount && node.data.asset && node.data.recipientAddress);
-      }
-      if (node.data.protocol === "custom") {
-        return !(node.data.contractAddress && node.data.customContractVerified && node.data.selectedFunction);
-      }
-      if (node.data.protocol === "conditional") {
-        return !(node.data.contractAddress && node.data.conditionalContractVerified && node.data.selectedFunction && node.data.comparisonOperator != null);
-      }
-      if (node.data.protocol === "balanceLogic") {
-        return !(node.data.balanceLogicAddress && node.data.balanceLogicComparisonOperator != null && (node.data.balanceLogicCompareValue ?? "").trim() !== "");
-      }
-      if (node.data.protocol === "morpho") {
-        return !(node.data.action && node.data.asset && (node.data.amount ?? "").trim() !== "");
-      }
-      if (node.data.protocol === "uniswap") {
-        if (node.data.action === "swap") {
-          return !(node.data.swapFrom && node.data.swapTo && node.data.amount);
-        }
-        if (node.data.action === "addLiquidity" || node.data.action === "removeLiquidity") {
-          return !(node.data.liquidityTokenA && node.data.liquidityTokenB);
-        }
-      }
-      return !(node.data.action && node.data.amount);
-    });
-
-    if (unconfiguredNode) {
-      return { canExecute: false, reason: `Action "${unconfiguredNode.data.label || unconfiguredNode.data.protocol}" is not fully configured` };
-    }
-
-    return { canExecute: true, reason: null };
-  }, [nodes, activeAccount]);
-
-  const handleExecuteFlow = useCallback(async () => {
-    const { canExecute, reason } = canExecuteFlow();
-    if (!canExecute) {
-      addToast(reason || "Cannot execute flow", "error");
-      return;
-    }
-
-    if (executeFlowRef.current) {
-      try {
-        await executeFlowRef.current();
-      } catch (error) {
-        // Errors are already handled in the execute function
-        console.error("Flow execution error:", error);
-      }
-    }
-  }, [canExecuteFlow, addToast]);
-
-  const fullscreenContainerRef = useRef<HTMLDivElement>(null);
-
-  const handleToggleFullscreen = useCallback(() => {
-    if (!fullscreenContainerRef.current) return;
-    if (document.fullscreenElement) {
-      document.exitFullscreen();
-    } else {
-      fullscreenContainerRef.current.requestFullscreen();
-    }
-  }, []);
-
-  useEffect(() => {
-    const onFullscreenChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
-    };
-    document.addEventListener("fullscreenchange", onFullscreenChange);
-    return () => document.removeEventListener("fullscreenchange", onFullscreenChange);
-  }, []);
-
-  // Custom edge change handler to detect deletions
-  const handleEdgesChange = useCallback(
-    (changes: any[]) => {
-      // Check if any edge was removed
-      const hasRemoval = changes.some((change) => change.type === "remove");
-      if (hasRemoval) {
-        setSelectedEdgeId(null);
-      }
-      onEdgesChange(changes);
-    },
-    [onEdgesChange]
-  );
-  const [history, setHistory] = useState<{ nodes: Node[]; edges: Edge[] }[]>(
-    []
-  );
-  const [historyIndex, setHistoryIndex] = useState(-1);
-  const [tabs, setTabs] = useState<Tab[]>([
-    { id: "1", name: "My Kratong #1", nodes: initialNodes, edges: initialEdges },
-  ]);
-  const [activeTabId, setActiveTabId] = useState("1");
   const { theme } = useTheme();
 
-  // Share functionality state
-  const [shareDialogOpen, setShareDialogOpen] = useState(false);
-  const [shareUrl, setShareUrl] = useState<string | undefined>(undefined);
-  const [isSharing, setIsSharing] = useState(false);
-  const [shareError, setShareError] = useState<string | null>(null);
+  // Check if loading shared flow
+  const params = new URLSearchParams(window.location.search);
+  const cid = params.get("s") || params.get("share");
+  const isLoadingSharedFlowInitially = !!cid;
 
-  // Loading shared flow state
-  const [isLoadingSharedFlow, setIsLoadingSharedFlow] = useState(false);
-
-  // Track if workspace has been modified (for unsaved changes warning)
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-
-  // Tab close confirmation state
-  const [showTabCloseConfirm, setShowTabCloseConfirm] = useState(false);
-  const [tabToClose, setTabToClose] = useState<string | null>(null);
-
-  // LocalStorage key for workspace
-  const WORKSPACE_STORAGE_KEY = "ethkratong-workspace";
-
-  // Save workspace to localStorage
-  const saveWorkspaceToLocalStorage = useCallback(() => {
-    try {
-      const workspace = {
-        tabs: tabs.map(tab => ({
-          ...tab,
-          nodes: tab.id === activeTabId ? nodes : tab.nodes,
-          edges: tab.id === activeTabId ? edges : tab.edges,
-        })),
-        activeTabId,
-        timestamp: Date.now(),
-      };
-      localStorage.setItem(WORKSPACE_STORAGE_KEY, JSON.stringify(workspace));
-    } catch (error) {
-      console.error("Failed to save workspace to localStorage:", error);
-    }
-  }, [tabs, activeTabId, nodes, edges]);
+  // All custom hooks
+  const toast = useFlowToast();
+  const ui = useFlowUI();
+  const workspace = useFlowWorkspace(
+    {
+      initialTabs: initialWorkspace.tabs,
+      initialActiveTabId: initialWorkspace.activeTabId,
+      isLoadingSharedFlow: isLoadingSharedFlowInitially,
+    },
+    nodes,
+    edges,
+    setNodes,
+    setEdges
+  );
+  const history = useFlowHistory(nodes, edges, setNodes, setEdges);
+  const execution = useFlowExecution(nodes, activeAccount, toast.addToast);
+  const sequence = useFlowSequence(nodes, edges, setNodes, setEdges, edgeType);
+  const editor = useFlowEditor(reactFlowInstance, reactFlowWrapper, nodes, setNodes);
+  const fileOps = useFlowFileOperations(
+    nodes,
+    edges,
+    workspace.tabs,
+    workspace.activeTabId,
+    workspace.setTabs,
+    workspace.setActiveTabId,
+    setNodes,
+    setEdges,
+    () => `${tabId++}`
+  );
+  const share = useFlowShare(
+    nodes,
+    edges,
+    workspace.tabs,
+    workspace.activeTabId,
+    workspace.setTabs,
+    workspace.setActiveTabId,
+    setNodes,
+    setEdges,
+    () => `${tabId++}`
+  );
 
   // Restore workspace from localStorage on mount
   useEffect(() => {
@@ -384,119 +172,25 @@ function FlowCanvas() {
 
     // If loading a shared flow, don't restore from localStorage
     if (cid) {
-      setIsLoadingSharedFlow(true);
+      share.setIsLoadingSharedFlow(true);
       setNodes([]);
       setEdges([]);
       return;
     }
-
-    // Try to restore from localStorage
-    try {
-      const saved = localStorage.getItem(WORKSPACE_STORAGE_KEY);
-      if (saved) {
-        const workspace = JSON.parse(saved);
-        if (workspace.tabs && workspace.tabs.length > 0) {
-          setTabs(workspace.tabs);
-          setActiveTabId(workspace.activeTabId || workspace.tabs[0].id);
-          const activeTab = workspace.tabs.find((t: Tab) => t.id === workspace.activeTabId) || workspace.tabs[0];
-          setNodes(activeTab.nodes);
-          setEdges(activeTab.edges);
-          console.log("Workspace restored from localStorage");
-        }
-      }
-    } catch (error) {
-      console.error("Failed to restore workspace from localStorage:", error);
-    }
   }, []);
 
-  // Track changes to mark workspace as having unsaved changes
-  useEffect(() => {
-    // Skip on initial mount and when loading shared flow
-    if (nodes.length === 0 && edges.length === 0) return;
-    if (isLoadingSharedFlow) return;
-
-    // Mark as having unsaved changes (user must manually save)
-    setHasUnsavedChanges(true);
-  }, [nodes, edges, tabs, activeTabId, isLoadingSharedFlow]);
-
-  // Warn user before closing/refreshing page if there are unsaved changes
-  useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (hasUnsavedChanges) {
-        e.preventDefault();
-        // Modern browsers require returnValue to be set
-        e.returnValue = "";
-        return "";
+  // Custom edge change handler to detect deletions
+  const handleEdgesChange = useCallback(
+    (changes: any[]) => {
+      // Check if any edge was removed
+      const hasRemoval = changes.some((change) => change.type === "remove");
+      if (hasRemoval) {
+        ui.setSelectedEdgeId(null);
       }
-    };
-
-    window.addEventListener("beforeunload", handleBeforeUnload);
-    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, [hasUnsavedChanges]);
-
-  // Calculate sequence numbers based on graph topology when edges change
-  useEffect(() => {
-    const orderMap = calculateExecutionOrder(nodes, edges);
-
-    // Update nodes with calculated sequence numbers
-    setNodes((nds) =>
-      nds.map((node) => {
-        const sequenceNumber = orderMap.get(node.id);
-        if (sequenceNumber !== undefined && sequenceNumber !== node.data.sequenceNumber) {
-          return {
-            ...node,
-            data: {
-              ...node.data,
-              sequenceNumber,
-            },
-          };
-        }
-        return node;
-      })
-    );
-  }, [edges]); // Recalculate when edges change
-
-  // Initialize sequence numbers for nodes that don't have them
-  useEffect(() => {
-    const needsInitialization = nodes.some(
-      (node) => node.data.sequenceNumber === undefined && node.data.protocol !== "wallet"
-    );
-
-    if (needsInitialization) {
-      setNodes((nds) =>
-        nds.map((node) => {
-          if (node.data.sequenceNumber === undefined && node.data.protocol !== "wallet") {
-            // Find max sequence and add to end
-            const maxSeq = Math.max(
-              0,
-              ...nds
-                .filter((n) => n.data.sequenceNumber !== undefined)
-                .map((n) => (n.data as ProtocolNodeData).sequenceNumber || 0)
-            );
-            return {
-              ...node,
-              data: {
-                ...node.data,
-                sequenceNumber: maxSeq + 1,
-              },
-            };
-          }
-          return node;
-        })
-      );
-    }
-  }, [nodes, setNodes]); // Only initialize missing sequence numbers
-
-  // Save to history on changes
-  useEffect(() => {
-    if (nodes.length > 0 || edges.length > 0) {
-      setHistory((prev) => [
-        ...prev.slice(0, historyIndex + 1),
-        { nodes, edges },
-      ]);
-      setHistoryIndex((prev) => prev + 1);
-    }
-  }, [nodes, edges]);
+      onEdgesChange(changes);
+    },
+    [onEdgesChange, ui]
+  );
 
   // Handle keyboard shortcuts for deletion
   useEffect(() => {
@@ -519,7 +213,7 @@ function FlowCanvas() {
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [setNodes, setEdges]);
 
-  // When connecting from Uniswap (swap) to Transfer, pre-fill with output; if multiple swaps connect, combine their estimated outputs
+  // When connecting from Uniswap (swap) to Transfer, pre-fill with output
   const onConnect = useCallback(
     (params: Connection) => {
       setEdges((eds) => addEdge(params, eds));
@@ -578,7 +272,7 @@ function FlowCanvas() {
   // Handle edge selection to add animation
   const onEdgeClick = useCallback(
     (_event: React.MouseEvent, edge: Edge) => {
-      setSelectedEdgeId(edge.id);
+      ui.setSelectedEdgeId(edge.id);
       setEdges((eds) =>
         eds.map((e) => ({
           ...e,
@@ -587,12 +281,12 @@ function FlowCanvas() {
         }))
       );
     },
-    [setEdges]
+    [setEdges, ui]
   );
 
   const onPaneClick = useCallback(() => {
     // Deselect all edges when clicking on the pane
-    setSelectedEdgeId(null);
+    ui.setSelectedEdgeId(null);
     setEdges((eds) =>
       eds.map((e) => ({
         ...e,
@@ -600,238 +294,19 @@ function FlowCanvas() {
         selected: false,
       }))
     );
-  }, [setEdges]);
+  }, [setEdges, ui]);
 
   const handleDeleteEdge = useCallback(() => {
-    if (selectedEdgeId) {
-      setEdges((eds) => eds.filter((e) => e.id !== selectedEdgeId));
-      setSelectedEdgeId(null);
+    if (ui.selectedEdgeId) {
+      setEdges((eds) => eds.filter((e) => e.id !== ui.selectedEdgeId));
+      ui.setSelectedEdgeId(null);
     }
-  }, [selectedEdgeId, setEdges]);
-
-  const onDragOver = useCallback((event: React.DragEvent) => {
-    event.preventDefault();
-    event.dataTransfer.dropEffect = "move";
-  }, []);
-
-  const onDrop = useCallback(
-    (event: React.DragEvent) => {
-      event.preventDefault();
-
-      const protocol = event.dataTransfer.getData(
-        "application/reactflow-protocol"
-      );
-      const label = event.dataTransfer.getData("application/reactflow-label");
-
-      if (!protocol || !reactFlowInstance) return;
-
-      const position = reactFlowInstance.screenToFlowPosition({
-        x: event.clientX,
-        y: event.clientY,
-      });
-
-      // Ensure new node id never conflicts with existing nodes (avoid replacing on drop)
-      const existingIds = new Set(nodes.map((n) => n.id));
-      const maxN = nodes.reduce((max, n) => {
-        const m = n.id.match(/^node-(\d+)$/);
-        const num = m ? parseInt(m[1], 10) : 0;
-        return Math.max(max, num);
-      }, 0);
-      let nextNum = maxN + 1;
-      while (existingIds.has(`node-${nextNum}`)) nextNum++;
-      const nextNodeId = `node-${nextNum}`;
-
-      // Find the highest sequence number among existing nodes
-      const maxSequence = Math.max(
-        0,
-        ...(nodes as Node<ProtocolNodeData>[])
-          .filter((n) => n.data.sequenceNumber !== undefined)
-          .map((n) => n.data.sequenceNumber || 0)
-      );
-
-      const newNode: Node<ProtocolNodeData> = {
-        id: nextNodeId,
-        type: "protocol",
-        position,
-        data: {
-          protocol: protocol as any,
-          label: label,
-          sequenceNumber: maxSequence + 1, // Add to the end
-          // Set default action for Uniswap nodes
-          ...(protocol === "uniswap" ? { action: "swap" as const } : {}),
-        },
-      };
-
-      setNodes((nds) => nds.concat(newNode));
-    },
-    [reactFlowInstance, setNodes, nodes]
-  );
-
-  const handleAddNodeFromSidebar = useCallback(
-    (protocol: string, label: string) => {
-      if (!reactFlowInstance || !reactFlowWrapper.current) return;
-
-      const rect = reactFlowWrapper.current.getBoundingClientRect();
-      const centerX = rect.left + rect.width / 2;
-      const centerY = rect.top + rect.height / 2;
-      const position = reactFlowInstance.screenToFlowPosition({
-        x: centerX,
-        y: centerY,
-      });
-
-      const existingIds = new Set(nodes.map((n) => n.id));
-      const maxN = nodes.reduce((max, n) => {
-        const m = n.id.match(/^node-(\d+)$/);
-        const num = m ? parseInt(m[1], 10) : 0;
-        return Math.max(max, num);
-      }, 0);
-      let nextNum = maxN + 1;
-      while (existingIds.has(`node-${nextNum}`)) nextNum++;
-      const nextNodeId = `node-${nextNum}`;
-
-      const maxSequence = Math.max(
-        0,
-        ...(nodes as Node<ProtocolNodeData>[])
-          .filter((n) => n.data.sequenceNumber !== undefined)
-          .map((n) => n.data.sequenceNumber || 0)
-      );
-
-      const newNode: Node<ProtocolNodeData> = {
-        id: nextNodeId,
-        type: "protocol",
-        position,
-        data: {
-          protocol: protocol as any,
-          label: label,
-          sequenceNumber: maxSequence + 1,
-          ...(protocol === "uniswap" ? { action: "swap" as const } : {}),
-        },
-      };
-
-      setNodes((nds) => nds.concat(newNode));
-    },
-    [reactFlowInstance, setNodes, nodes]
-  );
+  }, [ui.selectedEdgeId, setEdges, ui]);
 
   const handleSave = () => {
-    saveWorkspaceToLocalStorage();
-    setHasUnsavedChanges(false);
-    addToast("Workflow saved successfully", "success");
-  };
-
-  const handleExport = () => {
-    const tabName = tabs.find((t) => t.id === activeTabId)?.name || "My Kratong #1";
-
-    // Normalize nodes before saving - ensure all Uniswap nodes have action field
-    const normalizedNodes = nodes.map((node) => {
-      if (node.data.protocol === "uniswap" && !node.data.action) {
-        // Default to "swap" if no action is set
-        return {
-          ...node,
-          data: {
-            ...node.data,
-            action: "swap" as const,
-          },
-        };
-      }
-      return node;
-    });
-
-    const strategy = {
-      nodes: normalizedNodes,
-      edges,
-      name: tabName,
-    };
-    const blob = new Blob([JSON.stringify(strategy, null, 2)], {
-      type: "application/json",
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${strategy.name}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const handleLoad = () => {
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = ".json";
-    input.onchange = (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          try {
-            const data = JSON.parse(event.target?.result as string);
-            const loadedNodes = data.nodes || [];
-            const loadedEdges = data.edges || [];
-            const nameFromFile = file.name.replace(/\.json$/i, "");
-
-            // Normalize nodes - ensure Uniswap nodes have action field set
-            const normalizedNodes = loadedNodes.map((node: Node<ProtocolNodeData>) => {
-              if (node.data.protocol === "uniswap") {
-                // If action is missing but swapFrom/swapTo exist, set action to "swap"
-                if (!node.data.action && (node.data.swapFrom || node.data.swapTo)) {
-                  return {
-                    ...node,
-                    data: {
-                      ...node.data,
-                      action: "swap" as const,
-                    },
-                  };
-                }
-                // If action is missing and no swap data, default to "swap"
-                if (!node.data.action) {
-                  return {
-                    ...node,
-                    data: {
-                      ...node.data,
-                      action: "swap" as const,
-                    },
-                  };
-                }
-              }
-              return node;
-            });
-
-            // Always add loaded flow as a new tab
-            const newTab: Tab = {
-              id: `${tabId++}`,
-              name: nameFromFile,
-              nodes: normalizedNodes,
-              edges: loadedEdges,
-            };
-            setTabs((prev) => [...prev, newTab]);
-            setActiveTabId(newTab.id);
-            setNodes(newTab.nodes);
-            setEdges(newTab.edges);
-          } catch (error) {
-            console.error("Failed to load file:", error);
-          }
-        };
-        reader.readAsText(file);
-      }
-    };
-    input.click();
-  };
-
-  const handleUndo = () => {
-    if (historyIndex > 0) {
-      const prevState = history[historyIndex - 1];
-      setNodes(prevState.nodes as Node<ProtocolNodeData>[]);
-      setEdges(prevState.edges);
-      setHistoryIndex((prev) => prev - 1);
-    }
-  };
-
-  const handleRedo = () => {
-    if (historyIndex < history.length - 1) {
-      const nextState = history[historyIndex + 1];
-      setNodes(nextState.nodes as Node<ProtocolNodeData>[]);
-      setEdges(nextState.edges);
-      setHistoryIndex((prev) => prev + 1);
-    }
+    workspace.saveWorkspaceToLocalStorage();
+    workspace.setHasUnsavedChanges(false);
+    toast.addToast("Workflow saved successfully", "success");
   };
 
   const handleReset = () => {
@@ -839,275 +314,72 @@ function FlowCanvas() {
     setEdges(initialEdges);
   };
 
-  const handleShare = async (): Promise<string> => {
-    setIsSharing(true);
-    setShareError(null);
-
-    try {
-      const tabName = tabs.find((t) => t.id === activeTabId)?.name || "My Kratong";
-
-      // Normalize nodes before sharing - ensure all Uniswap nodes have action field
-      const normalizedNodes = nodes.map((node) => {
-        if (node.data.protocol === "uniswap" && !node.data.action) {
-          // Default to "swap" if no action is set
-          return {
-            ...node,
-            data: {
-              ...node.data,
-              action: "swap" as const,
-            },
-          };
-        }
-        return node;
-      });
-
-      const flowData: FlowShareData = {
-        nodes: normalizedNodes,
-        edges: edges,
-        name: tabName,
-        timestamp: Date.now(),
-      };
-
-      const cid = await uploadFlowToIPFS(flowData);
-      const url = getShareUrl(cid);
-
-      setShareUrl(url);
-      setIsSharing(false);
-
-      return cid;
-    } catch (error) {
-      console.error("Failed to share flow:", error);
-      setIsSharing(false);
-      setShareError(error instanceof Error ? error.message : "Failed to share flow");
-      throw error;
-    }
-  };
-
-  const handleOpenShareDialog = () => {
-    setShareUrl(undefined);
-    setShareError(null);
-    setShareDialogOpen(true);
-  };
-
-  const handleCloseShareDialog = () => {
-    setShareDialogOpen(false);
-    setShareUrl(undefined);
-    setShareError(null);
-  };
-
-  const handleLoadSharedFlow = useCallback((loadedNodes: Node[], loadedEdges: Edge[]) => {
-    // Normalize nodes - ensure Uniswap nodes have action field set
-    const normalizedNodes = loadedNodes.map((node: Node) => {
-      const nodeData = node.data as ProtocolNodeData;
-      if (nodeData.protocol === "uniswap") {
-        // If action is missing but swapFrom/swapTo exist, set action to "swap"
-        if (!nodeData.action && (nodeData.swapFrom || nodeData.swapTo)) {
-          return {
-            ...node,
-            data: {
-              ...nodeData,
-              action: "swap" as const,
-            },
-          } as Node<ProtocolNodeData>;
-        }
-        // If action is missing and no swap data, default to "swap"
-        if (!nodeData.action) {
-          return {
-            ...node,
-            data: {
-              ...nodeData,
-              action: "swap" as const,
-            },
-          } as Node<ProtocolNodeData>;
-        }
-      }
-      return node as Node<ProtocolNodeData>;
-    });
-
-    // Create a new tab for the shared flow
-    const newTab: Tab = {
-      id: `${tabId++}`,
-      name: "Shared Kratong",
-      nodes: normalizedNodes as Node<ProtocolNodeData>[],
-      edges: loadedEdges,
-    };
-    setTabs((prev) => [...prev, newTab]);
-    setActiveTabId(newTab.id);
-    setNodes(newTab.nodes);
-    setEdges(newTab.edges);
-    setIsLoadingSharedFlow(false);
-  }, [setNodes, setEdges]);
-
-  const handleLoadError = useCallback((message: string) => {
-    console.error("Failed to load shared flow:", message);
-    alert(`Failed to load shared flow: ${message}`);
-    setIsLoadingSharedFlow(false);
-    // Restore default nodes on error
-    setNodes(initialNodes);
-    setEdges(initialEdges);
-  }, [setNodes, setEdges]);
-
-  // Load shared flows from URL parameters
-  useSharedFlowLoader({
-    onLoadSharedFlow: handleLoadSharedFlow,
-    onError: handleLoadError,
-  });
-
   const handleNewTab = () => {
-    const newTab: Tab = {
+    const newTab = {
       id: `${tabId++}`,
-      name: `My Kratong #${tabs.length + 1}`,
+      name: `My Kratong #${workspace.tabs.length + 1}`,
       nodes: initialNodes,
       edges: initialEdges,
     };
-    setTabs((prev) => [...prev, newTab]);
-    setActiveTabId(newTab.id);
+    workspace.setTabs((prev) => [...prev, newTab]);
+    workspace.setActiveTabId(newTab.id);
     setNodes(newTab.nodes);
     setEdges(newTab.edges);
   };
 
-  const handleTabChange = (tabId: string) => {
-    // Save current tab state
-    setTabs((prev) =>
-      prev.map((tab) =>
-        tab.id === activeTabId ? { ...tab, nodes: nodes as Node<ProtocolNodeData>[], edges } : tab
-      )
-    );
-
-    // Load new tab state
-    const tab = tabs.find((t) => t.id === tabId);
-    if (tab) {
-      setActiveTabId(tabId);
-      setNodes(tab.nodes);
-      setEdges(tab.edges);
-    }
-  };
-
-  const handleTabClose = (tabId: string) => {
-    if (tabs.length === 1) return;
-
-    // Show confirmation dialog if there are unsaved changes
-    if (hasUnsavedChanges) {
-      setTabToClose(tabId);
-      setShowTabCloseConfirm(true);
-    } else {
-      // No unsaved changes, close immediately
-      performTabClose(tabId);
-    }
-  };
-
-  const performTabClose = (tabId: string) => {
-    const tabIndex = tabs.findIndex((t) => t.id === tabId);
-    const newTabs = tabs.filter((t) => t.id !== tabId);
-    setTabs(newTabs);
-
-    if (activeTabId === tabId) {
-      const newActiveTab = newTabs[Math.max(0, tabIndex - 1)];
-      setActiveTabId(newActiveTab.id);
-      setNodes(newActiveTab.nodes);
-      setEdges(newActiveTab.edges);
-    }
-  };
-
-  const handleTabCloseConfirm = () => {
-    if (tabToClose) {
-      performTabClose(tabToClose);
-      setTabToClose(null);
-    }
-    setShowTabCloseConfirm(false);
-  };
-
-  const handleReorderNodes = (newOrder: string[]) => {
-    if (newOrder.length === 0) return;
-
-    // Find wallet node
-    const walletNode = nodes.find((n) => n.data.protocol === "wallet");
-    if (!walletNode) return;
-
-    const firstNodeId = newOrder[0];
-
-    // Update sequence numbers
-    setNodes((nds) =>
-      nds.map((node) => {
-        const orderIndex = newOrder.indexOf(node.id);
-        if (orderIndex !== -1) {
-          return {
-            ...node,
-            data: {
-              ...node.data,
-              sequenceNumber: orderIndex + 1, // +1 because sequence starts at 1
-            },
-          };
-        }
-        return node;
-      })
-    );
-
-    // Ensure the first node is connected ONLY to wallet
-    setEdges((eds) => {
-      // Remove ALL incoming edges to the first node
-      const filteredEdges = eds.filter((edge) => edge.target !== firstNodeId);
-
-      // Add single edge from wallet to first node
-      return [
-        ...filteredEdges,
-        {
-          id: `${walletNode.id}-${firstNodeId}`,
-          source: walletNode.id,
-          target: firstNodeId,
-          type: edgeType,
-        },
-      ];
-    });
-  };
+  // Load shared flows from URL parameters
+  useSharedFlowLoader({
+    onLoadSharedFlow: share.handleLoadSharedFlow,
+    onError: (message) => share.handleLoadError(message, initialNodes, initialEdges),
+  });
 
   return (
     <div
-      ref={fullscreenContainerRef}
-      className={`flex flex-col h-full w-full bg-gray-50 dark:bg-gray-950 ${isFullscreen ? "min-h-screen min-w-screen" : ""}`}
+      ref={ui.fullscreenContainerRef}
+      className={`flex flex-col h-full w-full bg-gray-50 dark:bg-gray-950 ${ui.isFullscreen ? "min-h-screen min-w-screen" : ""}`}
     >
       <Toolbar
-        isSidebarOpen={isSidebarOpen}
-        onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
-        isRightDrawerOpen={isRightDrawerOpen}
-        onToggleRightDrawer={() => setIsRightDrawerOpen(!isRightDrawerOpen)}
-        isMiniMapVisible={isMiniMapVisible}
-        onToggleMiniMap={() => setIsMiniMapVisible(!isMiniMapVisible)}
+        isSidebarOpen={ui.isSidebarOpen}
+        onToggleSidebar={() => ui.setIsSidebarOpen(!ui.isSidebarOpen)}
+        isRightDrawerOpen={ui.isRightDrawerOpen}
+        onToggleRightDrawer={() => ui.setIsRightDrawerOpen(!ui.isRightDrawerOpen)}
+        isMiniMapVisible={ui.isMiniMapVisible}
+        onToggleMiniMap={() => ui.setIsMiniMapVisible(!ui.isMiniMapVisible)}
         edgeType={edgeType}
         onEdgeTypeChange={(type) => {
           setEdgeType(type);
           // Update all existing edges with new type
           setEdges((eds) => eds.map((e) => ({ ...e, type })));
         }}
-        selectedEdgeId={selectedEdgeId}
+        selectedEdgeId={ui.selectedEdgeId}
         onDeleteEdge={handleDeleteEdge}
         onSave={handleSave}
-        onExport={handleExport}
-        onLoad={handleLoad}
-        onShare={handleOpenShareDialog}
-        onUndo={handleUndo}
-        onRedo={handleRedo}
+        onExport={fileOps.handleExport}
+        onLoad={fileOps.handleLoad}
+        onShare={share.handleOpenShareDialog}
+        onUndo={history.handleUndo}
+        onRedo={history.handleRedo}
         onReset={handleReset}
         onNewTab={handleNewTab}
-        onExecuteFlow={handleExecuteFlow}
-        isExecutingFlow={isExecutingFlow}
-        onToggleFullscreen={handleToggleFullscreen}
-        isFullscreen={isFullscreen}
-        canUndo={historyIndex > 0}
-        canRedo={historyIndex < history.length - 1}
+        onExecuteFlow={execution.handleExecuteFlow}
+        isExecutingFlow={execution.isExecutingFlow}
+        onToggleFullscreen={ui.handleToggleFullscreen}
+        isFullscreen={ui.isFullscreen}
+        canUndo={history.canUndo}
+        canRedo={history.canRedo}
       />
       <Tabs
-        tabs={tabs}
-        activeTabId={activeTabId}
-        onTabChange={handleTabChange}
-        onTabClose={handleTabClose}
+        tabs={workspace.tabs}
+        activeTabId={workspace.activeTabId}
+        onTabChange={workspace.handleTabChange}
+        onTabClose={workspace.handleTabClose}
         onTabAdd={handleNewTab}
       />
       <div className="flex flex-1 overflow-hidden relative">
         <Sidebar
-            isOpen={isSidebarOpen}
-            onAddNode={handleAddNodeFromSidebar}
-          />
+          isOpen={ui.isSidebarOpen}
+          onAddNode={editor.handleAddNodeFromSidebar}
+        />
         <div
           ref={reactFlowWrapper}
           className="flex-1 bg-gray-50 dark:bg-gray-950"
@@ -1121,8 +393,8 @@ function FlowCanvas() {
             onEdgeClick={onEdgeClick}
             onPaneClick={onPaneClick}
             onInit={setReactFlowInstance}
-            onDrop={onDrop}
-            onDragOver={onDragOver}
+            onDrop={editor.onDrop}
+            onDragOver={editor.onDragOver}
             nodeTypes={nodeTypes as NodeTypes}
             fitView
             defaultEdgeOptions={{
@@ -1140,105 +412,38 @@ function FlowCanvas() {
               }}
             />
             <Controls />
-            {isMiniMapVisible && <MiniMap />}
+            {ui.isMiniMapVisible && <MiniMap />}
           </ReactFlow>
         </div>
         <RightDrawer
-          isOpen={isRightDrawerOpen}
-          onClose={() => setIsRightDrawerOpen(false)}
+          isOpen={ui.isRightDrawerOpen}
+          onClose={() => ui.setIsRightDrawerOpen(false)}
           nodes={nodes as Node<ProtocolNodeData>[]}
           edges={edges}
-          onReorderNodes={handleReorderNodes}
+          onReorderNodes={sequence.handleReorderNodes}
           onRegisterExecute={(execute) => {
-            executeFlowRef.current = execute;
+            execution.executeFlowRef.current = execute;
           }}
-          onExecutionChange={setIsExecutingFlow}
+          onExecutionChange={execution.setIsExecutingFlow}
         />
       </div>
       <ShareDialog
-        open={shareDialogOpen}
-        onClose={handleCloseShareDialog}
-        onShare={handleShare}
-        shareUrl={shareUrl}
-        isSharing={isSharing}
+        open={share.shareDialogOpen}
+        onClose={share.handleCloseShareDialog}
+        onShare={share.handleShare}
+        shareUrl={share.shareUrl}
+        isSharing={share.isSharing}
       />
 
-      {/* Tab close confirmation dialog */}
-      <Dialog.Root open={showTabCloseConfirm} onOpenChange={setShowTabCloseConfirm}>
-        <Dialog.Portal>
-          <Dialog.Overlay
-            className={cn(
-              "fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm",
-              "data-[state=open]:animate-in data-[state=closed]:animate-out",
-              "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
-            )}
-          />
-          <Dialog.Content
-            className={cn(
-              "fixed left-[50%] top-[50%] z-[101] w-[95vw] max-w-md translate-x-[-50%] translate-y-[-50%]",
-              "rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-2xl",
-              "p-5 space-y-4",
-              "data-[state=open]:animate-in data-[state=closed]:animate-out",
-              "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
-              "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95"
-            )}
-          >
-            <div className="flex items-start gap-3">
-              <div className="shrink-0 p-1.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400">
-                <AlertTriangle className="h-5 w-5" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <Dialog.Title className="text-base font-semibold text-gray-900 dark:text-gray-100">
-                  Close this Kratong?
-                </Dialog.Title>
-                <Dialog.Description className="mt-1.5 text-sm text-gray-600 dark:text-gray-400">
-                  Unsaved changes will be lost. Do you wish to proceed?
-                </Dialog.Description>
-              </div>
-            </div>
-            <div className="flex justify-end gap-2 pt-2">
-              <Dialog.Close asChild>
-                <button
-                  type="button"
-                  className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                >
-                  No
-                </button>
-              </Dialog.Close>
-              <button
-                type="button"
-                onClick={handleTabCloseConfirm}
-                className="px-4 py-2 text-sm font-medium text-white bg-amber-600 hover:bg-amber-700 rounded-lg transition-colors"
-              >
-                Yes
-              </button>
-            </div>
-          </Dialog.Content>
-        </Dialog.Portal>
-      </Dialog.Root>
+      <TabCloseConfirmDialog
+        open={workspace.showTabCloseConfirm}
+        onOpenChange={workspace.setShowTabCloseConfirm}
+        onConfirm={workspace.handleTabCloseConfirm}
+      />
 
-      {/* Loading overlay for shared flows */}
-      {isLoadingSharedFlow && (
-        <div className="fixed inset-0 z-[200] bg-gray-50/95 dark:bg-gray-950/95 backdrop-blur-sm flex items-center justify-center">
-          <div className="flex flex-col items-center gap-4">
-            <div className="relative">
-              <div className="w-16 h-16 border-4 border-gray-200 dark:border-gray-700 rounded-full"></div>
-              <div className="absolute top-0 left-0 w-16 h-16 border-4 border-teal-600 border-t-transparent rounded-full animate-spin"></div>
-            </div>
-            <div className="text-center">
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
-                Receiving Kratong
-              </h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                Loading flow from IPFS...
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
+      <SharedFlowLoadingOverlay isVisible={share.isLoadingSharedFlow} />
 
-      {/* Toast notifications */}
-      <ToastContainer toasts={toasts} onDismiss={dismissToast} />
+      <ToastContainer toasts={toast.toasts} onDismiss={toast.dismissToast} />
     </div>
   );
 }

@@ -30,7 +30,7 @@ export function MorphoConfigModal({
     const [showDetails, setShowDetails] = useState(true);
     const template = allProtocols.find((t) => t.protocol === "morpho");
     const { balances } = useWalletBalancesForModal(open);
-    const { vaults, isLoading: vaultsLoading } = useMorphoVaults();
+    const { vaults, isLoading: _vaultsLoading } = useMorphoVaults();
 
     const selectedVault = data.morphoVaultAddress
         ? vaults.find((v) => v.address.toLowerCase() === data.morphoVaultAddress!.toLowerCase())
