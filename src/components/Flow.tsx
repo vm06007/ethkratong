@@ -14,6 +14,8 @@ import {
   ReactFlowProvider,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
+import * as Dialog from "@radix-ui/react-dialog";
+import { AlertTriangle } from "lucide-react";
 
 import ProtocolNode from "./nodes/ProtocolNode";
 import { Sidebar } from "./layout/Sidebar";
@@ -25,6 +27,8 @@ import { useTheme } from "@/hooks/useTheme";
 import { useSharedFlowLoader } from "@/hooks/useSharedFlowLoader";
 import { uploadFlowToIPFS, getShareUrl, type FlowShareData } from "@/lib/ipfs";
 import type { ProtocolNodeData } from "@/types";
+import { cn } from "@/lib/utils";
+import { ToastContainer, type Toast } from "./ui/toast";
 
 // Helper function to calculate execution order starting from wallet
 // Uses topological sort to create a linear execution sequence
@@ -130,10 +134,57 @@ interface Tab {
   edges: Edge[];
 }
 
+// Helper function to get initial workspace from localStorage or defaults
+function getInitialWorkspace() {
+  const WORKSPACE_STORAGE_KEY = "ethkratong-workspace";
+
+  // Check if we're loading a shared flow
+  const params = new URLSearchParams(window.location.search);
+  const cid = params.get("s") || params.get("share");
+  if (cid) {
+    // Return empty state for shared flow loading
+    return {
+      tabs: [{ id: "1", name: "My Kratong #1", nodes: [], edges: [] }],
+      activeTabId: "1",
+      nodes: [],
+      edges: [],
+    };
+  }
+
+  // Try to restore from localStorage
+  try {
+    const saved = localStorage.getItem(WORKSPACE_STORAGE_KEY);
+    if (saved) {
+      const workspace = JSON.parse(saved);
+      if (workspace.tabs && workspace.tabs.length > 0) {
+        const activeTab = workspace.tabs.find((t: Tab) => t.id === workspace.activeTabId) || workspace.tabs[0];
+        console.log("Workspace restored from localStorage");
+        return {
+          tabs: workspace.tabs,
+          activeTabId: workspace.activeTabId || workspace.tabs[0].id,
+          nodes: activeTab.nodes,
+          edges: activeTab.edges,
+        };
+      }
+    }
+  } catch (error) {
+    console.error("Failed to restore workspace from localStorage:", error);
+  }
+
+  // Return default state
+  return {
+    tabs: [{ id: "1", name: "My Kratong #1", nodes: initialNodes, edges: initialEdges }],
+    activeTabId: "1",
+    nodes: initialNodes,
+    edges: initialEdges,
+  };
+}
+
 function FlowCanvas() {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+  const initialWorkspace = getInitialWorkspace();
+  const [nodes, setNodes, onNodesChange] = useNodesState(initialWorkspace.nodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(initialWorkspace.edges);
   const [reactFlowInstance, setReactFlowInstance] = useState<any>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isRightDrawerOpen, setIsRightDrawerOpen] = useState(false);
@@ -195,17 +246,104 @@ function FlowCanvas() {
   // Loading shared flow state
   const [isLoadingSharedFlow, setIsLoadingSharedFlow] = useState(false);
 
-  // Check if we should load a shared flow on mount
+  // Track if workspace has been modified (for unsaved changes warning)
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+  // Tab close confirmation state
+  const [showTabCloseConfirm, setShowTabCloseConfirm] = useState(false);
+  const [tabToClose, setTabToClose] = useState<string | null>(null);
+
+  // Toast notifications
+  const [toasts, setToasts] = useState<Toast[]>([]);
+
+  // LocalStorage key for workspace
+  const WORKSPACE_STORAGE_KEY = "ethkratong-workspace";
+
+  // Toast helper functions
+  const addToast = useCallback((message: string, type: "success" | "error" | "info" = "success") => {
+    const id = `toast-${Date.now()}-${Math.random()}`;
+    const toast: Toast = { id, message, type, duration: 3000 };
+    setToasts((prev) => [...prev, toast]);
+  }, []);
+
+  const dismissToast = useCallback((id: string) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  }, []);
+
+  // Save workspace to localStorage
+  const saveWorkspaceToLocalStorage = useCallback(() => {
+    try {
+      const workspace = {
+        tabs: tabs.map(tab => ({
+          ...tab,
+          nodes: tab.id === activeTabId ? nodes : tab.nodes,
+          edges: tab.id === activeTabId ? edges : tab.edges,
+        })),
+        activeTabId,
+        timestamp: Date.now(),
+      };
+      localStorage.setItem(WORKSPACE_STORAGE_KEY, JSON.stringify(workspace));
+    } catch (error) {
+      console.error("Failed to save workspace to localStorage:", error);
+    }
+  }, [tabs, activeTabId, nodes, edges]);
+
+  // Restore workspace from localStorage on mount
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const cid = params.get("s") || params.get("share");
+
+    // If loading a shared flow, don't restore from localStorage
     if (cid) {
       setIsLoadingSharedFlow(true);
-      // Clear default nodes when loading shared flow
       setNodes([]);
       setEdges([]);
+      return;
+    }
+
+    // Try to restore from localStorage
+    try {
+      const saved = localStorage.getItem(WORKSPACE_STORAGE_KEY);
+      if (saved) {
+        const workspace = JSON.parse(saved);
+        if (workspace.tabs && workspace.tabs.length > 0) {
+          setTabs(workspace.tabs);
+          setActiveTabId(workspace.activeTabId || workspace.tabs[0].id);
+          const activeTab = workspace.tabs.find((t: Tab) => t.id === workspace.activeTabId) || workspace.tabs[0];
+          setNodes(activeTab.nodes);
+          setEdges(activeTab.edges);
+          console.log("Workspace restored from localStorage");
+        }
+      }
+    } catch (error) {
+      console.error("Failed to restore workspace from localStorage:", error);
     }
   }, []);
+
+  // Track changes to mark workspace as having unsaved changes
+  useEffect(() => {
+    // Skip on initial mount and when loading shared flow
+    if (nodes.length === 0 && edges.length === 0) return;
+    if (isLoadingSharedFlow) return;
+
+    // Mark as having unsaved changes (user must manually save)
+    setHasUnsavedChanges(true);
+  }, [nodes, edges, tabs, activeTabId, isLoadingSharedFlow]);
+
+  // Warn user before closing/refreshing page if there are unsaved changes
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        // Modern browsers require returnValue to be set
+        e.returnValue = "";
+        return "";
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [hasUnsavedChanges]);
 
   // Calculate sequence numbers based on graph topology when edges change
   useEffect(() => {
@@ -487,6 +625,12 @@ function FlowCanvas() {
   );
 
   const handleSave = () => {
+    saveWorkspaceToLocalStorage();
+    setHasUnsavedChanges(false);
+    addToast("Workflow saved successfully", "success");
+  };
+
+  const handleExport = () => {
     const tabName = tabs.find((t) => t.id === activeTabId)?.name || "My Kratong #1";
 
     // Normalize nodes before saving - ensure all Uniswap nodes have action field
@@ -753,6 +897,17 @@ function FlowCanvas() {
   const handleTabClose = (tabId: string) => {
     if (tabs.length === 1) return;
 
+    // Show confirmation dialog if there are unsaved changes
+    if (hasUnsavedChanges) {
+      setTabToClose(tabId);
+      setShowTabCloseConfirm(true);
+    } else {
+      // No unsaved changes, close immediately
+      performTabClose(tabId);
+    }
+  };
+
+  const performTabClose = (tabId: string) => {
     const tabIndex = tabs.findIndex((t) => t.id === tabId);
     const newTabs = tabs.filter((t) => t.id !== tabId);
     setTabs(newTabs);
@@ -763,6 +918,14 @@ function FlowCanvas() {
       setNodes(newActiveTab.nodes);
       setEdges(newActiveTab.edges);
     }
+  };
+
+  const handleTabCloseConfirm = () => {
+    if (tabToClose) {
+      performTabClose(tabToClose);
+      setTabToClose(null);
+    }
+    setShowTabCloseConfirm(false);
   };
 
   const handleReorderNodes = (newOrder: string[]) => {
@@ -830,6 +993,7 @@ function FlowCanvas() {
         selectedEdgeId={selectedEdgeId}
         onDeleteEdge={handleDeleteEdge}
         onSave={handleSave}
+        onExport={handleExport}
         onLoad={handleLoad}
         onShare={handleOpenShareDialog}
         onUndo={handleUndo}
@@ -910,6 +1074,60 @@ function FlowCanvas() {
         isSharing={isSharing}
       />
 
+      {/* Tab close confirmation dialog */}
+      <Dialog.Root open={showTabCloseConfirm} onOpenChange={setShowTabCloseConfirm}>
+        <Dialog.Portal>
+          <Dialog.Overlay
+            className={cn(
+              "fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm",
+              "data-[state=open]:animate-in data-[state=closed]:animate-out",
+              "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
+            )}
+          />
+          <Dialog.Content
+            className={cn(
+              "fixed left-[50%] top-[50%] z-[101] w-[95vw] max-w-md translate-x-[-50%] translate-y-[-50%]",
+              "rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-2xl",
+              "p-5 space-y-4",
+              "data-[state=open]:animate-in data-[state=closed]:animate-out",
+              "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+              "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95"
+            )}
+          >
+            <div className="flex items-start gap-3">
+              <div className="shrink-0 p-1.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400">
+                <AlertTriangle className="h-5 w-5" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <Dialog.Title className="text-base font-semibold text-gray-900 dark:text-gray-100">
+                  Close this Kratong?
+                </Dialog.Title>
+                <Dialog.Description className="mt-1.5 text-sm text-gray-600 dark:text-gray-400">
+                  Unsaved changes will be lost. Do you wish to proceed?
+                </Dialog.Description>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Dialog.Close asChild>
+                <button
+                  type="button"
+                  className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                >
+                  No
+                </button>
+              </Dialog.Close>
+              <button
+                type="button"
+                onClick={handleTabCloseConfirm}
+                className="px-4 py-2 text-sm font-medium text-white bg-amber-600 hover:bg-amber-700 rounded-lg transition-colors"
+              >
+                Yes
+              </button>
+            </div>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
+
       {/* Loading overlay for shared flows */}
       {isLoadingSharedFlow && (
         <div className="fixed inset-0 z-[200] bg-gray-50/95 dark:bg-gray-950/95 backdrop-blur-sm flex items-center justify-center">
@@ -929,6 +1147,9 @@ function FlowCanvas() {
           </div>
         </div>
       )}
+
+      {/* Toast notifications */}
+      <ToastContainer toasts={toasts} onDismiss={dismissToast} />
     </div>
   );
 }

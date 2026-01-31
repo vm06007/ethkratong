@@ -49,6 +49,7 @@ interface ToolbarProps {
   selectedEdgeId: string | null;
   onDeleteEdge: () => void;
   onSave: () => void;
+  onExport: () => void;
   onLoad: () => void;
   onShare: () => void;
   onUndo: () => void;
@@ -75,6 +76,7 @@ export function Toolbar({
   selectedEdgeId,
   onDeleteEdge,
   onSave,
+  onExport,
   onLoad,
   onShare,
   onUndo,
@@ -128,11 +130,14 @@ export function Toolbar({
         <div className="w-px h-6 bg-gray-300 dark:bg-gray-600" />
 
         {/* File Operations */}
-        <button onClick={onSave} className={iconButton} aria-label="Save">
-          <Save className={iconClass} />
-        </button>
         <button onClick={onLoad} className={iconButton} aria-label="Load">
           <FolderOpen className={iconClass} />
+        </button>
+        <button onClick={onExport} className={iconButton} aria-label="Export to file">
+          <Upload className={iconClass} />
+        </button>
+        <button onClick={onSave} className={iconButton} aria-label="Save to localStorage">
+          <Save className={iconClass} />
         </button>
         <button onClick={onShare} className={iconButton} aria-label="Share">
           <Share2 className={iconClass} />
