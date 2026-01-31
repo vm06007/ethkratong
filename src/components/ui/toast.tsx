@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { X, CheckCircle2 } from "lucide-react";
+import { X, CheckCircle2, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface Toast {
@@ -34,6 +34,9 @@ function ToastItem({ toast, onDismiss }: ToastProps) {
     >
       {toast.type === "success" && (
         <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0" />
+      )}
+      {toast.type === "error" && (
+        <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400 flex-shrink-0" />
       )}
       <p className="flex-1 text-sm text-gray-900 dark:text-gray-100">
         {toast.message}

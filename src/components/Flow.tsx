@@ -29,6 +29,7 @@ import { uploadFlowToIPFS, getShareUrl, type FlowShareData } from "@/lib/ipfs";
 import type { ProtocolNodeData } from "@/types";
 import { cn } from "@/lib/utils";
 import { ToastContainer, type Toast } from "./ui/toast";
+import { useActiveAccount } from "thirdweb/react";
 
 // Helper function to calculate execution order starting from wallet
 // Uses topological sort to create a linear execution sequence
@@ -186,15 +187,117 @@ function FlowCanvas() {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialWorkspace.nodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialWorkspace.edges);
   const [reactFlowInstance, setReactFlowInstance] = useState<any>(null);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [isRightDrawerOpen, setIsRightDrawerOpen] = useState(false);
-  const [isMiniMapVisible, setIsMiniMapVisible] = useState(true);
+    const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth > 768);
+    const [isRightDrawerOpen, setIsRightDrawerOpen] = useState(false);
+    const [isMiniMapVisible, setIsMiniMapVisible] = useState(window.innerWidth > 768);
+
+    useEffect(() => {
+        const handleResize = () => {
+            if (window.innerWidth <= 768) {
+                setIsSidebarOpen(false);
+                setIsRightDrawerOpen(false);
+                setIsMiniMapVisible(false);
+            }
+        };
+        window.addEventListener("resize", handleResize);
+        return () => window.removeEventListener("resize", handleResize);
+    }, []);
   const [edgeType, setEdgeType] = useState<"default" | "straight" | "step" | "smoothstep">("default");
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
 
   const executeFlowRef = useRef<(() => Promise<void>) | null>(null);
   const [isExecutingFlow, setIsExecutingFlow] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // Get active account for execution validation
+  const activeAccount = useActiveAccount();
+
+  // Toast notifications state (needs to be before callbacks that use it)
+  const [toasts, setToasts] = useState<Toast[]>([]);
+
+  // Toast helper functions
+  const addToast = useCallback((message: string, type: "success" | "error" | "info" = "success") => {
+    const id = `toast-${Date.now()}-${Math.random()}`;
+    const toast: Toast = { id, message, type, duration: 3000 };
+    setToasts((prev) => [...prev, toast]);
+  }, []);
+
+  const dismissToast = useCallback((id: string) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  }, []);
+
+  // Function to check if flow can be executed
+  const canExecuteFlow = useCallback(() => {
+    // Check if wallet is connected
+    if (!activeAccount?.address) {
+      return { canExecute: false, reason: "Please connect your wallet first" };
+    }
+
+    // Check if there are any nodes connected to wallet
+    const walletNode = nodes.find((n) => n.data.protocol === "wallet");
+    if (!walletNode) {
+      return { canExecute: false, reason: "No wallet node found" };
+    }
+
+    // Check if there are any action nodes
+    const actionNodes = nodes.filter(
+      (n) => n.data.protocol !== "wallet" && n.data.sequenceNumber !== undefined && n.data.sequenceNumber > 0
+    );
+    if (actionNodes.length === 0) {
+      return { canExecute: false, reason: "No actions configured. Add and connect nodes to create a flow." };
+    }
+
+    // Check if all actions are properly configured
+    const unconfiguredNode = actionNodes.find((node) => {
+      if (node.data.protocol === "transfer") {
+        return !(node.data.amount && node.data.asset && node.data.recipientAddress);
+      }
+      if (node.data.protocol === "custom") {
+        return !(node.data.contractAddress && node.data.customContractVerified && node.data.selectedFunction);
+      }
+      if (node.data.protocol === "conditional") {
+        return !(node.data.contractAddress && node.data.conditionalContractVerified && node.data.selectedFunction && node.data.comparisonOperator != null);
+      }
+      if (node.data.protocol === "balanceLogic") {
+        return !(node.data.balanceLogicAddress && node.data.balanceLogicComparisonOperator != null && (node.data.balanceLogicCompareValue ?? "").trim() !== "");
+      }
+      if (node.data.protocol === "morpho") {
+        return !(node.data.action && node.data.asset && (node.data.amount ?? "").trim() !== "");
+      }
+      if (node.data.protocol === "uniswap") {
+        if (node.data.action === "swap") {
+          return !(node.data.swapFrom && node.data.swapTo && node.data.amount);
+        }
+        if (node.data.action === "addLiquidity" || node.data.action === "removeLiquidity") {
+          return !(node.data.liquidityTokenA && node.data.liquidityTokenB);
+        }
+      }
+      return !(node.data.action && node.data.amount);
+    });
+
+    if (unconfiguredNode) {
+      return { canExecute: false, reason: `Action "${unconfiguredNode.data.label || unconfiguredNode.data.protocol}" is not fully configured` };
+    }
+
+    return { canExecute: true, reason: null };
+  }, [nodes, activeAccount]);
+
+  const handleExecuteFlow = useCallback(async () => {
+    const { canExecute, reason } = canExecuteFlow();
+    if (!canExecute) {
+      addToast(reason || "Cannot execute flow", "error");
+      return;
+    }
+
+    if (executeFlowRef.current) {
+      try {
+        await executeFlowRef.current();
+      } catch (error) {
+        // Errors are already handled in the execute function
+        console.error("Flow execution error:", error);
+      }
+    }
+  }, [canExecuteFlow, addToast]);
 
   const fullscreenContainerRef = useRef<HTMLDivElement>(null);
 
@@ -253,22 +356,8 @@ function FlowCanvas() {
   const [showTabCloseConfirm, setShowTabCloseConfirm] = useState(false);
   const [tabToClose, setTabToClose] = useState<string | null>(null);
 
-  // Toast notifications
-  const [toasts, setToasts] = useState<Toast[]>([]);
-
   // LocalStorage key for workspace
   const WORKSPACE_STORAGE_KEY = "ethkratong-workspace";
-
-  // Toast helper functions
-  const addToast = useCallback((message: string, type: "success" | "error" | "info" = "success") => {
-    const id = `toast-${Date.now()}-${Math.random()}`;
-    const toast: Toast = { id, message, type, duration: 3000 };
-    setToasts((prev) => [...prev, toast]);
-  }, []);
-
-  const dismissToast = useCallback((id: string) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id));
-  }, []);
 
   // Save workspace to localStorage
   const saveWorkspaceToLocalStorage = useCallback(() => {
@@ -382,7 +471,7 @@ function FlowCanvas() {
               0,
               ...nds
                 .filter((n) => n.data.sequenceNumber !== undefined)
-                .map((n) => n.data.sequenceNumber || 0)
+                .map((n) => (n.data as ProtocolNodeData).sequenceNumber || 0)
             );
             return {
               ...node,
@@ -555,7 +644,7 @@ function FlowCanvas() {
       // Find the highest sequence number among existing nodes
       const maxSequence = Math.max(
         0,
-        ...nodes
+        ...(nodes as Node<ProtocolNodeData>[])
           .filter((n) => n.data.sequenceNumber !== undefined)
           .map((n) => n.data.sequenceNumber || 0)
       );
@@ -602,7 +691,7 @@ function FlowCanvas() {
 
       const maxSequence = Math.max(
         0,
-        ...nodes
+        ...(nodes as Node<ProtocolNodeData>[])
           .filter((n) => n.data.sequenceNumber !== undefined)
           .map((n) => n.data.sequenceNumber || 0)
       );
@@ -819,7 +908,7 @@ function FlowCanvas() {
               ...nodeData,
               action: "swap" as const,
             },
-          };
+          } as Node<ProtocolNodeData>;
         }
         // If action is missing and no swap data, default to "swap"
         if (!nodeData.action) {
@@ -829,10 +918,10 @@ function FlowCanvas() {
               ...nodeData,
               action: "swap" as const,
             },
-          };
+          } as Node<ProtocolNodeData>;
         }
       }
-      return node;
+      return node as Node<ProtocolNodeData>;
     });
 
     // Create a new tab for the shared flow
@@ -881,7 +970,7 @@ function FlowCanvas() {
     // Save current tab state
     setTabs((prev) =>
       prev.map((tab) =>
-        tab.id === activeTabId ? { ...tab, nodes, edges } : tab
+        tab.id === activeTabId ? { ...tab, nodes: nodes as Node<ProtocolNodeData>[], edges } : tab
       )
     );
 
@@ -1000,7 +1089,7 @@ function FlowCanvas() {
         onRedo={handleRedo}
         onReset={handleReset}
         onNewTab={handleNewTab}
-        onExecuteFlow={() => executeFlowRef.current?.()}
+        onExecuteFlow={handleExecuteFlow}
         isExecutingFlow={isExecutingFlow}
         onToggleFullscreen={handleToggleFullscreen}
         isFullscreen={isFullscreen}
@@ -1057,7 +1146,7 @@ function FlowCanvas() {
         <RightDrawer
           isOpen={isRightDrawerOpen}
           onClose={() => setIsRightDrawerOpen(false)}
-          nodes={nodes}
+          nodes={nodes as Node<ProtocolNodeData>[]}
           edges={edges}
           onReorderNodes={handleReorderNodes}
           onRegisterExecute={(execute) => {

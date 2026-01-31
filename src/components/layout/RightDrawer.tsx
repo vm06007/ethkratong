@@ -683,10 +683,10 @@ export function RightDrawer({ isOpen, onClose, nodes, edges, onReorderNodes, onR
     <aside
       className={cn(
         "w-80 bg-gray-100 dark:bg-gray-900 border-l border-gray-300 dark:border-gray-700 transition-all duration-300 ease-in-out",
-        isOpen ? "translate-x-0" : "translate-x-full absolute right-0 z-10 h-full"
+        isOpen ? "translate-x-0" : "translate-x-full absolute right-0 z-50 h-full"
       )}
     >
-      <div className="p-4 h-full flex flex-col">
+      <div className="p-4 h-full flex flex-col bg-gray-100 dark:bg-gray-900">
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold dark:text-gray-100">Execution Plan</h2>

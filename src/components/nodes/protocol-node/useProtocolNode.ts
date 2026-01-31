@@ -230,17 +230,16 @@ export function useProtocolNode(id: string, data: ProtocolNodeData) {
         if (data.protocol !== "transfer" && data.protocol !== "morpho") return [];
         if (data.protocol === "transfer" && !isExpanded) return [];
 
-        // If still loading, return empty (will trigger loading state in UI)
         if (isLoadingBaseBalances) return [];
+        // Transfer needs wallet base balances; morpho can use empty base so upstream vault shares still flow
+        if (data.protocol === "transfer" && !baseBalancesForEffective.length) return [];
 
-        // If no base balances loaded yet, return empty
-        if (!baseBalancesForEffective.length) return [];
-
+        const base = baseBalancesForEffective.length ? baseBalancesForEffective : [];
         const effective = getEffectiveBalances(
             nodesFromStore,
             edgesFromStore,
             id,
-            baseBalancesForEffective
+            base
         );
         return effective.filter(
             (token) => Number(token.balance) > 0 || token.symbol.endsWith(" LP")

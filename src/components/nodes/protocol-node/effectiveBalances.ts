@@ -106,6 +106,13 @@ export function getEffectiveBalances(
             if (d.action === "lend" || d.action === "deposit") {
                 balances[assetKey] = (balances[assetKey] ?? 0) - amt;
                 if (balances[assetKey] < 0) balances[assetKey] = 0;
+                // Receipt (vault share) tokens from this Lend for downstream Borrow/Redeem
+                const shareSymbol = d.morphoEstimatedSharesSymbol;
+                const shareAmt = d.morphoEstimatedShares != null ? parseFloat(d.morphoEstimatedShares) : NaN;
+                if (shareSymbol && !Number.isNaN(shareAmt) && shareAmt > 0) {
+                    if (balances[shareSymbol] == null) balances[shareSymbol] = 0;
+                    balances[shareSymbol] += shareAmt;
+                }
             }
             if (d.action === "withdraw" || d.action === "borrow") {
                 balances[assetKey] = (balances[assetKey] ?? 0) + amt;
@@ -122,6 +129,9 @@ export function getEffectiveBalances(
     }
 
     const lpSymbols = Object.keys(balances).filter((s) => s.endsWith(" LP"));
+    const vaultShareSymbols = Object.keys(balances).filter(
+        (s) => !lpSymbols.includes(s) && !baseBalances.some((t) => t.symbol === s)
+    );
     const baseResult = baseBalances.map((t) => {
         const v = balances[t.symbol] ?? 0;
         const formatted =
@@ -134,5 +144,11 @@ export function getEffectiveBalances(
             v === 0 ? "0.00" : v < 0.01 ? v.toFixed(6) : v.toFixed(2);
         return { symbol, balance, isLoading: false };
     });
-    return [...baseResult, ...lpEntries];
+    const vaultShareEntries = vaultShareSymbols.map((symbol) => {
+        const v = balances[symbol] ?? 0;
+        const balance =
+            v === 0 ? "0.00" : v < 0.01 ? v.toFixed(6) : v.toFixed(2);
+        return { symbol, balance, isLoading: false };
+    });
+    return [...baseResult, ...lpEntries, ...vaultShareEntries];
 }

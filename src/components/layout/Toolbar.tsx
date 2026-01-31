@@ -100,8 +100,8 @@ export function Toolbar({
     setShowResetConfirm(false);
   };
 
-  const iconButton = "p-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed";
-  const iconClass = "w-5 h-5 text-gray-700 dark:text-gray-300";
+    const iconButton = "p-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0";
+    const iconClass = "w-5 h-5 text-gray-700 dark:text-gray-300";
 
   const edgeTypes = [
     { value: "default" as const, label: "Curved" },
@@ -113,8 +113,8 @@ export function Toolbar({
   return (
     <div className="h-14 bg-white dark:bg-gray-900 border-b border-gray-300 dark:border-gray-700 flex items-center justify-between px-4 shadow-sm transition-colors">
       {/* Left Section */}
-      <div className="flex items-center gap-2">
-        {/* Sidebar Toggle */}
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
+            {/* Sidebar Toggle */}
         <button
           onClick={onToggleSidebar}
           className={iconButton}
@@ -130,14 +130,14 @@ export function Toolbar({
         <div className="w-px h-6 bg-gray-300 dark:bg-gray-600" />
 
         {/* File Operations */}
-        <button onClick={onLoad} className={iconButton} aria-label="Load">
+        <button onClick={onSave} className={iconButton} aria-label="Save to localStorage">
+          <Save className={iconClass} />
+        </button>
+        <button onClick={onLoad} className={iconButton} aria-label="Load from file">
           <FolderOpen className={iconClass} />
         </button>
         <button onClick={onExport} className={iconButton} aria-label="Export to file">
           <Upload className={iconClass} />
-        </button>
-        <button onClick={onSave} className={iconButton} aria-label="Save to localStorage">
-          <Save className={iconClass} />
         </button>
         <button onClick={onShare} className={iconButton} aria-label="Share">
           <Share2 className={iconClass} />
@@ -272,12 +272,12 @@ export function Toolbar({
         )}
       </div>
 
-      {/* Center Section - Title */}
-      <div className="flex items-center gap-2">
+      {/* Center Section -  Title */}
+      <div className="hidden md:flex items-center gap-2 shrink-0">
         <img
           src="/loy-krathong.svg"
           alt=""
-          className="h-[40px] w-auto object-contain [filter:hue-rotate(-445deg)]"
+          className="h-[40px] w-auto object-contain"
         />
         <h1 className="text-gray-700 dark:text-[#efeaea] font-light text-[20px] tracking-normal [text-shadow:revert-layer] font-sans">
           ETHKratong
@@ -285,26 +285,22 @@ export function Toolbar({
       </div>
 
       {/* Right Section */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
         {/* New Tab */}
-        <button onClick={onNewTab} className={iconButton} aria-label="New tab">
+        <button onClick={onNewTab} className={cn(iconButton, "hidden md:flex")} aria-label="New tab">
           <Plus className={iconClass} />
         </button>
 
-        <div className="w-px h-6 bg-gray-300 dark:bg-gray-600" />
+        <div className="w-px h-6 bg-gray-300 dark:bg-gray-600 hidden md:block" />
 
-        {/* Share/Upload */}
-        <button className={iconButton} aria-label="Upload">
-          <Upload className={iconClass} />
-        </button>
-
-        {/* Globe Menu */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button className={iconButton} aria-label="Community & Links">
-              <Globe className={iconClass} />
-            </button>
-          </DropdownMenuTrigger>
+        {/* Globe Menu - hidden in fullscreen */}
+        {!isFullscreen && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className={cn(iconButton, "hidden md:flex")} aria-label="Community & Links">
+                <Globe className={iconClass} />
+              </button>
+            </DropdownMenuTrigger>
           <DropdownMenuContent align="end" side="bottom">
             <DropdownMenuItem asChild>
               <a
@@ -340,20 +336,14 @@ export function Toolbar({
               </a>
             </DropdownMenuItem>
           </DropdownMenuContent>
-        </DropdownMenu>
-
-        <div className="w-px h-6 bg-gray-300 dark:bg-gray-600" />
-
-        {/* Wallet Connect */}
-        <WalletConnect />
-
-        <div className="w-px h-6 bg-gray-300 dark:bg-gray-600" />
+          </DropdownMenu>
+        )}
 
         {/* Fullscreen canvas */}
         {onToggleFullscreen && (
           <button
             onClick={onToggleFullscreen}
-            className={iconButton}
+            className={cn(iconButton, "hidden md:flex")}
             aria-label={isFullscreen ? "Exit fullscreen" : "Fullscreen canvas"}
           >
             {isFullscreen ? (
@@ -377,18 +367,25 @@ export function Toolbar({
           )}
         </button>
 
+        <div className="w-px h-6 bg-gray-300 dark:bg-gray-600" />
+
+        {/* Wallet Connect */}
+        <WalletConnect />
+
+        <div className="w-px h-6 bg-gray-300 dark:bg-gray-600" />
+
         {/* Execute flow (same as drawer Launch button) */}
         {onExecuteFlow && (
           <button
             onClick={onExecuteFlow}
             disabled={isExecutingFlow}
-            className={iconButton}
+            className="p-2 rounded-lg border border-purple-600 dark:border-purple-500 bg-purple-600 dark:bg-purple-600 hover:bg-purple-700 dark:hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
             aria-label={isExecutingFlow ? "Executing..." : "Launch Kratong"}
           >
             {isExecutingFlow ? (
-              <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
             ) : (
-              <Play className={iconClass} />
+              <Play className="w-5 h-5 text-white fill-white" />
             )}
           </button>
         )}

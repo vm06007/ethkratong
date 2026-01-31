@@ -66,7 +66,7 @@ export function Sidebar({ isOpen, onAddNode }: SidebarProps) {
     <aside
       className={cn(
         "w-64 bg-gray-100 dark:bg-gray-900 border-r border-gray-300 dark:border-gray-700 overflow-y-auto transition-all duration-300 ease-in-out flex flex-col",
-        isOpen ? "translate-x-0" : "-translate-x-full absolute z-10 h-full"
+        isOpen ? "translate-x-0" : "-translate-x-full absolute z-50 h-full"
       )}
     >
       {/* Search */}
@@ -84,7 +84,7 @@ export function Sidebar({ isOpen, onAddNode }: SidebarProps) {
       </div>
 
       {/* Protocol Categories */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+        <div className="flex-1 overflow-y-auto p-4 space-y-3 pb-20 md:pb-4">
         {filteredCategories.map((category) => {
           const isExpanded = expandedCategories.includes(category.name);
           const IconComponent = iconMap[category.icon as keyof typeof iconMap];

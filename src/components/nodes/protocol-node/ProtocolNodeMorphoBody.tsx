@@ -4,6 +4,7 @@ import type { ProtocolNodeData } from "@/types";
 import { UNISWAP_TOKEN_OPTIONS } from "./constants";
 import { useWalletBalancesForModal } from "./useWalletBalancesForModal";
 import { useMorphoVaults } from "./useMorphoVaults";
+import { useMorphoVaultShareBalances } from "./useMorphoVaultShareBalances";
 import { readMorphoVaultPreviewDeposit } from "@/services/batchedExecution";
 import type { TokenBalance } from "./types";
 
@@ -25,7 +26,7 @@ interface ProtocolNodeMorphoBodyProps {
     isLoadingEffectiveBalances?: boolean;
 }
 
-const VAULT_ACTIONS = ["lend", "redeem"] as const;
+const VAULT_ACTIONS = ["lend", "redeem", "borrow"] as const;
 function isVaultAction(action: string): action is (typeof VAULT_ACTIONS)[number] {
     return VAULT_ACTIONS.includes(action as (typeof VAULT_ACTIONS)[number]);
 }
@@ -56,6 +57,7 @@ export function ProtocolNodeMorphoBody({
 
     const { balances: walletBalances } = useWalletBalancesForModal(true);
     const { vaults, isLoading: vaultsLoading } = useMorphoVaults();
+    const { hasAnyVaultShares } = useMorphoVaultShareBalances(true);
 
     const action = data.action || "";
     const useVaultSelector = isVaultAction(action);
@@ -63,11 +65,20 @@ export function ProtocolNodeMorphoBody({
     const balances =
         effectiveBalances && effectiveBalances.length > 0 ? effectiveBalances : walletBalances;
 
-    // Heuristic to check for collateral or debt
-    // In a real app, we'd fetch actual Morpho positions
-    // For now, if they have any balance, we'll assume they can redeem or borrow
-    const hasLended = balances.some(b => parseFloat(b.balance) > 0);
-    const hasBorrowed = true; // Placeholder for debt check
+    // Redeem / Borrow: available if user has vault receipt (share) tokens – from wallet or from upstream Lend in this flow
+    const norm = (s: string) => (s ?? "").trim().toLowerCase();
+    const hasEffectiveVaultShares =
+        (effectiveBalances?.length ?? 0) > 0 &&
+        vaults.some((v) =>
+            effectiveBalances!.some(
+                (b) =>
+                    parseFloat(b.balance) > 0 &&
+                    (b.symbol === v.name || norm(b.symbol) === norm(v.name))
+            )
+        );
+    const canRedeem = hasAnyVaultShares || hasEffectiveVaultShares;
+    const canBorrow = canRedeem;
+    const hasBorrowed = false; // TODO: fetch user's Morpho debt to enable Repay
 
     // Determine if we should show loading indicator
     const showLoading = isLoadingEffectiveBalances &&
@@ -227,19 +238,25 @@ export function ProtocolNodeMorphoBody({
                         let disabled = false;
                         let label = a.charAt(0).toUpperCase() + a.slice(1);
                         
-                        if (a === "borrow" || a === "redeem") {
-                            // Only if lended collateral
-                            // For demo purposes, we'll allow it if we see any non-zero balance
-                            // or if it's already selected
-                            disabled = !hasLended && action !== a;
+                        if (a === "redeem") {
+                            disabled = !canRedeem && action !== a;
+                        } else if (a === "borrow") {
+                            disabled = !canBorrow && action !== a;
                         } else if (a === "repay") {
-                            // Only if borrowed something
                             disabled = !hasBorrowed && action !== a;
                         }
 
+                        const disabledHint =
+                            (a === "redeem" || a === "borrow") && disabled
+                                ? "(deposit first to get vault shares)"
+                                : a === "repay" && disabled
+                                  ? "(need to have borrowed)"
+                                  : disabled
+                                      ? "(unavailable)"
+                                      : "";
                         return (
                             <option key={a} value={a} disabled={disabled}>
-                                {label} {disabled ? "(needs collateral/debt)" : ""}
+                                {label} {disabledHint}
                             </option>
                         );
                     })}
