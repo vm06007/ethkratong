@@ -304,7 +304,7 @@ export function Toolbar({
           <DropdownMenuContent align="end" side="bottom">
             <DropdownMenuItem asChild>
               <a
-                href="https://github.com/ethkratong/ethkratong"
+                href="https://github.com/vm06007/ethkratong"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-2"
@@ -315,7 +315,7 @@ export function Toolbar({
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
               <a
-                href="https://x.com/ethkratong"
+                href="https://x.com/EthVitally"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-2"

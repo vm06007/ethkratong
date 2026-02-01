@@ -278,7 +278,7 @@ If your wallet supports EIP-7702, all calls execute atomically. Otherwise, falls
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/ethkratong.git
+git clone https://github.com/vm06007/ethkratong.git
 cd ethkratong
 
 # Install dependencies
@@ -699,7 +699,7 @@ MIT License - see [LICENSE](LICENSE) file for details
 
 - **Documentation**: [docs.yourdomain.com](https://docs.yourdomain.com)
 - **Discord**: [Join our community](https://discord.gg/yourserver)
-- **Twitter**: [@ethkratong](https://twitter.com/ethkratong)
+- **Twitter**: [@EthVitally](https://x.com/EthVitally)
 - **Email**: support@yourdomain.com
 
 ---

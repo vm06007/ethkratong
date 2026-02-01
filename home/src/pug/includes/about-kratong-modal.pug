@@ -1,0 +1,37 @@
+// about kratong modal
+<div id="about-kratong-modal" class="feature-modal fixed inset-0 z-[100] hidden items-center justify-center bg-black/85 backdrop-blur-xl" aria-hidden="true">
+    <div class="relative w-full max-w-4xl mx-4 p-10 md:p-14 rounded-[2.5rem] bg-content border border-line shadow-2 flex flex-col justify-center" data-aos="zoom-in">
+        <button type="button" class="about-kratong-modal-close absolute top-6 right-6 z-10 flex items-center justify-center w-10 h-10 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors" aria-label="Close">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+        </button>
+        <div class="about-kratong-modal-content">
+            <div class="flex items-center mb-8 max-md:flex-col max-md:items-start">
+                <div class="relative flex justify-center items-center size-20 mr-8 rounded-2xl bg-gradient-to-b from-black/15 to-white/15 shadow-[0.0625rem_0.0625rem_0.0625rem_0_rgba(255,255,255,0.10)_inset,0_0_0.625rem_0_rgba(255,255,255,0.10)_inset] max-md:mb-5 max-md:mr-0">
+                    <div class="absolute inset-0 border border-line rounded-2xl"></div>
+                    img(class="w-10 h-10 object-contain" src=require('Images/loy-krathong.svg') alt="")
+                </div>
+                <h2 class="text-title-1 max-md:text-title-1-mobile bg-radial-white-2 bg-clip-text text-transparent">About Kratong</h2>
+            </div>
+            <div class="text-white/80 text-xl md:text-2xl leading-relaxed max-w-3xl space-y-4">
+                <p>ETHKratong is a <strong>digital kratong</strong>—inspired by the Thai tradition of Loy Krathong, when people float small offerings on the water</p>
+                <p>In Thai culture, <strong>freedom</strong> is at the heart of this ritual: each person makes their own kratong, choosing what to put on it and how to send it off. No two are the same.</p>
+                <p>We bring that same idea on-chain. Your ETHKratong is your offering—you design it, you choose the protocols and steps, and you make it <strong>completely custom</strong>. Like the physical kratongs, every digital kratong is unique.</p>
+            </div>
+            <div class="mt-8 flex flex-wrap gap-6 justify-center items-start">
+                <div class="flex flex-col items-center gap-2">
+                    img(class="w-full max-w-64 rounded-xl border border-line object-cover shadow-lg" src=require('Images/krat-old.jpg') alt="Traditional Thai kratong offering")
+                    <span class="text-description-3 text-description">Traditional kratong</span>
+                </div>
+                <div class="flex flex-col items-center gap-2">
+                    img(class="w-full max-w-64 rounded-xl border border-line object-cover shadow-lg" src=require('Images/krat-new.jpg') alt="ETHKratong digital kratong")
+                    <span class="text-description-3 text-description">Digital kratong</span>
+                </div>
+            </div>
+            <div class="mt-12">
+                <button type="button" class="about-kratong-modal-close px-8 py-3 rounded-full bg-green text-black text-lg font-bold hover:bg-green/90 transition-all hover:scale-105 shadow-lg">Got it</button>
+            </div>
+        </div>
+    </div>
+</div>

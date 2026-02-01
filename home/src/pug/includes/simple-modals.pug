@@ -1,0 +1,16 @@
+// newsletter success modal
+#newsletter-success-modal.feature-modal.fixed.inset-0.z-[100].hidden.items-center.justify-center.bg-black/85.backdrop-blur-xl(aria-hidden="true")
+    .relative.w-full.max-w-md.mx-4.p-10.rounded-[2.5rem].bg-content.border.border-line.shadow-2.flex.flex-col.items-center.text-center(data-aos="zoom-in")
+        .mb-8.text-title-3.max-md:text-title-4.bg-radial-white-2.bg-clip-text.text-transparent You are subscribed
+        button.newsletter-success-modal-close.px-8.py-3.rounded-full.bg-green.text-black.text-lg.font-bold.hover:bg-green/90.transition-all.hover:scale-105.shadow-lg(type="button") Got it
+
+// legal modal (Terms & Conditions / Privacy Policy)
+#legal-modal.feature-modal.fixed.inset-0.z-[100].hidden.items-center.justify-center.bg-black/85.backdrop-blur-xl(aria-hidden="true")
+    .relative.w-full.max-w-3xl.max-h-[85vh].mx-4.p-10.md:p-14.rounded-[2.5rem].bg-content.border.border-line.shadow-2.flex.flex-col(data-aos="zoom-in")
+        button.legal-modal-close.absolute.top-6.right-6.z-10.flex.items-center.justify-center.w-10.h-10.rounded-full.bg-white/10.text-white.hover:bg-white/20.transition-colors(aria-label="Close" type="button")
+            svg.w-6.h-6(fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg")
+                path(stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12")
+        h2.legal-modal-title.mb-6.text-title-2.max-md:text-title-3.bg-radial-white-2.bg-clip-text.text-transparent
+        .legal-modal-body.flex-1.overflow-y-auto.text-description-3.text-description.space-y-4.pr-2
+        .mt-8
+            button.legal-modal-close.px-8.py-3.rounded-full.bg-green.text-black.text-lg.font-bold.hover:bg-green/90.transition-all.hover:scale-105.shadow-lg(type="button") Close

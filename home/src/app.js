@@ -18,18 +18,18 @@
     wrap.removeClass("visible");
   });
 
-  head.on("click", function (e) {
-    e.stopPropagation();
-    dropdown.toggleClass("active");
-  });
-
-  body.on("click", function (e) {
-    e.stopPropagation();
-  });
-
-  $("html,body").on("click", function () {
-    dropdown.removeClass("active");
-  });
+  if (head.length) {
+    head.on("click", function (e) {
+      e.stopPropagation();
+      dropdown.toggleClass("active");
+    });
+    body.on("click", function (e) {
+      e.stopPropagation();
+    });
+    $("html,body").on("click", function () {
+      dropdown.removeClass("active");
+    });
+  }
 })();
 
 // accordion
@@ -209,6 +209,122 @@ $(document).ready(function () {
     if (e.key === "Escape" && modal.attr("aria-hidden") === "false") {
       closeModal();
     }
+  });
+})();
+
+// about kratong modal
+(function () {
+  const modal = $("#about-kratong-modal");
+  const openBtn = $(".js-about-kratong");
+  const closeBtn = modal.find(".about-kratong-modal-close");
+
+  function openModal() {
+    modal.css("display", "flex").attr("aria-hidden", "false");
+    $("body").addClass("no-scroll");
+  }
+
+  function closeModal() {
+    modal.css("display", "none").attr("aria-hidden", "true");
+    $("body").removeClass("no-scroll");
+  }
+
+  openBtn.on("click", function (e) {
+    e.preventDefault();
+    openModal();
+  });
+
+  closeBtn.on("click", closeModal);
+
+  modal.on("click", function (e) {
+    if (e.target === modal[0]) {
+      closeModal();
+    }
+  });
+
+  $(document).on("keydown", function (e) {
+    if (e.key === "Escape" && modal.attr("aria-hidden") === "false") {
+      closeModal();
+    }
+  });
+})();
+
+// newsletter form: show "You are subscribed" modal
+(function () {
+  const form = $("#newsletter-form");
+  const modal = $("#newsletter-success-modal");
+  const closeBtn = modal.find(".newsletter-success-modal-close");
+
+  function openModal() {
+    modal.css("display", "flex").attr("aria-hidden", "false");
+    $("body").addClass("no-scroll");
+  }
+
+  function closeModal() {
+    modal.css("display", "none").attr("aria-hidden", "true");
+    $("body").removeClass("no-scroll");
+  }
+
+  if (form.length) {
+    form.on("submit", function (e) {
+      e.preventDefault();
+      openModal();
+    });
+  }
+
+  closeBtn.on("click", closeModal);
+  modal.on("click", function (e) {
+    if (e.target === modal[0]) closeModal();
+  });
+  $(document).on("keydown", function (e) {
+    if (e.key === "Escape" && modal.attr("aria-hidden") === "false") closeModal();
+  });
+})();
+
+// legal modal (Terms & Conditions / Privacy Policy)
+(function () {
+  const modal = $("#legal-modal");
+  const titleEl = modal.find(".legal-modal-title");
+  const bodyEl = modal.find(".legal-modal-body");
+  const openBtns = $(".js-legal-modal");
+  const closeBtn = modal.find(".legal-modal-close");
+
+  const content = {
+    terms: {
+      title: "Terms & Conditions",
+      body: "<p>By using ETHKratong you agree to these terms. Do not use the service for anything illegal. We provide the tool as-is; use at your own risk. You are responsible for your transactions and keys.</p><p>We may update these terms; continued use means you accept the changes.</p>"
+    },
+    privacy: {
+      title: "Privacy Policy",
+      body: "<p>ETHKratong does not collect or store your personal data for the app experience. Transaction data is on the blockchain. If you subscribe to our newsletter we use your email only to send updates; you can unsubscribe anytime.</p><p>We do not sell your data.</p>"
+    }
+  };
+
+  function openModal(which) {
+    const data = content[which];
+    if (data) {
+      titleEl.text(data.title);
+      bodyEl.html(data.body);
+    }
+    modal.css("display", "flex").attr("aria-hidden", "false");
+    $("body").addClass("no-scroll");
+  }
+
+  function closeModal() {
+    modal.css("display", "none").attr("aria-hidden", "true");
+    $("body").removeClass("no-scroll");
+  }
+
+  openBtns.on("click", function (e) {
+    e.preventDefault();
+    openModal($(this).data("legal"));
+  });
+
+  closeBtn.on("click", closeModal);
+  modal.on("click", function (e) {
+    if (e.target === modal[0]) closeModal();
+  });
+  $(document).on("keydown", function (e) {
+    if (e.key === "Escape" && modal.attr("aria-hidden") === "false") closeModal();
   });
 })();
 
