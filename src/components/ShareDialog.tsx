@@ -7,10 +7,11 @@ import { cn } from "@/lib/utils";
 interface ShareDialogProps {
   open: boolean;
   onClose: () => void;
-  onShare: (makePrivate: boolean) => Promise<string>; // Returns the CID
+  onShare: (makePrivate: boolean, autoExecute: boolean) => Promise<string>; // Returns the CID
   shareUrl?: string;
   isSharing?: boolean;
   isPrivate?: boolean;
+  autoExecute?: boolean;
 }
 
 export function ShareDialog({
@@ -20,15 +21,17 @@ export function ShareDialog({
   shareUrl,
   isSharing = false,
   isPrivate = false,
+  autoExecute = false,
 }: ShareDialogProps) {
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [makePrivate, setMakePrivate] = useState(false);
+  const [enableAutoExecute, setEnableAutoExecute] = useState(false);
 
   const handleShare = async () => {
     try {
       setError(null);
-      await onShare(makePrivate);
+      await onShare(makePrivate, enableAutoExecute);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to share flow");
     }
@@ -119,6 +122,26 @@ export function ShareDialog({
                   </div>
                 </label>
 
+                {/* Auto-Execute Toggle */}
+                <label className="flex items-start gap-3 p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={enableAutoExecute}
+                    onChange={(e) => setEnableAutoExecute(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 rounded border-gray-300 text-teal-600 focus:ring-teal-500 dark:border-gray-600 dark:bg-gray-700"
+                  />
+                  <div className="flex-1 text-sm">
+                    <div className="font-medium text-gray-900 dark:text-white mb-1">
+                      Auto-Execute on Load
+                    </div>
+                    <div className="text-xs text-gray-600 dark:text-gray-400">
+                      Automatically trigger execution when the flow is loaded. The recipient
+                      will only need to confirm the transaction in their wallet—no need to
+                      click the play button.
+                    </div>
+                  </div>
+                </label>
+
                 {error && (
                   <div className="rounded-lg bg-red-50 border border-red-200 dark:bg-red-900/30 dark:border-red-700 p-3">
                     <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
@@ -201,6 +224,11 @@ export function ShareDialog({
                 {isPrivate && (
                   <span className="block mt-2 text-teal-600 dark:text-teal-400 font-medium">
                     🔒 This is a private share. The encryption key is included in the link.
+                  </span>
+                )}
+                {autoExecute && (
+                  <span className="block mt-2 text-purple-600 dark:text-purple-400 font-medium">
+                    Auto-execute enabled: The flow will automatically trigger execution when opened.
                   </span>
                 )}
               </p>

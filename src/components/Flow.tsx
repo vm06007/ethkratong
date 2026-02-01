@@ -23,6 +23,7 @@ import { RightDrawer } from "./layout/RightDrawer";
 import { ShareDialog } from "./ShareDialog";
 import { TabCloseConfirmDialog } from "./dialogs/TabCloseConfirmDialog";
 import { SharedFlowLoadingOverlay } from "./overlays/SharedFlowLoadingOverlay";
+import { ExecutingFlowOverlay } from "./overlays/ExecutingFlowOverlay";
 import { useTheme } from "@/hooks/useTheme";
 import { useSharedFlowLoader } from "@/hooks/useSharedFlowLoader";
 import { useFlowToast } from "@/hooks/useFlowToast";
@@ -329,9 +330,12 @@ function FlowCanvas() {
   };
 
   // Load shared flows from URL parameters
-  useSharedFlowLoader({
+  const { isAutoExecuting, cancelAutoExecute } = useSharedFlowLoader({
     onLoadSharedFlow: share.handleLoadSharedFlow,
     onError: (message) => share.handleLoadError(message, initialNodes, initialEdges),
+    onAutoExecute: execution.handleExecuteFlow,
+    isWalletConnected: !!activeAccount,
+    hasNodes: nodes.length > 0,
   });
 
   return (
@@ -435,6 +439,7 @@ function FlowCanvas() {
         shareUrl={share.shareUrl}
         isSharing={share.isSharing}
         isPrivate={share.isPrivateShare}
+        autoExecute={share.isAutoExecute}
       />
 
       <TabCloseConfirmDialog
@@ -444,6 +449,11 @@ function FlowCanvas() {
       />
 
       <SharedFlowLoadingOverlay isVisible={share.isLoadingSharedFlow} />
+      <ExecutingFlowOverlay
+        isVisible={isAutoExecuting}
+        isWalletConnected={!!activeAccount}
+        onClose={cancelAutoExecute}
+      />
 
       <ToastContainer toasts={toast.toasts} onDismiss={toast.dismissToast} />
     </div>

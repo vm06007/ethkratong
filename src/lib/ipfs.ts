@@ -139,12 +139,18 @@ export async function downloadFlowFromIPFS(
  * Get the shareable URL for a flow CID
  * @param cid The Content Identifier
  * @param encryptionKey Optional encryption key for private flows
+ * @param autoExecute Whether to automatically execute the flow on load
  * @returns The full URL to share
  */
-export function getShareUrl(cid: string, encryptionKey?: string): string {
+export function getShareUrl(cid: string, encryptionKey?: string, autoExecute?: boolean): string {
   // Use custom base URL from env if provided, otherwise use current origin
   const baseUrl = import.meta.env.VITE_SHARE_BASE_URL || window.location.origin;
-  const url = `${baseUrl}?s=${cid}`;
+  let url = `${baseUrl}?s=${cid}`;
+
+  // Add auto-execute parameter if enabled
+  if (autoExecute) {
+    url += '&autoexec=1';
+  }
 
   // For private flows, add the encryption key in the URL fragment
   // Fragment (after #) is never sent to the server, stays client-side only

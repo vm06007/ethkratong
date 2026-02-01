@@ -90,7 +90,7 @@ Interact with any verified contract on Etherscan:
 - **Estimated shares**: Preview vault shares received
 - **Real-time APY**: Live yield rates for all vaults
 
-#### Uniswap V2
+#### Uniswap
 - **Swap**: Trade tokens with slippage protection
 - **Add Liquidity**: Provide liquidity to pools, receive LP tokens
 - **Remove Liquidity**: Burn LP tokens, receive underlying assets
@@ -148,7 +148,7 @@ Powered by Thirdweb's Wallet SDK:
 |----------|------------------|--------|
 | **Aave V3** | Deposit, Withdraw, Borrow, Repay | ✅ Live |
 | **Morpho Blue** | Lend, Redeem, Borrow | ✅ Live |
-| **Uniswap V2** | Swap, Add Liquidity | ✅ Live |
+| **Uniswap** | Swap, Add Liquidity | ✅ Live |
 | **Transfer** | ETH/ERC20 transfers | ✅ Live |
 | **Custom Contracts** | Any verified contract | ✅ Live |
 | **Conditional Logic** | View function checks | ✅ Live |
@@ -369,7 +369,7 @@ npm run build
 
 ```
 1. Wallet → Conditional (Check ETH/USDC price)
-   - Contract: UniswapV2Pair (ETH/USDC)
+   - Contract: Uniswap Pair (ETH/USDC)
    - Function: getReserves()
    - Condition: reserve1/reserve0 > 3000 (price > $3000)
 
@@ -651,7 +651,7 @@ bun run build
 ### Q1 2026
 - ✅ Aave V3 integration
 - ✅ Morpho Blue integration
-- ✅ Uniswap V2 swap & liquidity
+- ✅ Uniswap swap & liquidity
 - ✅ IPFS sharing (public & private)
 - ✅ Conditional execution
 - ✅ Custom contract interaction
