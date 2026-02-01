@@ -104,6 +104,47 @@ $(document).ready(function () {
   }
 });
 
+// demo modal
+(function () {
+  const modal = $("#demo-modal");
+  const video = modal.find(".demo-modal-video")[0];
+  const openBtn = $(".js-play-demo");
+  const closeBtn = modal.find(".demo-modal-close");
+
+  function openModal() {
+    modal.css("display", "flex").attr("aria-hidden", "false");
+    if (video) {
+      video.play().catch(function () {});
+    }
+  }
+
+  function closeModal() {
+    modal.css("display", "none").attr("aria-hidden", "true");
+    if (video) {
+      video.pause();
+    }
+  }
+
+  openBtn.on("click", function (e) {
+    e.preventDefault();
+    openModal();
+  });
+
+  closeBtn.on("click", closeModal);
+
+  modal.on("click", function (e) {
+    if (e.target === modal[0]) {
+      closeModal();
+    }
+  });
+
+  $(document).on("keydown", function (e) {
+    if (e.key === "Escape" && modal.attr("aria-hidden") === "false") {
+      closeModal();
+    }
+  });
+})();
+
 // aos
 AOS.init({
   offset: 120,

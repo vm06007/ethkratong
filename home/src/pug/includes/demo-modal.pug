@@ -1,0 +1,11 @@
+// demo modal - full screen video
+<div id="demo-modal" class="demo-modal fixed inset-0 z-[100] hidden items-center justify-center bg-black/95" aria-hidden="true">
+    <div class="relative w-full h-full flex items-center justify-center">
+        <button type="button" class="demo-modal-close absolute top-4 right-4 z-10 flex items-center justify-center w-10 h-10 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors" aria-label="Close">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+        </button>
+        <video class="demo-modal-video max-w-full max-h-full w-full h-full object-contain" src=require('Videos/video-1.mp4') controls playsinline></video>
+    </div>
+</div>
