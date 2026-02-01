@@ -212,6 +212,36 @@ $(document).ready(function () {
   });
 })();
 
+// about us modal (developers)
+(function () {
+  const modal = $("#about-us-modal");
+  const openBtn = $(".js-about-us");
+  const closeBtn = modal.find(".about-us-modal-close");
+
+  function openModal() {
+    modal.css("display", "flex").attr("aria-hidden", "false");
+    $("body").addClass("no-scroll");
+  }
+
+  function closeModal() {
+    modal.css("display", "none").attr("aria-hidden", "true");
+    $("body").removeClass("no-scroll");
+  }
+
+  openBtn.on("click", function (e) {
+    e.preventDefault();
+    openModal();
+  });
+
+  closeBtn.on("click", closeModal);
+  modal.on("click", function (e) {
+    if (e.target === modal[0]) closeModal();
+  });
+  $(document).on("keydown", function (e) {
+    if (e.key === "Escape" && modal.attr("aria-hidden") === "false") closeModal();
+  });
+})();
+
 // about kratong modal
 (function () {
   const modal = $("#about-kratong-modal");
@@ -317,6 +347,41 @@ $(document).ready(function () {
   openBtns.on("click", function (e) {
     e.preventDefault();
     openModal($(this).data("legal"));
+  });
+
+  closeBtn.on("click", closeModal);
+  modal.on("click", function (e) {
+    if (e.target === modal[0]) closeModal();
+  });
+  $(document).on("keydown", function (e) {
+    if (e.key === "Escape" && modal.attr("aria-hidden") === "false") closeModal();
+  });
+})();
+
+// detail image modal (gallery cards click)
+(function () {
+  const modal = $("#detail-image-modal");
+  const modalImg = $("#detail-image-modal-img");
+  const cards = $(".js-detail-image-card");
+  const closeBtn = modal.find(".detail-image-modal-close");
+
+  function openModal(src) {
+    modalImg.attr("src", src);
+    modal.css("display", "flex").attr("aria-hidden", "false");
+    $("body").addClass("no-scroll");
+  }
+
+  function closeModal() {
+    modal.css("display", "none").attr("aria-hidden", "true");
+    $("body").removeClass("no-scroll");
+  }
+
+  cards.on("click", function (e) {
+    e.preventDefault();
+    const $card = $(this);
+    const img = $card.find("img").first();
+    const src = img.length ? img.attr("src") : $card.data("image");
+    if (src) openModal(src);
   });
 
   closeBtn.on("click", closeModal);

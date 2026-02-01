@@ -212,3 +212,12 @@
 .hero-sphere.is-hovered .sphere-play-overlay {
   opacity: 1;
 }
+
+/* Detail slide cards: teal monochrome by default, full color on hover */
+.detail-slide-teal img {
+  filter: sepia(0.35) hue-rotate(165deg) saturate(0.5);
+  transition: filter 0.35s ease;
+}
+.detail-slide-teal:hover img {
+  filter: none;
+}

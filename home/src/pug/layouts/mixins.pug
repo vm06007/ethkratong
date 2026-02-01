@@ -15,7 +15,7 @@ mixin header(activeHome, activeFeatures, activeDocs)
                 <nav class="flex gap-10 mr-auto max-lg:gap-8 max-md:flex-col">
                     a(class="flex px-0.25 text-title-5 transition-colors hover:text-white " + (activeHome ? "text-white" : "text-description") href="index.html") Home
                     <button type="button" class="js-about-kratong flex px-0.25 text-title-5 text-description transition-colors hover:text-white border-0 bg-transparent cursor-pointer font-inherit" aria-label="About Kratong">About Kratong</button>
-                    a(class="js-scroll flex px-0.25 text-title-5 text-description transition-colors hover:text-white" href="/#pricing") Pricing
+                    <button type="button" class="js-about-us flex px-0.25 text-title-5 text-description transition-colors hover:text-white border-0 bg-transparent cursor-pointer font-inherit" aria-label="About Us">About Us</button>
                     a(class="flex px-0.25 text-title-5 transition-colors hover:text-white " + (activeDocs ? "text-white" : "text-description") href="docs.html") Docs
                 </nav>
                 <div class="flex gap-2.5 max-md:gap-4 max-md:w-full max-md:mt-auto max-md:pt-10">
@@ -52,12 +52,12 @@ mixin footer(absoluteFooter)
                     <div class="text-description-3 text-description">Visual DeFi Strategy Builder with Atomic Execution. Design, simulate, and execute complex transaction flows in a single step using EIP-7702 and conditonal logic.</div>
                 </div>
                 <div class="">
-                    <div class="mb-6 text-description-2 max-md:mb-2">Protocols</div>
+                    <div class="mb-6 text-description-2 max-md:mb-2">Menu</div>
                     <div class="flex flex-col items-start gap-4.5 max-md:gap-2.25">
-                        <a class="text-description-3 text-description transition-colors hover:text-white" href="#">Uniswap V3</a>
-                        <a class="text-description-3 text-description transition-colors hover:text-white" href="#">Aave V3</a>
-                        <a class="text-description-3 text-description transition-colors hover:text-white" href="#">Morpho Blue</a>
-                        <a class="text-description-3 text-description transition-colors hover:text-white" href="#">Curve Finance</a>
+                        <a class="text-description-3 text-description transition-colors hover:text-white" href="index.html">Home</a>
+                        <button type="button" class="js-about-kratong text-description-3 text-description transition-colors hover:text-white border-0 bg-transparent cursor-pointer font-inherit p-0 text-left" aria-label="About Kratong">About Kratong</button>
+                        <button type="button" class="js-about-us text-description-3 text-description transition-colors hover:text-white border-0 bg-transparent cursor-pointer font-inherit p-0 text-left" aria-label="About Us">About Us</button>
+                        <a class="text-description-3 text-description transition-colors hover:text-white" href="docs.html">Docs</a>
                     </div>
                 </div>
                 <div class="">

@@ -1,8 +1,59 @@
+// detail image modal (gallery / strategy images)
+<div id="detail-image-modal" class="feature-modal fixed inset-0 z-[100] hidden items-center justify-center bg-black/85 backdrop-blur-xl" aria-hidden="true">
+    <div class="relative w-full max-w-4xl max-h-[90vh] mx-4 flex flex-col items-center" data-aos="zoom-in">
+        <button type="button" class="detail-image-modal-close absolute -top-12 right-0 z-10 flex items-center justify-center w-10 h-10 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors" aria-label="Close">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+        </button>
+        <img id="detail-image-modal-img" class="max-w-full max-h-[85vh] w-auto object-contain rounded-xl shadow-2" src="" alt="Strategy" />
+    </div>
+</div>
+
 // newsletter success modal
 <div id="newsletter-success-modal" class="feature-modal fixed inset-0 z-[100] hidden items-center justify-center bg-black/85 backdrop-blur-xl" aria-hidden="true">
     <div class="relative w-full max-w-md mx-4 p-10 rounded-[2.5rem] bg-content border border-line shadow-2 flex flex-col items-center text-center" data-aos="zoom-in">
         <div class="mb-8 text-title-3 max-md:text-title-4 bg-radial-white-2 bg-clip-text text-transparent">You are subscribed</div>
         <button type="button" class="newsletter-success-modal-close px-8 py-3 rounded-full bg-green text-black text-lg font-bold hover:bg-green/90 transition-all hover:scale-105 shadow-lg">Got it</button>
+    </div>
+</div>
+
+// about us modal (developers)
+<div id="about-us-modal" class="feature-modal fixed inset-0 z-[100] hidden items-center justify-center bg-black/85 backdrop-blur-xl" aria-hidden="true">
+    <div class="relative w-full max-w-3xl max-h-[85vh] mx-4 p-10 md:p-14 rounded-[2.5rem] bg-content border border-line shadow-2 flex flex-col" data-aos="zoom-in">
+        <button type="button" class="about-us-modal-close absolute top-6 right-6 z-10 flex items-center justify-center w-10 h-10 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors" aria-label="Close">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+        </button>
+        <h2 class="mb-6 text-title-2 max-md:text-title-3 bg-radial-white-2 bg-clip-text text-transparent">About Us</h2>
+        <p class="mb-6 text-description-3 text-description">ETHKratong is built by a small team of developers who care about DeFi UX and atomic execution. Meet the people behind the project.</p>
+        <div class="flex-1 overflow-y-auto space-y-4 pr-2">
+            <div class="flex items-start gap-4 p-4 rounded-xl bg-black/30 border border-line">
+                <div class="shrink-0 w-12 h-12 rounded-full bg-gradient-to-b from-[#42B39E] to-[#1B8C77] flex items-center justify-center text-white font-bold text-lg">VM</div>
+                <div>
+                    <div class="text-title-5 text-white mb-1">Vitally Marinchenko</div>
+                    <div class="text-description-3 text-description">Core development. GitHub: <a class="text-green hover:underline" href="https://github.com/vm06007" target="_blank" rel="noopener">vm06007</a></div>
+                </div>
+            </div>
+            <div class="flex items-start gap-4 p-4 rounded-xl bg-black/30 border border-line">
+                <div class="shrink-0 w-12 h-12 rounded-full bg-gradient-to-b from-[#42B39E] to-[#1B8C77] flex items-center justify-center text-white font-bold text-lg">Y</div>
+                <div>
+                    <div class="text-title-5 text-white mb-1">Yiying</div>
+                    <div class="text-description-3 text-description">She helped with the homepage and design.</div>
+                </div>
+            </div>
+            <div class="flex items-start gap-4 p-4 rounded-xl bg-black/30 border border-line">
+                <div class="shrink-0 w-12 h-12 rounded-full bg-gradient-to-b from-[#42B39E] to-[#1B8C77] flex items-center justify-center text-white font-bold text-lg">J</div>
+                <div>
+                    <div class="text-title-5 text-white mb-1">jingyistudio</div>
+                    <div class="text-description-3 text-description">She helped with concept and testing.</div>
+                </div>
+            </div>
+        </div>
+        <div class="mt-8">
+            <a class="inline-block px-8 py-3 rounded-full bg-green text-black text-lg font-bold hover:bg-green/90 transition-all hover:scale-105 shadow-lg" href="https://github.com/vm06007/ethkratong" target="_blank" rel="noopener">View on GitHub</a>
+        </div>
     </div>
 </div>
 
