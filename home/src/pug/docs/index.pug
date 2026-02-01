@@ -1,0 +1,43 @@
+extends ../layouts/layout
+block content
+    +header(false, false, true)
+    <div>
+        // docs
+        <div class="tabs relative pt-34.5 pb-36 max-lg:py-28 max-md:pt-24 max-md:pb-20">
+            <div class="center relative z-3 flex items-start max-lg:block">
+                <div class="sticky top-5 flex flex-col gap-3.5 shrink-0 w-50 p-2.5 bg-white/2 shadow-2 rounded-xl after:absolute after:inset-0 after:border after:border-line after:rounded-xl after:pointer-events-none max-lg:static max-lg:flex-row max-lg:w-auto max-lg:-mx-10 max-lg:mb-10 max-lg:p-0 max-lg:px-10 max-lg:shadow-none max-lg:rounded-none max-lg:bg-transparent max-lg:after:hidden max-lg:overflow-auto max-lg:scrollbar-none max-md:-mx-5 max-md:px-5">
+                    <button class="tabs-button active min-h-10 px-3.5 py-2 rounded-xl text-left text-description-2 text-description transition-all cursor-pointer hover:bg-line hover:text-white max-lg:shrink-0">Quick Start</button>
+                    <button class="tabs-button min-h-10 px-3.5 py-2 rounded-xl text-left text-description-2 text-description transition-all cursor-pointer hover:bg-line hover:text-white max-lg:shrink-0">Key Features Guide</button>
+                    <button class="tabs-button min-h-10 px-3.5 py-2 rounded-xl text-left text-description-2 text-description transition-all cursor-pointer hover:bg-line hover:text-white max-lg:shrink-0">Integration & API</button>
+                    <button class="tabs-button min-h-10 px-3.5 py-2 rounded-xl text-left text-description-2 text-description transition-all cursor-pointer hover:bg-line hover:text-white max-lg:shrink-0">LLM</button>
+                    <button class="tabs-button min-h-10 px-3.5 py-2 rounded-xl text-left text-description-2 text-description transition-all cursor-pointer hover:bg-line hover:text-white max-lg:shrink-0">Deployment</button>
+                    <button class="tabs-button min-h-10 px-3.5 py-2 rounded-xl text-left text-description-2 text-description transition-all cursor-pointer hover:bg-line hover:text-white max-lg:shrink-0">Management</button>
+                </div>
+                <div class="grow pl-20 max-2xl:pl-16 max-xl:pl-10 max-lg:pl-0">
+                    <div class="">
+                        <div class="relative px-10 pt-6 pb-7 shadow-2 rounded-[1.25rem] bg-black/50 overflow-hidden after:absolute after:inset-0 after:border after:border-line after:rounded-[1.25rem] after:pointer-events-none max-xl:p-6 max-md:px-7.5 max-md:pt-6 max-md:pb-50">
+                            <div class="relative z-1 max-w-108.5">
+                                <div class="mb-4 bg-radial-white-1 bg-clip-text text-transparent text-title-2 max-md:mb-2 max-md:text-title-1-mobile">Quick Start</div>
+                                <div class="text-description">Start your journey to building a chatbot in just a few simple steps. This guide will help you understand the basics of creating a bot and how to publish it effectively.</div>
+                            </div>
+                            <div class="absolute -top-13 -right-14 w-150 mask-radial-at-center mask-radial-from-20% mask-radial-to-52% max-xl:-right-32 max-md:left-1/2 max-md:right-auto max-md:top-auto max-md:-bottom-94 max-md:-translate-x-1/2 max-md:w-154">
+                                video(class="w-full" src=require('Videos/video-1.mp4') autoplay loop muted playsinline)
+                            </div>
+                        </div>
+                        <div class="mt-11 text-description [&_h4:not(:first-child)]:mt-8 [&_h4]:mb-4 [&_h4]:text-title-4 [&_h4]:text-white [&_p:not(:last-child)]:mb-4] max-md:mt-7 max-md:[&_h4]:mb-3 max-md:[&_h4]:text-title-2-mobile max-md:[&_h4:not(:first-child)]:mt-7">
+                            <h4>1. Account Installation & Setup</h4>
+                            <p>First, create your account or login to the dashboard. After that, verify your email and complete your profile. You can choose from the available bot templates or start from scratch according to your business needs.</p>
+                            <h4>2. Create Your First Bot</h4>
+                            <p> On the dashboard, click “Create New Bot”, give your bot a name and a short description. Choose a primary language and define its purpose—whether it’s for customer service, lead generation, or something else.</p>
+                            <h4>3. Build Conversations (Workflows)</h4>
+                            <p>Use the visual flow builder to build your conversations. You can add text nodes, questions, branching logic, and arrange the order of the dialogue. The preview panel will help you test the flow live.</p>
+                            <h4>4. Connect to a Website or App</h4>
+                            <p>Once done, you can get an embed code to place on your website. For users of platforms like WordPress or Shopify, there are integration plugins available. You can also use the Web SDK or API for custom applications.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="absolute top-81 left-[calc(50%-63.75rem)] z-2 size-116.5 bg-green/20 rounded-full blur-[8rem]"></div>
+        </div>
+    </div>
+    +footer

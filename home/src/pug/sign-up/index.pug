@@ -1,0 +1,49 @@
+extends ../layouts/layout
+block content
+    // sign in
+    <div class="relative flex max-lg:h-screen overflow-hidden">
+        <div class="flex justify-center items-center grow">
+            <div class="w-full max-w-80">
+                <a class="absolute top-6 left-6 inline-flex items-center gap-2 max-md:static max-md:mx-auto max-md:mb-8" href="index.html">
+                    img(class="h-10 w-auto object-contain" src=require('Images/loy-krathong.svg') alt="")
+                    <span class="text-white font-light text-[20px] tracking-normal font-sans">ETHKratong</span>
+                </a>
+                <div class="mb-10 text-center text-3xl">Create your account</div>
+                <button class="btn btn-secondary w-full gap-2 bg-line">
+                    img(class="w-6" src=require('Images/google.svg') alt="")
+                    <span>Sign up with Google</span>
+                </button>
+                <div class="my-6 text-center text-description-2 text-description">Or sign up with email</div>
+                <div class="mb-4">
+                    <div class="flex items-center mb-2 text-description-2">
+                        <div class="mr-auto text-white">Email</div>
+                    </div>
+                    <div class="">
+                        <input class="input" type="text" name="email" placeholder="Enter email" required autocomplete="off" />
+                    </div>
+                </div>
+                <div class="mb-6">
+                    <div class="flex items-center mb-2 text-description-2">
+                        <div class="mr-auto text-white">Password</div>
+                    </div>
+                    <div class="">
+                        <input class="input" type="password" name="password" placeholder="Enter password" required autocomplete="off" />
+                    </div>
+                </div>
+                <button class="btn btn-primary w-full">Create account</button>
+                <div class="mt-4 text-center">
+                    <a class="text-description-3 text-description transition-colors hover:text-white" href="sign-in.html" >Already have an account?</a>
+                </div>
+            </div>
+        </div>
+        <div class="relative w-[55%] h-svh mask-r-from-0% mask-r-to-100% max-2xl:w-[60%] max-lg:hidden">
+            <div class="absolute top-1/2 left-20 -translate-y-1/2 size-224 overflow-hidden rounded-full max-4xl:size-236">
+                <div class="absolute -top-[11%] -left-[62%] -right-[50%] mask-radial-at-center mask-radial-from-20% mask-radial-to-52%">
+                    video(class="w-full" src=require('Videos/video-5.mp4') autoplay loop muted playsinline)
+                </div>
+                <div class="absolute top-70 -left-25 size-99 bg-green/20 rounded-full blur-[6.75rem]"></div>
+                <div class="absolute inset-0 rounded-full shadow-[0.875rem_1.0625rem_1.25rem_0_rgba(255,255,255,0.25)_inset] bg-black/1 max-md:shadow-[0.5rem_0.625rem_0.75rem_0_rgba(255,255,255,0.25)_inset]"></div>
+            </div>
+            <div class="absolute top-50% left-64 translate-y-1/2 z-2 size-99 bg-green/20 rounded-full blur-[6.75rem]"></div>
+        </div>
+    </div>

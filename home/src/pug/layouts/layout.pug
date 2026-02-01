@@ -1,0 +1,12 @@
+include mixins
+doctype html
+html(lang="en" class="text-[calc(0.7rem+0.4vw)] max-[2200px]:text-[calc(0.7rem+0.35vw)] max-[2050px]:text-[calc(0.7rem+0.3vw)] max-3xl:text-[1rem]")
+    head
+        include head
+    body(class="bg-black font-helvetica text-description-1 text-white antialiased max-md:text-description-mobile")
+        div(class="relative flex flex-col min-h-screen")
+            block content
+        script(src="https://code.jquery.com/jquery-3.7.1.min.js")
+        script(src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js")
+        script(src="https://unpkg.com/aos@next/dist/aos.js")
+        script(src=require('../../app.js'))

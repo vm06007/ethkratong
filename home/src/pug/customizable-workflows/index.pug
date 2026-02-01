@@ -1,0 +1,244 @@
+extends ../layouts/layout
+block content
+    +header(false, true, false)
+    <div class="overflow-hidden">
+        // hero
+        <div class="relative pt-38 pb-20 max-md:pt-21 max-md:pb-10">
+            <div class="center relative z-4" data-aos="fade">
+                <div class="max-w-187 mx-auto mb-101 text-center max-xl:max-w-160 max-xl:mb-80 max-lg:max-w-120 max-lg:mb-72 max-md:mb-90">
+                    <div class="mb-5 text-title-3 text-green max-md:mb-2 max-md:text-title-3-mobile">Customizable Workflows</div>
+                    <div class="text-big-title-2 bg-radial-white-1 bg-clip-text text-transparent max-xl:text-title-1 max-lg:text-title-2 max-md:text-big-title-mobile">Create a Conversation Flow Accordingly</div>
+                </div>
+                <div class="flex justify-between items-center max-md:block">
+                    <div class="flex items-center gap-4 max-md:mb-8">
+                        <div class="bg-radial-white-1 bg-clip-text text-transparent text-title-1 leading-[3rem] max-lg:text-title-2 max-md:text-title-1-mobile">+40%</div>
+                        <div class="text-description">Improved Chat <br>Efficiency</div>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <div class="relative flex justify-center items-center size-11 rounded-lg bg-gradient-to-b from-black/15 to-white/15 shadow-3 after:absolute after:inset-0 after:border after:border-line after:rounded-lg after:pointer-events-none">
+                            img(class="w-5" src=require('Images/workflow-alt.svg') alt="")
+                        </div>
+                        <div class="max-w-78 text-description max-lg:max-w-68 max-lg:text-description-2 max-md:text-description-mobile">Set up your chatbot interaction flow flexibly without coding. Build a more focused.</div>
+                    </div>
+                </div>
+            </div>
+            <div class="absolute top-65.5 left-1/2 -translate-x-1/2 z-2 w-360 mask-r-from-50% mask-r-to-100% mask-t-from-50% mask-t-to-90% mask-l-from-50% mask-l-to-100% mask-b-from-50% mask-b-to-90% max-xl:w-320 max-lg:top-54 max-md:top-42 max-md:mask-r-to-64% max-md:mask-l-to-64%">
+                video(class="w-full" src=require('Videos/video-4.mp4') autoplay loop muted playsinline)
+            </div>
+            <div>
+                <div class="absolute top-54 right-[calc(50%-55rem)] size-116.5 bg-green/15 rounded-full blur-[8rem] max-xl:right-[calc(50%-45rem)] max-md:top-38 max-md:-right-37 max-md:size-66 max-md:blur-[6rem]"></div>
+                <div class="absolute -bottom-6 left-[calc(50%-61.875rem)] size-116.5 bg-green/15 rounded-full blur-[8rem] max-xl:left-[calc(50%-51.875rem)] max-md:top-100 max-md:-left-40 max-md:size-66 max-md:blur-[6rem]"></div>
+            </div>
+        </div>
+        // features
+        <div class="relative pt-41 pb-42 max-xl:py-32 max-lg:py-24 max-md:py-15">
+            <div class="center relative z-2" data-aos="fade">
+                <div class="label mb-3 max-md:mb-1.5">Workflow Features</div>
+                <div class="max-w-172 bg-radial-white-1 bg-clip-text text-transparent text-title-1 max-lg:text-title-2 max-md:text-title-1-mobile">Customizable Workflow Key Features</div>
+            </div>
+            <div class="relative z-2 mt-26.5 before:absolute before:z-2 before:left-0 before:top-0 before:bottom-0 before:right-[calc(50%+40rem)] before:bg-gradient-to-r before:from-black before:to-transparent before:pointer-events-none after:absolute after:z-2 after:right-0 after:top-0 after:bottom-0 after:left-[calc(50%+40rem)] after:bg-gradient-to-l after:from-black after:to-transparent after:pointer-events-none max-2xl:before:right-auto max-2xl:before:w-20 max-2xl:after:left-auto max-2xl:after:w-20 max-xl:mt-16 max-xl:before:w-10 max-xl:after:w-10 max-md:mt-13 max-md:before:hidden max-md:after:hidden" data-aos="fade">
+                <div class="center">
+                    <div class="relative">
+                        <div class="absolute left-7.25 -right-7.25 bottom-2 h-0.25 bg-gradient-to-r from-12% from-white/10 via-41% via-green to-70% to-white/5 max-md:-left-30 max-md:-right-5"></div>
+                        <div class="swiper swiper-features !overflow-visible">
+                            <div class="swiper-wrapper">
+                                <div class="swiper-slide relative !flex gap-6 !h-auto min-h-65 pr-20 pb-10.5 before:absolute before:left-0 before:bottom-2 before:right-0 before:h-0.25 before:bg-white/10 first:before:left-7.25 max-xl:pr-4 max-md:min-h-55">
+                                    <div class="swiper-icon relative flex justify-center items-center shrink-0 size-14.5 rounded-2xl shadow-3 bg-gradient-to-b from-black/5 to-white/5">
+                                        <div class="absolute inset-1.5 rounded-xl bg-line shadow-3"></div>
+                                        img(class="relative z-1 w-5" src=require('Images/workflow-setting-alt.svg') alt="")
+                                    </div>
+                                    <div class="flex flex-col grow pt-3.5">
+                                        <div class="mb-3.5 text-title-3 max-md:text-title-2-mobile">Visual Flow Builder</div>
+                                        <div class="mb-4 text-description">Design conversation flows with an interactive visual interface — simply drag & drop nodes.</div>
+                                        <div class="mt-auto text-description-2 text-description">01</div>
+                                    </div>
+                                    <div class="swiper-line absolute top-14.5 left-7.25 bottom-2 w-0.25 opacity-50 transition-opacity bg-white/20 before:absolute before:inset-0 before:bg-gradient-to-b before:from-transparent before:to-[#7BE1CE] before:opacity-0"></div>
+                                    <div class="swiper-circle absolute left-[1.65625rem] bottom-1.5 size-1.5 after:absolute after:inset-0 after:rounded-full after:bg-[#374145] after:transition-colors before:absolute before:-inset-1 before:rounded-full before:bg-green/30 before:backdrop-blur-[0.125rem] before:opacity-0 before:transition-opacity"></div>
+                                </div>
+                                <div class="swiper-slide relative !flex gap-6 !h-auto min-h-65 pr-20 pb-10.5 before:absolute before:left-0 before:bottom-2 before:right-0 before:h-0.25 before:bg-white/10 first:before:left-7.25 max-xl:pr-4 max-md:min-h-55">
+                                    <div class="swiper-icon relative flex justify-center items-center shrink-0 size-14.5 rounded-2xl shadow-3 bg-gradient-to-b from-black/5 to-white/5">
+                                        <div class="absolute inset-1.5 rounded-xl bg-line shadow-3"></div>
+                                        img(class="relative z-1 w-5" src=require('Images/database-management.svg') alt="")
+                                    </div>
+                                    <div class="flex flex-col grow pt-3.5">
+                                        <div class="mb-3.5 text-title-3 max-md:text-title-2-mobile">Conditions & Branching Logic</div>
+                                        <div class="mb-4 text-description">Create branches based on user answers, specific data, or specific times.</div>
+                                        <div class="mt-auto text-description-2 text-description">02</div>
+                                    </div>
+                                    <div class="swiper-line absolute top-14.5 left-7.25 bottom-2 w-0.25 opacity-50 transition-opacity bg-white/20 before:absolute before:inset-0 before:bg-gradient-to-b before:from-transparent before:to-[#7BE1CE] before:opacity-0"></div>
+                                    <div class="swiper-circle absolute left-[1.65625rem] bottom-1.5 size-1.5 after:absolute after:inset-0 after:rounded-full after:bg-[#374145] after:transition-colors before:absolute before:-inset-1 before:rounded-full before:bg-green/30 before:backdrop-blur-[0.125rem] before:opacity-0 before:transition-opacity"></div>
+                                </div>
+                                <div class="swiper-slide relative !flex gap-6 !h-auto min-h-65 pr-20 pb-10.5 before:absolute before:left-0 before:bottom-2 before:right-0 before:h-0.25 before:bg-white/10 first:before:left-7.25 max-xl:pr-4 max-md:min-h-55">
+                                    <div class="swiper-icon relative flex justify-center items-center shrink-0 size-14.5 rounded-2xl shadow-3 bg-gradient-to-b from-black/5 to-white/5">
+                                        <div class="absolute inset-1.5 rounded-xl bg-line shadow-3"></div>
+                                        img(class="relative z-1 w-5" src=require('Images/message-arrow-up-right.svg') alt="")
+                                    </div>
+                                    <div class="flex flex-col grow pt-3.5">
+                                        <div class="mb-3.5 text-title-3 max-md:text-title-2-mobile">Multi-Turn Responses</div>
+                                        <div class="mb-4 text-description">Build long-form dialogs with contextual and natural conversations.</div>
+                                        <div class="mt-auto text-description-2 text-description">03</div>
+                                    </div>
+                                    <div class="swiper-line absolute top-14.5 left-7.25 bottom-2 w-0.25 opacity-50 transition-opacity bg-white/20 before:absolute before:inset-0 before:bg-gradient-to-b before:from-transparent before:to-[#7BE1CE] before:opacity-0"></div>
+                                    <div class="swiper-circle absolute left-[1.65625rem] bottom-1.5 size-1.5 after:absolute after:inset-0 after:rounded-full after:bg-[#374145] after:transition-colors before:absolute before:-inset-1 before:rounded-full before:bg-green/30 before:backdrop-blur-[0.125rem] before:opacity-0 before:transition-opacity"></div>
+                                </div>
+                                <div class="swiper-slide relative !flex gap-6 !h-auto min-h-65 pr-20 pb-10.5 before:absolute before:left-0 before:bottom-2 before:right-0 before:h-0.25 before:bg-white/10 first:before:left-7.25 max-xl:pr-4 max-md:min-h-55">
+                                    <div class="swiper-icon relative flex justify-center items-center shrink-0 size-14.5 rounded-2xl shadow-3 bg-gradient-to-b from-black/5 to-white/5">
+                                        <div class="absolute inset-1.5 rounded-xl bg-line shadow-3"></div>
+                                        img(class="relative z-1 w-5" src=require('Images/comments.svg') alt="")
+                                    </div>
+                                    <div class="flex flex-col grow pt-3.5">
+                                        <div class="mb-3.5 text-title-3 max-md:text-title-2-mobile">Automated Actions</div>
+                                        <div class="mb-4 text-description">Execute actions like sending emails, updating databases, or firing notifications based on user events.</div>
+                                        <div class="mt-auto text-description-2 text-description">04</div>
+                                    </div>
+                                    <div class="swiper-line absolute top-14.5 left-7.25 bottom-2 w-0.25 opacity-50 transition-opacity bg-white/20 before:absolute before:inset-0 before:bg-gradient-to-b before:from-transparent before:to-[#7BE1CE] before:opacity-0"></div>
+                                    <div class="swiper-circle absolute left-[1.65625rem] bottom-1.5 size-1.5 after:absolute after:inset-0 after:rounded-full after:bg-[#374145] after:transition-colors before:absolute before:-inset-1 before:rounded-full before:bg-green/30 before:backdrop-blur-[0.125rem] before:opacity-0 before:transition-opacity"></div>
+                                </div>
+                                <div class="swiper-slide relative !flex gap-6 !h-auto min-h-65 pr-20 pb-10.5 before:absolute before:left-0 before:bottom-2 before:right-0 before:h-0.25 before:bg-white/10 first:before:left-7.25 max-xl:pr-4 max-md:min-h-55">
+                                    <div class="swiper-icon relative flex justify-center items-center shrink-0 size-14.5 rounded-2xl shadow-3 bg-gradient-to-b from-black/5 to-white/5">
+                                        <div class="absolute inset-1.5 rounded-xl bg-line shadow-3"></div>
+                                        img(class="relative z-1 w-5" src=require('Images/workflow-setting-alt.svg') alt="")
+                                    </div>
+                                    <div class="flex flex-col grow pt-3.5">
+                                        <div class="mb-3.5 text-title-3 max-md:text-title-2-mobile">Visual Flow Builder</div>
+                                        <div class="mb-4 text-description">Design conversation flows with an interactive visual interface — simply drag & drop nodes.</div>
+                                        <div class="mt-auto text-description-2 text-description">05</div>
+                                    </div>
+                                    <div class="swiper-line absolute top-14.5 left-7.25 bottom-2 w-0.25 opacity-50 transition-opacity bg-white/20 before:absolute before:inset-0 before:bg-gradient-to-b before:from-transparent before:to-[#7BE1CE] before:opacity-0"></div>
+                                    <div class="swiper-circle absolute left-[1.65625rem] bottom-1.5 size-1.5 after:absolute after:inset-0 after:rounded-full after:bg-[#374145] after:transition-colors before:absolute before:-inset-1 before:rounded-full before:bg-green/30 before:backdrop-blur-[0.125rem] before:opacity-0 before:transition-opacity"></div>
+                                </div>
+                                <div class="swiper-slide relative !flex gap-6 !h-auto min-h-65 pr-20 pb-10.5 before:absolute before:left-0 before:bottom-2 before:right-0 before:h-0.25 before:bg-white/10 first:before:left-7.25 max-xl:pr-4 max-md:min-h-55">
+                                    <div class="swiper-icon relative flex justify-center items-center shrink-0 size-14.5 rounded-2xl shadow-3 bg-gradient-to-b from-black/5 to-white/5">
+                                        <div class="absolute inset-1.5 rounded-xl bg-line shadow-3"></div>
+                                        img(class="relative z-1 w-5" src=require('Images/database-management.svg') alt="")
+                                    </div>
+                                    <div class="flex flex-col grow pt-3.5">
+                                        <div class="mb-3.5 text-title-3 max-md:text-title-2-mobile">Conditions & Branching Logic</div>
+                                        <div class="mb-4 text-description">Create branches based on user answers, specific data, or specific times.</div>
+                                        <div class="mt-auto text-description-2 text-description">06</div>
+                                    </div>
+                                    <div class="swiper-line absolute top-14.5 left-7.25 bottom-2 w-0.25 opacity-50 transition-opacity bg-white/20 before:absolute before:inset-0 before:bg-gradient-to-b before:from-transparent before:to-[#7BE1CE] before:opacity-0"></div>
+                                    <div class="swiper-circle absolute left-[1.65625rem] bottom-1.5 size-1.5 after:absolute after:inset-0 after:rounded-full after:bg-[#374145] after:transition-colors before:absolute before:-inset-1 before:rounded-full before:bg-green/30 before:backdrop-blur-[0.125rem] before:opacity-0 before:transition-opacity"></div>
+                                </div>
+                                <div class="swiper-slide relative !flex gap-6 !h-auto min-h-65 pr-20 pb-10.5 before:absolute before:left-0 before:bottom-2 before:right-0 before:h-0.25 before:bg-white/10 first:before:left-7.25 max-xl:pr-4 max-md:min-h-55">
+                                    <div class="swiper-icon relative flex justify-center items-center shrink-0 size-14.5 rounded-2xl shadow-3 bg-gradient-to-b from-black/5 to-white/5">
+                                        <div class="absolute inset-1.5 rounded-xl bg-line shadow-3"></div>
+                                        img(class="relative z-1 w-5" src=require('Images/message-arrow-up-right.svg') alt="")
+                                    </div>
+                                    <div class="flex flex-col grow pt-3.5">
+                                        <div class="mb-3.5 text-title-3 max-md:text-title-2-mobile">Multi-Turn Responses</div>
+                                        <div class="mb-4 text-description">Build long-form dialogs with contextual and natural conversations.</div>
+                                        <div class="mt-auto text-description-2 text-description">07</div>
+                                    </div>
+                                    <div class="swiper-line absolute top-14.5 left-7.25 bottom-2 w-0.25 opacity-50 transition-opacity bg-white/20 before:absolute before:inset-0 before:bg-gradient-to-b before:from-transparent before:to-[#7BE1CE] before:opacity-0"></div>
+                                    <div class="swiper-circle absolute left-[1.65625rem] bottom-1.5 size-1.5 after:absolute after:inset-0 after:rounded-full after:bg-[#374145] after:transition-colors before:absolute before:-inset-1 before:rounded-full before:bg-green/30 before:backdrop-blur-[0.125rem] before:opacity-0 before:transition-opacity"></div>
+                                </div>
+                                <div class="swiper-slide relative !flex gap-6 !h-auto min-h-65 pr-20 pb-10.5 before:absolute before:left-0 before:bottom-2 before:right-0 before:h-0.25 before:bg-white/10 first:before:left-7.25 max-xl:pr-4 max-md:min-h-55">
+                                    <div class="swiper-icon relative flex justify-center items-center shrink-0 size-14.5 rounded-2xl shadow-3 bg-gradient-to-b from-black/5 to-white/5">
+                                        <div class="absolute inset-1.5 rounded-xl bg-line shadow-3"></div>
+                                        img(class="relative z-1 w-5" src=require('Images/comments.svg') alt="")
+                                    </div>
+                                    <div class="flex flex-col grow pt-3.5">
+                                        <div class="mb-3.5 text-title-3 max-md:text-title-2-mobile">Automated Actions</div>
+                                        <div class="mb-4 text-description">Execute actions like sending emails, updating databases, or firing notifications based on user events.</div>
+                                        <div class="mt-auto text-description-2 text-description">08</div>
+                                    </div>
+                                    <div class="swiper-line absolute top-14.5 left-7.25 bottom-2 w-0.25 opacity-50 transition-opacity bg-white/20 before:absolute before:inset-0 before:bg-gradient-to-b before:from-transparent before:to-[#7BE1CE] before:opacity-0"></div>
+                                    <div class="swiper-circle absolute left-[1.65625rem] bottom-1.5 size-1.5 after:absolute after:inset-0 after:rounded-full after:bg-[#374145] after:transition-colors before:absolute before:-inset-1 before:rounded-full before:bg-green/30 before:backdrop-blur-[0.125rem] before:opacity-0 before:transition-opacity"></div>
+                                </div>
+                            </div>
+                            <div class="swiper-button-next"></div>
+                            <div class="swiper-button-prev"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="absolute left-[calc(50%-20rem)] bottom-9 size-67 bg-green/10 rounded-full blur-[4rem] max-xl:left-[calc(50%-16.5rem)] max-xl:bottom-0 max-lg:left-[calc(50%-6.5rem)] max-lg:-bottom-6.5 max-md:-left-22 max-md:-bottom-22 max-md:blur-[4rem]"></div>
+        </div>
+        // automation
+        <div class="relative min-h-215 pt-28 max-xl:pt-24 max-lg:min-h-180 max-md:min-h-189 max-md:pt-25">
+            <div class="center relative z-2">
+                <div class="max-w-214 mx-auto text-center" data-aos="fade">
+                    <div class="label mb-3 max-md:mb-1.5">Smart Automation</div>
+                    <div class="mb-3 bg-radial-white-1 bg-clip-text text-transparent text-title-1 max-lg:text-title-2 max-md:text-title-1-mobile">Why Are Workflows Important?</div>
+                    <div class="text-description">Every business has unique needs. With customizable workflows, you can determine how your chatbot responds, asks questions, and directs users — from start to finish, like a sign-up, purchase, or help request.</div>
+                </div>
+            </div>
+            <div class="absolute top-94 left-1/2 -translate-x-1/2 size-236 overflow-hidden rounded-full mask-b-from-20% mask-b-to-50% max-xl:top-84 max-lg:size-160 max-md:top-96 max-md:size-145">
+                <div class="absolute -top-[11%] -left-[62%] -right-[50%] mask-radial-at-center mask-radial-from-20% mask-radial-to-52%">
+                    video(class="w-full" src=require('Videos/video-5.mp4') autoplay loop muted playsinline)
+                </div>
+                <div class="absolute top-70 -left-25 size-99 bg-green/20 rounded-full blur-[6.75rem]"></div>
+                <div class="absolute inset-0 rounded-full shadow-[0.875rem_1.0625rem_1.25rem_0_rgba(255,255,255,0.25)_inset] bg-black/1 max-md:shadow-[0.5rem_0.625rem_0.75rem_0_rgba(255,255,255,0.25)_inset]"></div>
+            </div>
+            <div class="absolute top-87.5 right-[calc(50%-27.94rem)] size-99 bg-green/20 rounded-full blur-[6.75rem] max-md:top-95 max-lg:size-64 max-md:-right-20 max-md:blur-[5rem]"></div>
+        </div>
+        // faq
+        <div class="pt-31 pb-32.5 max-xl:py-24 max-md:py-15">
+            <div class="center relative z-2">
+                <div class="max-w-169 mx-auto mb-16 text-center max-lg:mb-12 max-md:mb-8" data-aos="fade">
+                    <div class="label mb-3 max-md:mb-1.5">FAQ</div>
+                    <div class="bg-radial-white-2 bg-clip-text text-transparent text-title-1 max-lg:text-title-2 max-md:text-title-1-mobile">About Customizable Workflows</div>
+                </div>
+                <div class="relative max-w-213 mx-auto rounded-[1.25rem] shadow-[0.0625rem_0.0625rem_0.0625rem_0_rgba(255,255,255,0.10)_inset] after:absolute after:inset-0 after:border after:border-line after:rounded-[1.25rem] after:pointer-events-none" data-aos="fade">
+                    <div class="accordion-item border-b border-line last:border-b-0">
+                        <div class="accordion-head flex justify-between items-center p-3 pl-6 cursor-pointer">
+                            <div class="text-title-5 max-md:text-title-3-mobile">What is Customizable Workflow?</div>
+                            <div class="relative flex justify-center items-center shrink-0 size-7.5 ml-6 rounded-[0.4375rem] bg-black/50 shadow-2 after:absolute after:inset-0 after:border after:border-line after:rounded-[0.4375rem] after:pointer-events-none">
+                                <svg class="size-5 fill-white transition-transform" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20">
+                                    <path d="M5.646 7.646a.5.5 0 0 1 .707 0L10 11.293l3.646-3.647a.5.5 0 0 1 .638-.058l.069.058a.5.5 0 0 1 0 .707l-4 4a.5.5 0 0 1-.707 0l-4-4a.5.5 0 0 1 0-.707z" />
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="accordion-body hidden p-3 pl-6 text-description max-md:pt-0">Automate your customer service with conversational AI that can answer, understand, and adapt to each user in real-time.</div>
+                    </div>
+                    <div class="accordion-item border-b border-line last:border-b-0">
+                        <div class="accordion-head flex justify-between items-center p-3 pl-6 cursor-pointer">
+                            <div class="text-title-5 max-md:text-title-3-mobile">Do I need to code to create a workflow?</div>
+                            <div class="relative flex justify-center items-center shrink-0 size-7.5 ml-6 rounded-[0.4375rem] bg-black/50 shadow-2 after:absolute after:inset-0 after:border after:border-line after:rounded-[0.4375rem] after:pointer-events-none">
+                                <svg class="size-5 fill-white transition-transform" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20">
+                                    <path d="M5.646 7.646a.5.5 0 0 1 .707 0L10 11.293l3.646-3.647a.5.5 0 0 1 .638-.058l.069.058a.5.5 0 0 1 0 .707l-4 4a.5.5 0 0 1-.707 0l-4-4a.5.5 0 0 1 0-.707z" />
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="accordion-body hidden p-3 pl-6 text-description max-md:pt-0">Automate your customer service with conversational AI that can answer, understand, and adapt to each user in real-time.</div>
+                    </div>
+                    <div class="accordion-item border-b border-line last:border-b-0">
+                        <div class="accordion-head flex justify-between items-center p-3 pl-6 cursor-pointer">
+                            <div class="text-title-5 max-md:text-title-3-mobile">Can I add custom logic or specific conditions?</div>
+                            <div class="relative flex justify-center items-center shrink-0 size-7.5 ml-6 rounded-[0.4375rem] bg-black/50 shadow-2 after:absolute after:inset-0 after:border after:border-line after:rounded-[0.4375rem] after:pointer-events-none">
+                                <svg class="size-5 fill-white transition-transform" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20">
+                                    <path d="M5.646 7.646a.5.5 0 0 1 .707 0L10 11.293l3.646-3.647a.5.5 0 0 1 .638-.058l.069.058a.5.5 0 0 1 0 .707l-4 4a.5.5 0 0 1-.707 0l-4-4a.5.5 0 0 1 0-.707z" />
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="accordion-body hidden p-3 pl-6 text-description max-md:pt-0">Automate your customer service with conversational AI that can answer, understand, and adapt to each user in real-time.</div>
+                    </div>
+                    <div class="accordion-item border-b border-line last:border-b-0">
+                        <div class="accordion-head flex justify-between items-center p-3 pl-6 cursor-pointer">
+                            <div class="text-title-5 max-md:text-title-3-mobile">Can workflows be used across channels?</div>
+                            <div class="relative flex justify-center items-center shrink-0 size-7.5 ml-6 rounded-[0.4375rem] bg-black/50 shadow-2 after:absolute after:inset-0 after:border after:border-line after:rounded-[0.4375rem] after:pointer-events-none">
+                                <svg class="size-5 fill-white transition-transform" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20">
+                                    <path d="M5.646 7.646a.5.5 0 0 1 .707 0L10 11.293l3.646-3.647a.5.5 0 0 1 .638-.058l.069.058a.5.5 0 0 1 0 .707l-4 4a.5.5 0 0 1-.707 0l-4-4a.5.5 0 0 1 0-.707z" />
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="accordion-body hidden p-3 pl-6 text-description max-md:pt-0">Automate your customer service with conversational AI that can answer, understand, and adapt to each user in real-time.</div>
+                    </div>
+                    <div class="accordion-item border-b border-line last:border-b-0">
+                        <div class="accordion-head flex justify-between items-center p-3 pl-6 cursor-pointer">
+                            <div class="text-title-5 max-md:text-title-3-mobile">Can I save and clone workflows?</div>
+                            <div class="relative flex justify-center items-center shrink-0 size-7.5 ml-6 rounded-[0.4375rem] bg-black/50 shadow-2 after:absolute after:inset-0 after:border after:border-line after:rounded-[0.4375rem] after:pointer-events-none">
+                                <svg class="size-5 fill-white transition-transform" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20">
+                                    <path d="M5.646 7.646a.5.5 0 0 1 .707 0L10 11.293l3.646-3.647a.5.5 0 0 1 .638-.058l.069.058a.5.5 0 0 1 0 .707l-4 4a.5.5 0 0 1-.707 0l-4-4a.5.5 0 0 1 0-.707z" />
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="accordion-body hidden p-3 pl-6 text-description max-md:pt-0">Automate your customer service with conversational AI that can answer, understand, and adapt to each user in real-time.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        include ../includes/start
+    </div>
+    +footer(false)

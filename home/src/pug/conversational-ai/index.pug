@@ -1,0 +1,185 @@
+extends ../layouts/layout
+block content
+    +header(false, true, false)
+    <div class="overflow-hidden">
+        // hero
+        <div class="relative pt-46 pb-54 max-2xl:pb-40 max-xl:pb-32 max-lg:pt-40 max-lg:pb-24 max-md:pt-21 max-md:pb-16" data-aos="fade">
+            <div class="center max-lg:relative max-lg:z-2">
+                <div class="max-w-126 max-lg:max-w-full">
+                    <div class="relative z-2 mb-5 text-title-3 text-green max-md:mb-2 max-md:text-title-3-mobile">Conversational AI</div>
+                    <div class="relative z-2 mb-20.5 bg-radial-white-2 bg-clip-text text-transparent text-big-title-2 max-xl:text-title-1 max-xl:mb-14 max-lg:mb-8 max-md:max-w-80 max-md:mb-15 max-md:text-big-title-mobile">Natural Conversation</div>
+                    <div class="absolute top-47 right-[calc(50%-42.6rem)] z-1 w-186 max-2xl:w-172 max-2xl:right-[calc(50%-41rem)] max-xl:w-152 max-xl:right-[calc(50%-37rem)] max-lg:static max-lg:mx-auto max-lg:mb-10 max-md:w-full max-md:mb-17.5">
+                        img(class="w-full" src=require('Images/features-pic.png') alt="")
+                    </div>
+                    <ul class="relative z-2 flex flex-col gap-7 max-md:gap-4">
+                        <li class="flex items-center gap-5 text-title-4 max-xl:text-title-5 max-md:gap-3.5 max-md:text-title-4-mobile">
+                            <div class="flex justify-center items-center shrink-0 size-6 bg-green rounded-full shadow-[0.0625rem_0.0625rem_0.0625rem_0_rgba(255,255,255,0.20)_inset,_0_0_0.625rem_0_rgba(255,255,255,0.50)_inset]">
+                                <svg class="size-5 fill-black" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20">
+                                    <path d="M13.47 6.97A.75.75 0 0 1 14.53 8.03l-5 5a.75.75 0 0 1-1.061 0l-3-3A.75.75 0 0 1 6.53 8.97L9 11.439l4.47-4.469z" />
+                                </svg>
+                            </div>
+                            <div>Understands users' natural language contextually</div>
+                        </li>
+                        <li class="flex items-center gap-5 text-title-4 max-xl:text-title-5 max-md:gap-3.5 max-md:text-title-4-mobile">
+                            <div class="flex justify-center items-center shrink-0 size-6 bg-green rounded-full shadow-[0.0625rem_0.0625rem_0.0625rem_0_rgba(255,255,255,0.20)_inset,_0_0_0.625rem_0_rgba(255,255,255,0.50)_inset]">
+                                <svg class="size-5 fill-black" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20">
+                                    <path d="M13.47 6.97A.75.75 0 0 1 14.53 8.03l-5 5a.75.75 0 0 1-1.061 0l-3-3A.75.75 0 0 1 6.53 8.97L9 11.439l4.47-4.469z" />
+                                </svg>
+                            </div>
+                            <div>Responds in real-time with empathy and accuracy</div>
+                        </li>
+                        <li class="flex items-center gap-5 text-title-4 max-xl:text-title-5 max-md:gap-3.5 max-md:text-title-4-mobile">
+                            <div class="flex justify-center items-center shrink-0 size-6 bg-green rounded-full shadow-[0.0625rem_0.0625rem_0.0625rem_0_rgba(255,255,255,0.20)_inset,_0_0_0.625rem_0_rgba(255,255,255,0.50)_inset]">
+                                <svg class="size-5 fill-black" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20">
+                                    <path d="M13.47 6.97A.75.75 0 0 1 14.53 8.03l-5 5a.75.75 0 0 1-1.061 0l-3-3A.75.75 0 0 1 6.53 8.97L9 11.439l4.47-4.469z" />
+                                </svg>
+                            </div>
+                            <div>Adapts communication style to user preferences</div>
+                        </li>
+                        <li class="flex items-center gap-5 text-title-4 max-xl:text-title-5 max-md:gap-3.5 max-md:text-title-4-mobile">
+                            <div class="flex justify-center items-center shrink-0 size-6 bg-green rounded-full shadow-[0.0625rem_0.0625rem_0.0625rem_0_rgba(255,255,255,0.20)_inset,_0_0_0.625rem_0_rgba(255,255,255,0.50)_inset]">
+                                <svg class="size-5 fill-black" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20">
+                                    <path d="M13.47 6.97A.75.75 0 0 1 14.53 8.03l-5 5a.75.75 0 0 1-1.061 0l-3-3A.75.75 0 0 1 6.53 8.97L9 11.439l4.47-4.469z" />
+                                </svg>
+                            </div>
+                            <div>Supports ongoing dialogue across sessions & platforms</div>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div>
+                <div class="absolute top-44 right-[calc(50%-20.8rem)] size-91.5 bg-green/20 rounded-full blur-[6.25rem] max-lg:top-64 max-md:top-54 max-md:right-auto max-md:left-2.5 max-md:size-57 max-md:blur-[4rem]"></div>
+                <div class="absolute top-119.5 left-[calc(50%-55rem)] size-65.5 bg-green/20 rounded-full blur-[4.5rem] max-md:top-auto max-md:-left-28 max-md:bottom-10 max-md:size-49"></div>
+            </div>
+        </div>
+        // about
+        <div class="relative pt-38 pb-65 overflow-hidden max-xl:pb-56 max-lg:pt-32 max-lg:pb-48 max-md:pt-15 max-md:pb-36">
+            <div class="center relative z-2" data-aos="fade">
+                <div class="flex gap-11 max-lg:flex-col max-lg:gap-8 max-md:gap-2">
+                    <div class="shrink-0 w-44.5 text-title-3 text-green max-lg:w-full max-md:text-title-3-mobile">What is Conversational AI?</div>
+                    <div class="grow -mt-3 text-title-2 max-xl:text-[2rem] max-xl:leading-[3rem] max-md:mt-0 max-md:text-[1.25rem] max-md:leading-[1.875rem]">
+                        <span class="bg-radial-white-2 bg-clip-text text-transparent">Conversational AI is an NLP-based technology that enables chatbots to</span>
+                        <span class="bg-radial-gray bg-clip-text text-transparent">understand the intent, emotions, and context of user messages naturally.</span>
+                    </div>
+                </div>
+            </div>
+            <div class="absolute left-1/2 -bottom-40 -translate-x-1/2 w-360 mask-r-from-50% mask-r-to-90% mask-t-from-50% mask-t-to-90% mask-l-from-50% mask-l-to-90% mask-b-from-50% mask-b-to-90% max-xl:-bottom-30 max-xl:w-280 max-lg:-bottom-25 max-lg:w-240 max-md:w-214 max-md:-bottom-26">
+                video(class="w-full" src=require('Videos/video-3.mp4') autoplay loop muted playsinline)
+            </div>
+            <div class="absolute left-1/2 -bottom-45 -translate-x-1/2 w-200 h-76 rounded-[25rem] bg-green/20 blur-[5.25rem] max-lg:w-160 max-lg:h-56 max-md:-bottom-30 max-md:w-134 max-md:h-50 max-md:blur-[3.25rem]"></div>
+        </div>
+        <div class="relative pt-40.5 pb-36 max-xl:pb-26 max-md:pt-30 max-md:pb-15">
+            <div class="center relative z-2">
+                <div class="max-w-122 mx-auto mb-16 text-center max-lg:mb-12 max-md:mb-8" data-aos="fade">
+                    <div class="label mb-3 max-md:mb-1.5">Smart, Scalable, Effective</div>
+                    <div class="bg-radial-white-2 bg-clip-text text-transparent text-title-1 max-lg:text-title-2 max-md:text-title-1-mobile">Key Benefits of Conversational AI</div>
+                </div>
+                <div class="relative p-7.5 pt-107.5 shadow-2 rounded-[1.25rem] bg-content backdrop-blur-[1.25rem] overflow-hidden after:absolute after:inset-0 after:border after:border-line after:rounded-[1.25rem] after:pointer-events-none max-md:pt-62 max-md:p-5" data-aos="fade">
+                    <div class="absolute top-0 left-1/2 -translate-x-1/2 w-320 max-md:w-180">
+                        img(class="w-full" src=require('Images/benefits-pic.png') alt="")
+                    </div>
+                    <div class="flex gap-3.5 max-lg:flex-wrap max-lg:gap-0 max-lg:-mt-3 max-lg:-mx-1.5">
+                        <div class="relative flex items-center flex-1 gap-3.5 h-17 px-3.5 rounded-[0.875rem] bg-black/50 shadow-2 backdrop-blur-[1.25rem] after:absolute after:inset-0 after:border after:border-line after:rounded-[0.875rem] after:pointer-events-none max-lg:w-[calc(50%-0.75rem)] max-lg:flex-auto max-lg:mt-3 max-lg:mx-1.5 max-md:block max-md:h-auto max-md:p-3.5 max-md:pb-3">
+                            <div class="flex justify-center items-center shrink-0 size-10 shadow-3 rounded-xl bg-line max-md:mb-3">
+                                img(class="w-5" src=require('Images/review.svg') alt="")
+                            </div>
+                            <div class="text-title-5 max-xl:text-description-2 max-md:text-title-4-mobile">Increased Customer Satisfaction</div>
+                        </div>
+                        <div class="relative flex items-center flex-1 gap-3.5 h-17 px-3.5 rounded-[0.875rem] bg-black/50 shadow-2 backdrop-blur-[1.25rem] after:absolute after:inset-0 after:border after:border-line after:rounded-[0.875rem] after:pointer-events-none max-lg:w-[calc(50%-0.75rem)] max-lg:flex-auto max-lg:mt-3 max-lg:mx-1.5 max-md:block max-md:h-auto max-md:p-3.5 max-md:pb-3">
+                            <div class="flex justify-center items-center shrink-0 size-10 shadow-3 rounded-xl bg-line max-md:mb-3">
+                                img(class="w-5" src=require('Images/clock-up.svg') alt="")
+                            </div>
+                            <div class="text-title-5 max-xl:text-description-2 max-md:text-title-4-mobile">High Operational Efficiency</div>
+                        </div>
+                        <div class="relative flex items-center flex-1 gap-3.5 h-17 px-3.5 rounded-[0.875rem] bg-black/50 shadow-2 backdrop-blur-[1.25rem] after:absolute after:inset-0 after:border after:border-line after:rounded-[0.875rem] after:pointer-events-none max-lg:w-[calc(50%-0.75rem)] max-lg:flex-auto max-lg:mt-3 max-lg:mx-1.5 max-md:block max-md:h-auto max-md:p-3.5 max-md:pb-3">
+                            <div class="flex justify-center items-center shrink-0 size-10 shadow-3 rounded-xl bg-line max-md:mb-3">
+                                img(class="w-5" src=require('Images/time-twenty-four.svg') alt="")
+                            </div>
+                            <div class="text-title-5 max-xl:text-description-2 max-md:text-title-4-mobile">24/7 Nonstop Service</div>
+                        </div>
+                        <div class="relative flex items-center flex-1 gap-3.5 h-17 px-3.5 rounded-[0.875rem] bg-black/50 shadow-2 backdrop-blur-[1.25rem] after:absolute after:inset-0 after:border after:border-line after:rounded-[0.875rem] after:pointer-events-none max-lg:w-[calc(50%-0.75rem)] max-lg:flex-auto max-lg:mt-3 max-lg:mx-1.5 max-md:block max-md:h-auto max-md:p-3.5 max-md:pb-3">
+                            <div class="flex justify-center items-center shrink-0 size-10 shadow-3 rounded-xl bg-line max-md:mb-3">
+                                img(class="w-5" src=require('Images/sack-dollar.svg') alt="")
+                            </div>
+                            <div class="text-title-5 max-xl:text-description-2 max-md:text-title-4-mobile">Scalability at No Additional Cost</div>
+                        </div>
+                    </div>
+                    <div class="relative flex justify-between items-center min-h-10 mt-3.5 px-3.5 py-2 bg-black/80 rounded-[0.875rem] shadow-[0.0625rem_0.0625rem_0.0625rem_0_rgba(255,255,255,0.05)_inset] after:absolute after:inset-0 after:border after:border-line after:rounded-[0.875rem] after:pointer-events-none">
+                        <div class="text-description-2 text-description max-md:text-description-mobile">Harness the power of AI to create smarter, more responsive, and more cost-effective customer experiences in the long run.</div>
+                        <div class="shrink-0 ml-6 max-md:ml-3">
+                            img(class="w-5 opacity-100" src=require('Images/benefit-increase.svg') alt="")
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="absolute left-[calc(50%-52.5rem)] -bottom-49 size-99 bg-green/20 rounded-full blur-[6.75rem] max-md:-left-30 max-md:-bottom-33 max-md:size-64.5 max-md:blur-[4rem]"></div>
+        </div>
+        // faq
+        <div class="pt-40.5 pb-42 max-xl:py-32 max-lg:py-24 max-md:py-15">
+            <div class="center relative z-2">
+                <div class="max-w-169 mx-auto mb-16 text-center max-lg:mb-12 max-md:mb-8" data-aos="fade">
+                    <div class="label mb-3 max-md:mb-1.5">FAQ</div>
+                    <div class="bg-radial-white-2 bg-clip-text text-transparent text-title-1 max-lg:text-title-2 max-md:text-title-1-mobile">About Conversational AI</div>
+                </div>
+                <div class="relative max-w-213 mx-auto rounded-[1.25rem] shadow-[0.0625rem_0.0625rem_0.0625rem_0_rgba(255,255,255,0.10)_inset] after:absolute after:inset-0 after:border after:border-line after:rounded-[1.25rem] after:pointer-events-none" data-aos="fade">
+                    <div class="accordion-item border-b border-line last:border-b-0">
+                        <div class="accordion-head flex justify-between items-center p-3 pl-6 cursor-pointer">
+                            <div class="text-title-5 max-md:text-title-3-mobile">What is Conversational AI?</div>
+                            <div class="relative flex justify-center items-center shrink-0 size-7.5 ml-6 rounded-[0.4375rem] bg-black/50 shadow-2 after:absolute after:inset-0 after:border after:border-line after:rounded-[0.4375rem] after:pointer-events-none">
+                                <svg class="size-5 fill-white transition-transform" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20">
+                                    <path d="M5.646 7.646a.5.5 0 0 1 .707 0L10 11.293l3.646-3.647a.5.5 0 0 1 .638-.058l.069.058a.5.5 0 0 1 0 .707l-4 4a.5.5 0 0 1-.707 0l-4-4a.5.5 0 0 1 0-.707z" />
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="accordion-body hidden p-3 pl-6 text-description max-md:pt-0">Automate your customer service with conversational AI that can answer, understand, and adapt to each user in real-time.</div>
+                    </div>
+                    <div class="accordion-item border-b border-line last:border-b-0">
+                        <div class="accordion-head flex justify-between items-center p-3 pl-6 cursor-pointer">
+                            <div class="text-title-5 max-md:text-title-3-mobile">What is the difference between a regular chatbot and Conversational AI?</div>
+                            <div class="relative flex justify-center items-center shrink-0 size-7.5 ml-6 rounded-[0.4375rem] bg-black/50 shadow-2 after:absolute after:inset-0 after:border after:border-line after:rounded-[0.4375rem] after:pointer-events-none">
+                                <svg class="size-5 fill-white transition-transform" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20">
+                                    <path d="M5.646 7.646a.5.5 0 0 1 .707 0L10 11.293l3.646-3.647a.5.5 0 0 1 .638-.058l.069.058a.5.5 0 0 1 0 .707l-4 4a.5.5 0 0 1-.707 0l-4-4a.5.5 0 0 1 0-.707z" />
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="accordion-body hidden p-3 pl-6 text-description max-md:pt-0">Automate your customer service with conversational AI that can answer, understand, and adapt to each user in real-time.</div>
+                    </div>
+                    <div class="accordion-item border-b border-line last:border-b-0">
+                        <div class="accordion-head flex justify-between items-center p-3 pl-6 cursor-pointer">
+                            <div class="text-title-5 max-md:text-title-3-mobile">Can Conversational AI be used for all types of businesses?</div>
+                            <div class="relative flex justify-center items-center shrink-0 size-7.5 ml-6 rounded-[0.4375rem] bg-black/50 shadow-2 after:absolute after:inset-0 after:border after:border-line after:rounded-[0.4375rem] after:pointer-events-none">
+                                <svg class="size-5 fill-white transition-transform" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20">
+                                    <path d="M5.646 7.646a.5.5 0 0 1 .707 0L10 11.293l3.646-3.647a.5.5 0 0 1 .638-.058l.069.058a.5.5 0 0 1 0 .707l-4 4a.5.5 0 0 1-.707 0l-4-4a.5.5 0 0 1 0-.707z" />
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="accordion-body hidden p-3 pl-6 text-description max-md:pt-0">Automate your customer service with conversational AI that can answer, understand, and adapt to each user in real-time.</div>
+                    </div>
+                    <div class="accordion-item border-b border-line last:border-b-0">
+                        <div class="accordion-head flex justify-between items-center p-3 pl-6 cursor-pointer">
+                            <div class="text-title-5 max-md:text-title-3-mobile">Can this technology support more than one language?</div>
+                            <div class="relative flex justify-center items-center shrink-0 size-7.5 ml-6 rounded-[0.4375rem] bg-black/50 shadow-2 after:absolute after:inset-0 after:border after:border-line after:rounded-[0.4375rem] after:pointer-events-none">
+                                <svg class="size-5 fill-white transition-transform" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20">
+                                    <path d="M5.646 7.646a.5.5 0 0 1 .707 0L10 11.293l3.646-3.647a.5.5 0 0 1 .638-.058l.069.058a.5.5 0 0 1 0 .707l-4 4a.5.5 0 0 1-.707 0l-4-4a.5.5 0 0 1 0-.707z" />
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="accordion-body hidden p-3 pl-6 text-description max-md:pt-0">Automate your customer service with conversational AI that can answer, understand, and adapt to each user in real-time.</div>
+                    </div>
+                    <div class="accordion-item border-b border-line last:border-b-0">
+                        <div class="accordion-head flex justify-between items-center p-3 pl-6 cursor-pointer">
+                            <div class="text-title-5 max-md:text-title-3-mobile">How do I integrate Conversational AI into my website?</div>
+                            <div class="relative flex justify-center items-center shrink-0 size-7.5 ml-6 rounded-[0.4375rem] bg-black/50 shadow-2 after:absolute after:inset-0 after:border after:border-line after:rounded-[0.4375rem] after:pointer-events-none">
+                                <svg class="size-5 fill-white transition-transform" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20">
+                                    <path d="M5.646 7.646a.5.5 0 0 1 .707 0L10 11.293l3.646-3.647a.5.5 0 0 1 .638-.058l.069.058a.5.5 0 0 1 0 .707l-4 4a.5.5 0 0 1-.707 0l-4-4a.5.5 0 0 1 0-.707z" />
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="accordion-body hidden p-3 pl-6 text-description max-md:pt-0">Automate your customer service with conversational AI that can answer, understand, and adapt to each user in real-time.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        include ../includes/start
+    </div>
+    +footer(false)

@@ -1,0 +1,233 @@
+extends layouts/layout
+block content
+    +header(true, false, false)
+    <div class="overflow-hidden">
+        // hero
+
+
+
+        <div class="relative pt-58 pb-20 max-xl:pt-48 max-lg:pt-44 max-md:pt-21 max-md:pb-15">
+            <div class="center relative z-3" data-aos="fade">
+                <div class="max-w-187">
+                    <div class="mb-2 text-title-3 text-green max-md:text-[14px] max-md:mb-2">The Art of Visual Transaction Flows</div>
+                    <div class="mb-41 text-big-title-1 bg-radial-white-1 bg-clip-text text-transparent max-xl:text-big-title-2 max-lg:text-title-1 max-lg:mb-10 max-md:mb-80 max-md:text-big-title-mobile">ETHKratong Transactions</div>
+                    <div class="max-w-94 mb-9.5 text-description max-lg:max-w-76 max-md:max-w-full max-md:mb-3.5">Design, simulate, and execute complex Ethereum transactions with a beautiful visual interface. Inspired by the Thai tradition of Loy Kratong, we bring grace and flow to your DeFi interactions.</div>
+                    <div class="flex flex-col gap-2 text-title-5 text-green max-md:text-title-3-mobile mb-7.5 max-md:mb-6">
+                        <div>Float your transactions on-chain</div>
+                        <div>Beautifully Crafted DeFi Sequences</div>
+                    </div>
+                    <div class="flex gap-7.5 max-md:mb-12.5">
+                        <a class="fill-white transition-colors hover:fill-green" href="https://github.com/ethkratong/ethkratong" target="_blank">
+                            <svg class="size-5 fill-inherit" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24">
+                                <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                            </svg>
+                        </a>
+                        <a class="fill-white transition-colors hover:fill-green" href="https://x.com/ethkratong" target="_blank">
+                            <svg class="size-5 fill-inherit" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20">
+                                <path d="M15.75.96h3.068l-6.702 7.658L20 19.039h-6.171L8.993 12.72l-5.528 6.319H.391l7.167-8.192L0 .96h6.328l4.368 5.776L15.75.96zm-1.078 16.245h1.699L5.402 2.698H3.577l11.096 14.507z" />
+                            </svg>
+                        </a>
+                    </div>
+                    <div class="absolute right-20 bottom-0 grid grid-cols-2 gap-4 max-xl:right-10 max-md:static max-md:grid-cols-1">
+                        <div class="relative w-42 p-5 pb-6.5 rounded-[1.25rem] bg-content text-center shadow-1 backdrop-blur-[1.25rem] max-md:px-3" data-aos="fade-up">
+                            <div class="absolute inset-0 border border-line rounded-[1.25rem] pointer-events-none"></div>
+                            <div class="relative flex justify-center items-center size-11 mx-auto mb-4 rounded-lg bg-gradient-to-b from-black/15 to-white/15 shadow-[0.0625rem_0.0625rem_0.0625rem_0_rgba(255,255,255,0.10)_inset,0_0_0.625rem_0_rgba(255,255,255,0.10)_inset]">
+                                <div class="absolute inset-0 border border-line rounded-lg"></div>
+                                img(class="w-5" src=require('Images/clock.svg') alt="")
+                            </div>
+                            <div class="text-title-4 max-md:text-title-3-mobile">Atomic Execution</div>
+                        </div>
+                        <div class="relative w-42 p-5 pb-6.5 rounded-[1.25rem] bg-content text-center shadow-1 backdrop-blur-[1.25rem] max-md:px-3" data-aos="fade-up" data-aos-delay="100">
+                            <div class="absolute inset-0 border border-line rounded-[1.25rem] pointer-events-none"></div>
+                            <div class="relative flex justify-center items-center size-11 mx-auto mb-4 rounded-lg bg-gradient-to-b from-black/15 to-white/15 shadow-[0.0625rem_0.0625rem_0.0625rem_0_rgba(255,255,255,0.10)_inset,0_0_0.625rem_0_rgba(255,255,255,0.10)_inset]">
+                                <div class="absolute inset-0 border border-line rounded-lg"></div>
+                                img(class="w-5" src=require('Images/floor.svg') alt="")
+                            </div>
+                            <div class="text-title-4 max-md:text-title-3-mobile">Visual Flow Builder</div>
+                        </div>
+                        <div class="relative w-42 p-5 pb-6.5 rounded-[1.25rem] bg-content text-center shadow-1 backdrop-blur-[1.25rem] max-md:px-3" data-aos="fade-up" data-aos-delay="200">
+                            <div class="absolute inset-0 border border-line rounded-[1.25rem] pointer-events-none"></div>
+                            <div class="relative flex justify-center items-center size-11 mx-auto mb-4 rounded-lg bg-gradient-to-b from-black/15 to-white/15 shadow-[0.0625rem_0.0625rem_0.0625rem_0_rgba(255,255,255,0.10)_inset,0_0_0.625rem_0_rgba(255,255,255,0.10)_inset]">
+                                <div class="absolute inset-0 border border-line rounded-lg"></div>
+                                img(class="w-5" src=require('Images/chart.svg') alt="")
+                            </div>
+                            <div class="text-title-4 max-md:text-title-3-mobile">Balance Tracking</div>
+                        </div>
+                        <div class="relative w-42 p-5 pb-6.5 rounded-[1.25rem] bg-content text-center shadow-1 backdrop-blur-[1.25rem] max-md:px-3" data-aos="fade-up" data-aos-delay="300">
+                            <div class="absolute inset-0 border border-line rounded-[1.25rem] pointer-events-none"></div>
+                            <div class="relative flex justify-center items-center size-11 mx-auto mb-4 rounded-lg bg-gradient-to-b from-black/15 to-white/15 shadow-[0.0625rem_0.0625rem_0.0625rem_0_rgba(255,255,255,0.10)_inset,0_0_0.625rem_0_rgba(255,255,255,0.10)_inset]">
+                                <div class="absolute inset-0 border border-line rounded-lg"></div>
+                                img(class="w-5" src=require('Images/workflow-setting-alt.svg') alt="")
+                            </div>
+                            <div class="text-title-4 max-md:text-title-3-mobile">Conditional Logic</div>
+                        </div>
+                        <div class="relative w-42 p-5 pb-6.5 rounded-[1.25rem] bg-content text-center shadow-1 backdrop-blur-[1.25rem] max-md:px-3" data-aos="fade-up" data-aos-delay="400">
+                            <div class="absolute inset-0 border border-line rounded-[1.25rem] pointer-events-none"></div>
+                            <div class="relative flex justify-center items-center size-11 mx-auto mb-4 rounded-lg bg-gradient-to-b from-black/15 to-white/15 shadow-[0.0625rem_0.0625rem_0.0625rem_0_rgba(255,255,255,0.10)_inset,0_0_0.625rem_0_rgba(255,255,255,0.10)_inset]">
+                                <div class="absolute inset-0 border border-line rounded-lg"></div>
+                                img(class="w-5" src=require('Images/copy.svg') alt="")
+                            </div>
+                            <div class="text-title-4 max-md:text-title-3-mobile">Custom Contracts</div>
+                        </div>
+                        <div class="relative w-42 p-5 pb-6.5 rounded-[1.25rem] bg-content text-center shadow-1 backdrop-blur-[1.25rem] max-md:px-3" data-aos="fade-up" data-aos-delay="500">
+                            <div class="absolute inset-0 border border-line rounded-[1.25rem] pointer-events-none"></div>
+                            <div class="relative flex justify-center items-center size-11 mx-auto mb-4 rounded-lg bg-gradient-to-b from-black/15 to-white/15 shadow-[0.0625rem_0.0625rem_0.0625rem_0_rgba(255,255,255,0.10)_inset,0_0_0.625rem_0_rgba(255,255,255,0.10)_inset]">
+                                <div class="absolute inset-0 border border-line rounded-lg"></div>
+                                img(class="w-5" src=require('Images/loy-krathong.svg') alt="")
+                            </div>
+                            <div class="text-title-4 max-md:text-title-3-mobile">Encrypted Sharing</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="absolute top-23 right-[calc(50%-28.5rem)] size-178 rounded-full max-xl:size-140 max-md:top-36 max-md:right-auto max-md:left-8.5 max-md:size-133">
+                <div style="opacity: 0.2;" class="absolute -inset-[10%] mask-radial-at-center mask-radial-from-20% mask-radial-to-52%">
+                    video(class="w-full" src=require('Videos/video-1.mp4') autoplay loop muted playsinline)
+                </div>
+                <div class="absolute inset-0 rounded-full shadow-[0.875rem_1.0625rem_1.25rem_0_rgba(255,255,255,0.25)_inset] bg-black/1"></div>
+            </div>
+            <div>
+                <div class="absolute top-61.5 right-[calc(50%-35.18rem)] z-2 size-116.5 bg-green/20 rounded-full blur-[8rem] max-md:top-36 max-lg:-right-96 max-md:left-74 max-md:right-auto"></div>
+                <div class="absolute top-77 left-[calc(50%-57.5rem)] z-2 size-116.5 bg-green/20 rounded-full blur-[8rem] max-lg:-left-60 max-md:top-84 max-md:-left-52 max-md:size-80"></div>
+            </div>
+        </div>
+        // details
+        <div class="pt-40.5 pb-30.5 max-xl:pt-30 max-lg:py-24 max-md:py-15">
+            <div class="center">
+                <div class="flex flex-wrap -mt-4 -mx-2">
+                    <div class="relative min-h-75 rounded-[1.25rem] bg-content shadow-2 backdrop-blur-[1.25rem] after:absolute after:inset-0 after:border after:border-line after:rounded-[1.25rem] after:pointer-events-none max-xl:min-h-70 flex w-[calc(50%-1rem)] h-full mt-4 mx-2 pt-6 pb-7 px-8.5 max-xl:px-6 max-lg:w-[calc(100%-1rem)] max-md:px-8 max-md:min-h-112.5" data-aos="fade">
+                        <div class="relative z-2 max-w-58 flex flex-col max-md:max-w-full">
+                            <div class="mb-auto bg-radial-white-2 bg-clip-text text-transparent text-title-1 max-xl:text-title-2 max-md:mb-0.5 max-md:text-title-1-mobile">100%</div>
+                            <div class="mt-3 text-title-4 max-md:text-title-3-mobile">On-Chain Transparency</div>
+                            <div class="mt-2.5 text-description max-md:mt-2">Every step of your Kratong flow is verifiable on the Ethereum blockchain.</div>
+                        </div>
+                        <div class="absolute top-0 right-0 bottom-0 flex items-center max-2xl:-right-16 max-lg:right-0 max-md:top-auto max-md:left-0 max-md:pl-7.5">
+                            img(class="w-86.25 max-xl:w-72 max-md:w-full" src=require('Images/details-pic-1.png') alt="")
+                        </div>
+                    </div>
+                    <div class="relative min-h-75 rounded-[1.25rem] bg-content shadow-2 backdrop-blur-[1.25rem] after:absolute after:inset-0 after:border after:border-line after:rounded-[1.25rem] after:pointer-events-none max-xl:min-h-70 flex w-[calc(50%-1rem)] h-full mt-4 mx-2 pt-6 pb-7 px-8.5 max-xl:px-6 max-lg:w-[calc(100%-1rem)] max-md:px-8 max-md:min-h-112.5" data-aos="fade">
+                        <div class="relative z-2 max-w-58 flex flex-col max-md:max-w-full">
+                            <div class="mb-auto bg-radial-white-2 bg-clip-text text-transparent text-title-1 max-xl:text-title-2 max-md:mb-0.5 max-md:text-title-1-mobile">0</div>
+                            <div class="mt-3 text-title-4 max-md:text-title-3-mobile">Code Required</div>
+                            <div class="mt-2.5 text-description max-md:mt-2">Build complex DeFi strategies without writing a single line of Solidity.</div>
+                        </div>
+                        <div class="absolute top-0 right-0 bottom-0 flex items-center max-2xl:-right-16 max-lg:right-0 max-md:top-auto max-md:left-0 max-md:pl-7.5">
+                            img(class="w-86.25 max-xl:w-72 max-md:w-full" src=require('Images/details-pic-2.png') alt="")
+                        </div>
+                    </div>
+                    <div class="relative min-h-75 rounded-[1.25rem] bg-content shadow-2 backdrop-blur-[1.25rem] after:absolute after:inset-0 after:border after:border-line after:rounded-[1.25rem] after:pointer-events-none max-xl:min-h-70 flex items-end w-62.5 mt-4 mx-2 px-8.5 pb-7 max-xl:px-6 max-lg:w-[calc(50%-1rem)] max-md:w-[calc(100%-1rem)] max-md:min-h-72 max-md:px-7 max-md:pb-6" data-aos="fade">
+                        <div class="absolute top-0 left-0 right-0 flex justify-center">
+                            img(class="w-full max-lg:max-w-60 max-md:max-w-73.5" src=require('Images/details-pic-3.png') alt="")
+                        </div>
+                        <div class="relative z-2 max-w-58 flex flex-col">
+                            <div class="mb-2.5 text-title-4 max-md:mb-1.5 max-md:text-title-3-mobile">Protocol Agnostic</div>
+                            <div class="text-description">Seamlessly connect Uniswap, Aave, Morpho and more.</div>
+                        </div>
+                    </div>
+                    <div class="relative min-h-75 rounded-[1.25rem] bg-content shadow-2 backdrop-blur-[1.25rem] after:absolute after:inset-0 after:border after:border-line after:rounded-[1.25rem] after:pointer-events-none max-xl:min-h-70 flex items-end grow mt-4 mx-2 px-8.5 pb-7 overflow-hidden max-xl:px-6 max-lg:order-5" data-aos="fade">
+                        <div class="absolute top-0 left-0 flex justify-center max-2xl:top-8 max-lg:top-0 max-md:-left-3 max-md:w-176">
+                            img(class="w-full" src=require('Images/details-pic-4.png') alt="")
+                        </div>
+                        <div class="relative z-2 flex">
+                            <div class="relative flex justify-center items-center shrink-0 w-12.5 h-12.5 mr-5 rounded-lg bg-gradient-to-b from-[#42B39E] to-[#1B8C77] shadow-[0.0625rem_0.0625rem_0.0625rem_0_rgba(255,255,255,0.20)_inset,_0_0_0.625rem_0_rgba(255,255,255,0.50)_inset] after:absolute after:inset-0 after:border after:border-line after:rounded-lg after:pointer-events-none">
+                                img(class="w-4" src=require('Images/lightning.svg') alt="")
+                            </div>
+                            <div class="mr-2.5 bg-radial-white-2 bg-clip-text text-transparent text-title-1 leading-[3.1rem] max-xl:text-title-2 max-md:text-title-1-mobile">1</div>
+                            <div class="self-end text-title-4 text-description max-xl:max-w-30 max-xl:text-description-2 max-xl:self-center max-lg:max-w-full max-lg:text-description">Atomic Transaction</div>
+                        </div>
+                    </div>
+                    <div class="relative min-h-75 rounded-[1.25rem] bg-content shadow-2 backdrop-blur-[1.25rem] after:absolute after:inset-0 after:border after:border-line after:rounded-[1.25rem] after:pointer-events-none max-xl:min-h-70 flex items-end w-62.5 mt-4 mx-2 px-8.5 pb-7 max-xl:px-6 max-lg:w-[calc(50%-1rem)] max-md:w-[calc(100%-1rem)] max-md:min-h-72 max-md:px-7 max-md:pb-6" data-aos="fade">
+                        <div class="absolute top-0 left-0 right-0 flex justify-center">
+                            img(class="w-full max-lg:max-w-60 max-md:max-w-73.5" src=require('Images/details-pic-5.png') alt="")
+                        </div>
+                        <div class="relative z-2 max-w-58 flex flex-col">
+                            <div class="bg-radial-white-2 bg-clip-text text-transparent text-title-1 max-xl:text-title-2 max-md:text-title-1-mobile">69%</div>
+                            <div class="text-description">Gas efficiency through batched execution.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        // how it works
+        <div class="relative pt-34.5 pb-41 max-xl:pt-20 max-xl:pb-30 max-lg:py-24 max-md:pt-15 max-md:pb-14">
+            <div class="center relative z-2">
+                <div class="max-w-148 mx-auto mb-18 text-center max-xl:mb-14 max-md:mb-8.5" data-aos="fade">
+                    <div class="label mb-3 max-md:mb-1">How It Works</div>
+                    <div class="mb-6 bg-radial-white-2 bg-clip-text text-transparent text-title-1 max-lg:text-title-2 max-md:mb-3 max-md:text-title-1-mobile">Atomic Batching</div>
+                    <div class="text-description">Execute multi-step DeFi strategies in a single atomic transaction using EIP-7702.</div>
+                </div>
+                <div class="flex flex-wrap -mt-4 -mx-2">
+                    <div class="relative w-[calc(33.333%-1rem)] mt-4 mx-2 rounded-[1.25rem] bg-content shadow-2 backdrop-blur-[1.25rem] after:absolute after:inset-0 after:border after:border-line after:rounded-[1.25rem] after:pointer-events-none max-lg:w-[calc(50%-1rem)] max-md:w-[calc(100%-1rem)]" data-aos="fade">
+                        <div class="pt-8 px-8.5 pb-7.5 max-xl:px-5 max-xl:pb-5 max-lg:px-8 max-lg:pb-7 max-md:pb-6">
+                            <div class="mb-2.5 text-title-4 max-md:mb-1 max-md:text-title-2-mobile">1. Design Strategy</div>
+                            <div class="text-description">Drag and drop nodes to build your custom DeFi flow.</div>
+                        </div>
+                    </div>
+                    <div class="relative w-[calc(33.333%-1rem)] mt-4 mx-2 rounded-[1.25rem] bg-content shadow-2 backdrop-blur-[1.25rem] after:absolute after:inset-0 after:border after:border-line after:rounded-[1.25rem] after:pointer-events-none max-lg:w-[calc(50%-1rem)] max-md:w-[calc(100%-1rem)]" data-aos="fade">
+                        <div class="pt-8 px-8.5 pb-7.5 max-xl:px-5 max-xl:pb-5 max-lg:px-8 max-lg:pb-7 max-md:pb-6">
+                            <div class="mb-2.5 text-title-4 max-md:mb-1 max-md:text-title-2-mobile">2. Preview Balances</div>
+                            <div class="text-description">See real-time balance flows and estimated outputs.</div>
+                        </div>
+                    </div>
+                    <div class="relative w-[calc(33.333%-1rem)] mt-4 mx-2 rounded-[1.25rem] bg-content shadow-2 backdrop-blur-[1.25rem] after:absolute after:inset-0 after:border after:border-line after:rounded-[1.25rem] after:pointer-events-none max-lg:w-[calc(50%-1rem)] max-md:w-[calc(100%-1rem)]" data-aos="fade">
+                        <div class="pt-8 px-8.5 pb-7.5 max-xl:px-5 max-xl:pb-5 max-lg:px-8 max-lg:pb-7 max-md:pb-6">
+                            <div class="mb-2.5 text-title-4 max-md:mb-1 max-md:text-title-2-mobile">3. Launch Kratong</div>
+                            <div class="text-description">Execute everything in one atomic transaction.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="max-md:hidden">
+                <div class="absolute top-47.5 left-[calc(50%-52.38rem)] size-98.5 bg-green/20 rounded-full blur-[6.75rem]"></div>
+                <div class="absolute bottom-2.5 right-[calc(50%-51.44rem)] size-98.5 bg-green/20 rounded-full blur-[6.75rem]"></div>
+            </div>
+        </div>
+        // sharing
+        <div class="relative pt-34.5 pb-41 max-xl:pt-20 max-xl:pb-30 max-lg:py-24 max-md:pt-15 max-md:pb-14">
+            <div class="center relative z-2">
+                <div class="max-w-148 mx-auto mb-18 text-center max-xl:mb-14 max-md:mb-8.5" data-aos="fade">
+                    <div class="label mb-3 max-md:mb-1">Sharing & Collaboration</div>
+                    <div class="mb-6 bg-radial-white-2 bg-clip-text text-transparent text-title-1 max-lg:text-title-2 max-md:mb-3 max-md:text-title-1-mobile">Decentralized & Private</div>
+                    <div class="text-description">Share your strategies with the community or keep them private with end-to-end encryption.</div>
+                </div>
+                <div class="flex flex-wrap -mt-4 -mx-2">
+                    <div class="relative w-[calc(50%-1rem)] mt-4 mx-2 rounded-[1.25rem] bg-content shadow-2 backdrop-blur-[1.25rem] after:absolute after:inset-0 after:border after:border-line after:rounded-[1.25rem] after:pointer-events-none max-md:w-[calc(100%-1rem)]" data-aos="fade">
+                        <div class="pt-8 px-8.5 pb-7.5 max-xl:px-5 max-xl:pb-5 max-lg:px-8 max-lg:pb-7 max-md:pb-6">
+                            <div class="mb-2.5 text-title-4 max-md:mb-1 max-md:text-title-2-mobile">IPFS Public Sharing</div>
+                            <div class="text-description">Upload your flows to IPFS via Pinata for permanent, decentralized access. Share via link or QR code.</div>
+                        </div>
+                    </div>
+                    <div class="relative w-[calc(50%-1rem)] mt-4 mx-2 rounded-[1.25rem] bg-content shadow-2 backdrop-blur-[1.25rem] after:absolute after:inset-0 after:border after:border-line after:rounded-[1.25rem] after:pointer-events-none max-md:w-[calc(100%-1rem)]" data-aos="fade">
+                        <div class="pt-8 px-8.5 pb-7.5 max-xl:px-5 max-xl:pb-5 max-lg:px-8 max-lg:pb-7 max-md:pb-6">
+                            <div class="mb-2.5 text-title-4 max-md:mb-1 max-md:text-title-2-mobile">Private Encrypted Flows</div>
+                            <div class="text-description">Secure sensitive strategies with client-side AES-GCM encryption. The key stays in your URL fragment, never touching our servers.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        // protocols
+        <div class="relative pt-34.5 pb-41 max-xl:pt-20 max-xl:pb-30 max-lg:py-24 max-md:pt-15 max-md:pb-14">
+            <div class="center relative z-2">
+                <div class="max-w-148 mx-auto mb-18 text-center max-xl:mb-14 max-md:mb-8.5" data-aos="fade">
+                    <div class="label mb-3 max-md:mb-1">Powered by Protocols</div>
+                    <div class="mb-6 bg-radial-white-2 bg-clip-text text-transparent text-title-1 max-lg:text-title-2 max-md:mb-3 max-md:text-title-1-mobile">Expand your strategy capabilities</div>
+                    <div class="text-description">ETHKratong supports the most trusted DeFi protocols. Build complex flows across multiple platforms in one atomic transaction.</div>
+                </div>
+                <div class="relative rounded-[1.25rem] after:absolute after:inset-0 after:border after:border-[#263035] after:rounded-[1.25rem] after:pointer-events-none overflow-hidden" data-aos="fade">
+                    <div class="flex flex-wrap -mr-1.5">
+                        - var list = [{title: 'Uniswap V3', icon: 'loy-krathong.svg'}, {title: 'Aave V3', icon: 'loy-krathong.svg'}, {title: 'Morpho Blue', icon: 'loy-krathong.svg'}, {title: 'Curve Finance', icon: 'loy-krathong.svg'}, {title: 'Compound V3', icon: 'loy-krathong.svg'}, {title: 'Pendle', icon: 'loy-krathong.svg'}, {title: 'Balancer', icon: 'loy-krathong.svg'}, {title: 'MakerDAO', icon: 'loy-krathong.svg'}, {title: 'Synthetix', icon: 'loy-krathong.svg'}, {title: 'Lido', icon: 'loy-krathong.svg'}, {title: 'Rocket Pool', icon: 'loy-krathong.svg'}, {title: 'Frax Finance', icon: 'loy-krathong.svg'}, {title: 'GMX', icon: 'loy-krathong.svg'}, {title: 'dYdX', icon: 'loy-krathong.svg'}, {title: 'Yearn Finance', icon: 'loy-krathong.svg'}, {title: 'Instadapp', icon: 'loy-krathong.svg'}, {title: 'Convex', icon: 'loy-krathong.svg'}, {title: 'Fraxlend', icon: 'loy-krathong.svg'}]
+                        each item in list
+                            <a class="w-1/6 min-h-53 -mt-0.25 -ml-0.25 pt-14 px-4 pb-4 border-[0.0625rem] border-[#151F25] text-description transition-colors hover:text-white max-xl:w-1/4 max-lg:w-1/3 max-md:min-h-42 max-md:pt-8.5 max-md:px-2" href="#">
+                                <div class="flex justify-center items-center size-16 mx-auto mb-5 rounded-xl bg-line shadow-3 max-md:mb-4.5">
+                                    img(class="w-7" src=require('Images/' + item.icon) alt="")
+                                </div>
+                                <div class="text-center text-title-5 max-md:text-title-3-mobile">#{item.title}</div>
+                            </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        include includes/start
+    </div>
+    +footer(true)

@@ -1,0 +1,34 @@
+meta(charset="utf-8")
+title= 'ETHKratong | Visual DeFi Strategy Builder'
+meta(name="description" content="Design, simulate, and execute complex Ethereum transactions with a beautiful visual interface. Atomic execution using EIP-7702.")
+meta(http-equiv="X-UA-Compatible" content="IE=Edge")
+meta(name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=no")
+meta(name="format-detection" content="telephone=no")
+link(rel="apple-touch-icon" sizes="180x180" href=require('Images/loy-krathong.svg'))
+link(rel="icon" type="image/svg+xml" href=require('Images/loy-krathong.svg'))
+link(rel="mask-icon" href=require('Images/loy-krathong.svg') color="#5bbad5")
+meta(name="msapplication-TileColor" content="#da532c")
+meta(name="theme-color" content="#ffffff")
+//- include media-tags
+meta(property="og:title" content="ETHKratong | Visual DeFi Strategy Builder")
+meta(property="og:description" content="Design, simulate, and execute complex Ethereum transactions with a beautiful visual interface.")
+meta(property="og:type" content="website")
+meta(property="og:image" content=require('Images/loy-krathong.png'))
+meta(name="twitter:card" content="summary_large_image")
+meta(name="twitter:title" content="ETHKratong | Visual DeFi Strategy Builder")
+meta(name="twitter:description" content="Design, simulate, and execute complex Ethereum transactions with a beautiful visual interface.")
+meta(name="twitter:image" content=require('Images/loy-krathong.png'))
+link(href=require('../../fonts/Helvetica.woff') rel='stylesheet')
+link(rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css")
+link(rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css")
+link(href=require('../../style.css') rel='stylesheet')
+script.
+    let viewportmeta = document.querySelector('meta[name="viewport"]');
+    if (viewportmeta) {
+        if (screen.width < 375) {
+            let newScale = screen.width / 375;
+            viewportmeta.content = 'width=375, minimum-scale=' + newScale + ', maximum-scale=1.0, user-scalable=no, initial-scale=' + newScale + '';
+        } else {
+            viewportmeta.content = 'width=device-width, maximum-scale=1.0, initial-scale=1.0';
+        }
+    }

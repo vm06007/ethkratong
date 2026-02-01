@@ -1,0 +1,124 @@
+extends ../layouts/layout
+block content
+    +header(false, true, false)
+    <div class="overflow-hidden">
+        // hero
+        <div class="relative mb-18.5 pt-104.5 max-lg:pt-80 max-md:pt-69 max-md:mb-8">
+            <div class="center relative z-3">
+                <div class="max-w-204 mx-auto text-center max-2xl:max-w-169" data-aos="fade">
+                    <div class="mb-5 text-title-3 text-green max-md:mb-3 max-md:text-title-3-mobile">Powered by Integrations</div>
+                    <div class="mb-5 bg-radial-white-2 bg-clip-text text-transparent text-big-title-2 max-2xl:text-title-1 max-lg:text-title-2 max-md:mb-3 max-md:text-title-1-mobile">Expand your chatbot capabilities</div>
+                    <div class="text-description">Conversational AI is at the heart of our chatbots—the ability to understand human language, respond with the right context, and create conversations that feel natural.</div>
+                </div>
+            </div>
+            <div class="absolute -top-16 left-1/2 -translate-x-1/2 mask-b-from-50% mask-b-to-83% max-lg:-top-20">
+                <div class="w-256 h-141 rounded-full mask-[radial-gradient(50%_50%_at_50%_50%,#737373_0%,rgba(217,217,217,0)_100%)] max-lg:w-200 max-lg:h-110 max-md:w-160 max-md:h-100">
+                    <div class="absolute top-45 left-1/2 -translate-x-1/2 size-394 max-lg:size-240">
+                        <div class="absolute -left-[12%] -top-[14.5%] -right-[12%] mask-radial-at-center mask-radial-from-48% mask-radial-to-52%">
+                            video(class="w-full" src=require('Videos/video-1.mp4') autoplay loop muted playsinline)
+                        </div>
+                        <div class="absolute inset-0 rounded-full shadow-[0.875rem_1.0625rem_1.25rem_0_rgba(255,255,255,0.25)_inset] bg-black/1"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="absolute -top-17.5 left-1/2 -translate-x-1/2 z-2 size-99 bg-green/20 rounded-full blur-[6.75rem] max-md:-top-1 max-md:size-56 max-md:blur-[4rem]"></div>
+        </div>
+        // integrations
+        <div class="tabs pb-36.5 max-2xl:pb-30 max-lg:pb-24 max-md:pb-15">
+            <div class="center">
+                <div class="flex justify-between items-center mb-6 max-md:block" data-aos="fade">
+                    <div class="flex gap-1.5 bg-black rounded-xl shadow-3 max-md:mb-3.5">
+                        <button class="tabs-button active flex items-center h-10 px-3.5 rounded-xl text-description-2 text-description transition-all cursor-pointer hover:text-white max-md:flex-1 max-md:justify-center">Integration</button>
+                        <button class="tabs-button flex items-center h-10 px-3.5 rounded-xl text-description-2 text-description transition-all cursor-pointer hover:text-white max-md:flex-1 max-md:justify-center">Channel</button>
+                        <button class="tabs-button flex items-center h-10 px-3.5 rounded-xl text-description-2 text-description transition-all cursor-pointer hover:text-white max-md:flex-1 max-md:justify-center">LLM</button>
+                    </div>
+                    <form class="relative w-85 after:absolute after:inset-0 after:border after:border-line after:rounded-xl after:pointer-events-none max-lg:w-72 max-md:w-full">
+                        <input class="w-full h-10 pl-9.5 pr-4 border-0 outline-0 shadow-[0.0625rem_0.0625rem_0.0625rem_0_rgba(255,255,255,0.10)_inset] rounded-xl bg-white/5 text-description-2 text-white placeholder:text-description" type="text" name="search" placeholder="Search..." autocomplete="off" />
+                        <button class="absolute top-0 left-0 bottom-0 flex justify-center items-center w-9.5 pl-1">
+                            img(class="w-3.5" src=require('Images/search.svg') alt="")
+                        </button>
+                    </form>
+                </div>
+                <div class="relative before:absolute before:z-1 before:top-0 before:left-55 before:w-26 before:h-[0.0375rem] before:bg-gradient-to-r before:from-transparent before:via-[#7AE2CF]/50 before:to-transparent after:absolute after:bottom-0 after:right-55 after:w-26 after:h-[0.0375rem] after:bg-gradient-to-r after:from-transparent after:via-[#7AE2CF]/50 after:to-transparent max-md:before:left-5 max-md:after:right-5" data-aos="fade">
+                    <div class="relative rounded-[1.25rem] after:absolute after:inset-0 after:border after:border-[#263035] after:rounded-[1.25rem] after:pointer-events-none overflow-hidden">
+                        <div class="flex flex-wrap -mr-1.5">
+                            <a class="w-1/6 min-h-53 -mt-0.25 -ml-0.25 pt-14 px-4 pb-4 border-[0.0625rem] border-[#151F25] text-description transition-colors hover:text-white max-xl:w-1/4 max-lg:w-1/3 max-md:min-h-42 max-md:pt-8.5 max-md:px-2" href="integration.html">
+                                <div class="flex justify-center items-center size-16 mx-auto mb-5 rounded-xl bg-line shadow-3 max-md:mb-4.5">
+                                    img(class="w-7" src=require('Images/integration/lambda.png') alt="")
+                                </div>
+                                <div class="text-center text-title-5 max-md:text-title-3-mobile">AWS Lambda</div>
+                            </a>
+                            <a class="w-1/6 min-h-53 -mt-0.25 -ml-0.25 pt-14 px-4 pb-4 border-[0.0625rem] border-[#151F25] text-description transition-colors hover:text-white max-xl:w-1/4 max-lg:w-1/3 max-md:min-h-42 max-md:pt-8.5 max-md:px-2" href="integration.html">
+                                <div class="flex justify-center items-center size-16 mx-auto mb-5 rounded-xl bg-line shadow-3 max-md:mb-4.5">
+                                    img(class="w-7" src=require('Images/integration/s3.png') alt="")
+                                </div>
+                                <div class="text-center text-title-5 max-md:text-title-3-mobile">AWS S3</div>
+                            </a>
+                            <a class="w-1/6 min-h-53 -mt-0.25 -ml-0.25 pt-14 px-4 pb-4 border-[0.0625rem] border-[#151F25] text-description transition-colors hover:text-white max-xl:w-1/4 max-lg:w-1/3 max-md:min-h-42 max-md:pt-8.5 max-md:px-2" href="integration.html">
+                                <div class="flex justify-center items-center size-16 mx-auto mb-5 rounded-xl bg-line shadow-3 max-md:mb-4.5">
+                                    img(class="w-7" src=require('Images/integration/aftership.png') alt="")
+                                </div>
+                                <div class="text-center text-title-5 max-md:text-title-3-mobile">Aftership</div>
+                            </a>
+                            <a class="w-1/6 min-h-53 -mt-0.25 -ml-0.25 pt-14 px-4 pb-4 border-[0.0625rem] border-[#151F25] text-description transition-colors hover:text-white max-xl:w-1/4 max-lg:w-1/3 max-md:min-h-42 max-md:pt-8.5 max-md:px-2" href="integration.html">
+                                <div class="flex justify-center items-center size-16 mx-auto mb-5 rounded-xl bg-line shadow-3 max-md:mb-4.5">
+                                    img(class="w-7" src=require('Images/integration/asana.png') alt="")
+                                </div>
+                                <div class="text-center text-title-5 max-md:text-title-3-mobile">Asana</div>
+                            </a>
+                            <a class="w-1/6 min-h-53 -mt-0.25 -ml-0.25 pt-14 px-4 pb-4 border-[0.0625rem] border-[#151F25] text-description transition-colors hover:text-white max-xl:w-1/4 max-lg:w-1/3 max-md:min-h-42 max-md:pt-8.5 max-md:px-2" href="integration.html">
+                                <div class="flex justify-center items-center size-16 mx-auto mb-5 rounded-xl bg-line shadow-3 max-md:mb-4.5">
+                                    img(class="w-7" src=require('Images/integration/calendly.png') alt="")
+                                </div>
+                                <div class="text-center text-title-5 max-md:text-title-3-mobile">Calendly</div>
+                            </a>
+                            <a class="w-1/6 min-h-53 -mt-0.25 -ml-0.25 pt-14 px-4 pb-4 border-[0.0625rem] border-[#151F25] text-description transition-colors hover:text-white max-xl:w-1/4 max-lg:w-1/3 max-md:min-h-42 max-md:pt-8.5 max-md:px-2" href="integration.html">
+                                <div class="flex justify-center items-center size-16 mx-auto mb-5 rounded-xl bg-line shadow-3 max-md:mb-4.5">
+                                    img(class="w-7" src=require('Images/integration/google-analytics.png') alt="")
+                                </div>
+                                <div class="text-center text-title-5 max-md:text-title-3-mobile">Google Analytics</div>
+                            </a>
+                            <a class="w-1/6 min-h-53 -mt-0.25 -ml-0.25 pt-14 px-4 pb-4 border-[0.0625rem] border-[#151F25] text-description transition-colors hover:text-white max-xl:w-1/4 max-lg:w-1/3 max-md:min-h-42 max-md:pt-8.5 max-md:px-2" href="integration.html">
+                                <div class="flex justify-center items-center size-16 mx-auto mb-5 rounded-xl bg-line shadow-3 max-md:mb-4.5">
+                                    img(class="w-7" src=require('Images/integration/hubspot.png') alt="")
+                                </div>
+                                <div class="text-center text-title-5 max-md:text-title-3-mobile">HubSpot</div>
+                            </a>
+                            <a class="w-1/6 min-h-53 -mt-0.25 -ml-0.25 pt-14 px-4 pb-4 border-[0.0625rem] border-[#151F25] text-description transition-colors hover:text-white max-xl:w-1/4 max-lg:w-1/3 max-md:min-h-42 max-md:pt-8.5 max-md:px-2" href="integration.html">
+                                <div class="flex justify-center items-center size-16 mx-auto mb-5 rounded-xl bg-line shadow-3 max-md:mb-4.5">
+                                    img(class="w-7" src=require('Images/integration/jwt.png') alt="")
+                                </div>
+                                <div class="text-center text-title-5 max-md:text-title-3-mobile">JSON Web Token</div>
+                            </a>
+                            <a class="w-1/6 min-h-53 -mt-0.25 -ml-0.25 pt-14 px-4 pb-4 border-[0.0625rem] border-[#151F25] text-description transition-colors hover:text-white max-xl:w-1/4 max-lg:w-1/3 max-md:min-h-42 max-md:pt-8.5 max-md:px-2" href="integration.html">
+                                <div class="flex justify-center items-center size-16 mx-auto mb-5 rounded-xl bg-line shadow-3 max-md:mb-4.5">
+                                    img(class="w-7" src=require('Images/integration/jira-actions.png') alt="")
+                                </div>
+                                <div class="text-center text-title-5 max-md:text-title-3-mobile">Jira Actions</div>
+                            </a>
+                            <a class="w-1/6 min-h-53 -mt-0.25 -ml-0.25 pt-14 px-4 pb-4 border-[0.0625rem] border-[#151F25] text-description transition-colors hover:text-white max-xl:w-1/4 max-lg:w-1/3 max-md:min-h-42 max-md:pt-8.5 max-md:px-2" href="integration.html">
+                                <div class="flex justify-center items-center size-16 mx-auto mb-5 rounded-xl bg-line shadow-3 max-md:mb-4.5">
+                                    img(class="w-7" src=require('Images/integration/linear.png') alt="")
+                                </div>
+                                <div class="text-center text-title-5 max-md:text-title-3-mobile">Linear</div>
+                            </a>
+                            <a class="w-1/6 min-h-53 -mt-0.25 -ml-0.25 pt-14 px-4 pb-4 border-[0.0625rem] border-[#151F25] text-description transition-colors hover:text-white max-xl:w-1/4 max-lg:w-1/3 max-md:min-h-42 max-md:pt-8.5 max-md:px-2" href="integration.html">
+                                <div class="flex justify-center items-center size-16 mx-auto mb-5 rounded-xl bg-line shadow-3 max-md:mb-4.5">
+                                    img(class="w-7" src=require('Images/integration/notion.png') alt="")
+                                </div>
+                                <div class="text-center text-title-5 max-md:text-title-3-mobile">Notion</div>
+                            </a>
+                            <a class="w-1/6 min-h-53 -mt-0.25 -ml-0.25 pt-14 px-4 pb-4 border-[0.0625rem] border-[#151F25] text-description transition-colors hover:text-white max-xl:w-1/4 max-lg:w-1/3 max-md:min-h-42 max-md:pt-8.5 max-md:px-2" href="integration.html">
+                                <div class="flex justify-center items-center size-16 mx-auto mb-5 rounded-xl bg-line shadow-3 max-md:mb-4.5">
+                                    img(class="w-7" src=require('Images/integration/wikipedia.png') alt="")
+                                </div>
+                                <div class="text-center text-title-5 max-md:text-title-3-mobile">Wikipedia</div>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        include ../includes/start
+    </div>
+    +footer(false)
