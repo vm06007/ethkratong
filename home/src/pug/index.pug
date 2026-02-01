@@ -4,13 +4,11 @@ block content
     <div class="overflow-hidden">
         // hero
 
-
-
         <div class="relative pt-58 pb-20 max-xl:pt-48 max-lg:pt-44 max-md:pt-21 max-md:pb-15">
             <div class="center relative z-3" data-aos="fade">
                 <div class="max-w-187">
                     <div class="mb-2 text-title-3 text-green max-md:text-[14px] max-md:mb-2">The Art of Visual Transaction Flows</div>
-                    <div class="mb-41 text-big-title-1 bg-radial-white-1 bg-clip-text text-transparent max-xl:text-big-title-2 max-lg:text-title-1 max-lg:mb-10 max-md:mb-80 max-md:text-big-title-mobile">ETHKratong Transactions</div>
+                    <div class="mb-20 text-big-title-1 bg-radial-white-1 bg-clip-text text-transparent max-xl:text-big-title-2 max-lg:text-title-1 max-lg:mb-2.5 max-md:mb-20 max-md:text-big-title-mobile">ETHKratong Transactions</div>
                     <div class="max-w-94 mb-9.5 text-description max-lg:max-w-76 max-md:max-w-full max-md:mb-3.5">Design, simulate, and execute complex Ethereum transactions with a beautiful visual interface. Inspired by the Thai tradition of Loy Kratong, we bring grace and flow to your DeFi interactions.</div>
                     <div class="flex flex-col gap-2 text-title-5 text-green max-md:text-title-3-mobile mb-7.5 max-md:mb-6">
                         <div>Float your transactions on-chain</div>
@@ -80,12 +78,19 @@ block content
                     </div>
                 </div>
             </div>
-            <div class="absolute top-23 right-[calc(50%-28.5rem)] size-178 rounded-full max-xl:size-140 max-md:top-36 max-md:right-auto max-md:left-8.5 max-md:size-133">
-                <div style="opacity: 0.2;" class="absolute -inset-[10%] mask-radial-at-center mask-radial-from-20% mask-radial-to-52%">
-                    video(class="w-full" src=require('Videos/video-1.mp4') autoplay loop muted playsinline)
+            <a href="#" class="group js-play-demo absolute top-23 right-[calc(50%-28.5rem)] z-10 size-178 rounded-full max-xl:size-140 max-md:top-36 max-md:right-auto max-md:left-8.5 max-md:size-133 transition-transform duration-300 ease-out hover:scale-[1.1] cursor-pointer flex items-center justify-center overflow-hidden">
+                <div style="opacity: 0.2;" class="absolute -inset-[10%] mask-radial-at-center mask-radial-from-20% mask-radial-to-52% pointer-events-none">
+                    video(class="w-full rounded-full object-cover pointer-events-none" src=require('Videos/video-1.mp4') autoplay loop muted playsinline)
                 </div>
-                <div class="absolute inset-0 rounded-full shadow-[0.875rem_1.0625rem_1.25rem_0_rgba(255,255,255,0.25)_inset] bg-black/1"></div>
-            </div>
+                <div class="absolute inset-0 rounded-full shadow-[0.875rem_1.0625rem_1.25rem_0_rgba(255,255,255,0.25)_inset] bg-black/1 pointer-events-none"></div>
+                <div class="absolute inset-0 flex items-center justify-center rounded-full opacity-0 transition-opacity duration-300 group-hover:opacity-100 pointer-events-none z-[1]">
+                    <div class="flex items-center justify-center size-24 rounded-full bg-white/30 backdrop-blur-md border-2 border-white/50 shadow-xl max-md:size-20">
+                        <svg class="w-10 h-10 ml-1 max-md:w-8 max-md:h-8 max-md:ml-0.5 fill-white" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M8 5v14l11-7z"/>
+                        </svg>
+                    </div>
+                </div>
+            </a>
             <div>
                 <div class="absolute top-61.5 right-[calc(50%-35.18rem)] z-2 size-116.5 bg-green/20 rounded-full blur-[8rem] max-md:top-36 max-lg:-right-96 max-md:left-74 max-md:right-auto"></div>
                 <div class="absolute top-77 left-[calc(50%-57.5rem)] z-2 size-116.5 bg-green/20 rounded-full blur-[8rem] max-lg:-left-60 max-md:top-84 max-md:-left-52 max-md:size-80"></div>
