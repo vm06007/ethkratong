@@ -210,16 +210,68 @@ block content
                     <div class="mb-6 bg-radial-white-2 bg-clip-text text-transparent text-title-1 max-lg:text-title-2 max-md:mb-3 max-md:text-title-1-mobile">Expand your strategy capabilities</div>
                     <div class="text-description">ETHKratong supports the most trusted DeFi protocols. Build complex flows across multiple platforms in one atomic transaction.</div>
                 </div>
-                <div class="relative rounded-[1.25rem] after:absolute after:inset-0 after:border after:border-[#263035] after:rounded-[1.25rem] after:pointer-events-none overflow-hidden" data-aos="fade">
-                    <div class="flex flex-wrap -mr-1.5">
-                        - var list = [{title: 'Uniswap V3', icon: 'uniswap-uni-logo.svg'}, {title: 'Aave V3', icon: 'aave-aave-logo.svg'}, {title: 'Morpho Blue', icon: 'Morpho Labs-01.svg'}, {title: 'Curve Finance', icon: 'curve-dao-token-crv-logo.svg'}, {title: 'Compound V3', icon: 'compound-comp-logo.svg'}, {title: 'Pendle', icon: 'pendle-pendle-logo.svg'}, {title: 'Balancer', icon: 'balancer-bal-logo.svg'}, {title: 'MakerDAO', icon: 'maker-mkr-logo.svg'}, {title: 'Synthetix', icon: 'synthetix-snx-logo.svg'}, {title: 'Lido', icon: 'lido-dao-ldo-logo.svg'}, {title: 'Rocket Pool', icon: 'rocket-pool-rpl-logo.svg'}, {title: 'Frax Finance', icon: 'frax-frax-logo.svg'}]
-                        each item in list
-                            <a class="w-1/6 min-h-53 -mt-0.25 -ml-0.25 pt-14 px-4 pb-4 border-[0.0625rem] border-[#151F25] text-description transition-colors hover:text-white max-xl:w-1/4 max-lg:w-1/3 max-md:min-h-42 max-md:pt-8.5 max-md:px-2" href="#">
-                                <div class="flex justify-center items-center size-16 mx-auto mb-5 rounded-xl bg-line shadow-3 max-md:mb-4.5">
-                                    img(class="w-7" src=require('Images/' + item.icon) alt="")
-                                </div>
-                                <div class="text-center text-title-5 max-md:text-title-3-mobile">#{item.title}</div>
-                            </a>
+                <div class="tabs" data-aos="fade">
+                    <div class="flex justify-center mb-10 max-md:mb-6">
+                        <div class="flex gap-1.5 bg-black rounded-xl shadow-3 p-1 border border-line">
+                            <button class="tabs-button active flex items-center h-10 px-6 rounded-xl text-description-2 text-description transition-all cursor-pointer hover:text-white">All</button>
+                            <button class="tabs-button flex items-center h-10 px-6 rounded-xl text-description-2 text-description transition-all cursor-pointer hover:text-white">Lend</button>
+                            <button class="tabs-button flex items-center h-10 px-6 rounded-xl text-description-2 text-description transition-all cursor-pointer hover:text-white">Swap</button>
+                            <button class="tabs-button flex items-center h-10 px-6 rounded-xl text-description-2 text-description transition-all cursor-pointer hover:text-white">Yield</button>
+                        </div>
+                    </div>
+                    <div class="relative rounded-[1.25rem] after:absolute after:inset-0 after:border after:border-[#263035] after:rounded-[1.25rem] after:pointer-events-none overflow-hidden">
+                        // All tab
+                        <div class="tabs-item">
+                            <div class="flex flex-wrap -mr-1.5">
+                                - var allList = [{title: 'Uniswap V3', icon: 'uniswap-uni-logo.svg'}, {title: 'Aave V3', icon: 'aave-aave-logo.svg'}, {title: 'Morpho Blue', icon: 'Morpho Labs-01.svg'}, {title: 'Curve Finance', icon: 'curve-dao-token-crv-logo.svg'}, {title: 'Compound V3', icon: 'compound-comp-logo.svg'}, {title: 'Pendle', icon: 'pendle-pendle-logo.svg'}, {title: 'Balancer', icon: 'balancer-bal-logo.svg'}, {title: 'MakerDAO', icon: 'maker-mkr-logo.svg'}, {title: 'Synthetix', icon: 'synthetix-snx-logo.svg'}, {title: 'Lido', icon: 'lido-dao-ldo-logo.svg'}, {title: 'Rocket Pool', icon: 'rocket-pool-rpl-logo.svg'}, {title: 'Frax Finance', icon: 'frax-frax-logo.svg'}]
+                                each item in allList
+                                    <a class="w-1/6 min-h-53 -mt-0.25 -ml-0.25 pt-14 px-4 pb-4 border-[0.0625rem] border-[#151F25] text-description transition-colors hover:text-white max-xl:w-1/4 max-lg:w-1/3 max-md:min-h-42 max-md:pt-8.5 max-md:px-2" href="#">
+                                        <div class="flex justify-center items-center size-16 mx-auto mb-5 rounded-xl bg-line shadow-3 max-md:mb-4.5">
+                                            img(class="w-7" src=require('Images/' + item.icon) alt="")
+                                        </div>
+                                        <div class="text-center text-title-5 max-md:text-title-3-mobile">#{item.title}</div>
+                                    </a>
+                            </div>
+                        </div>
+                        // Lend tab
+                        <div class="tabs-item hidden">
+                            <div class="flex flex-wrap -mr-1.5">
+                                - var lendList = [{title: 'Aave V3', icon: 'aave-aave-logo.svg'}, {title: 'Morpho Blue', icon: 'Morpho Labs-01.svg'}, {title: 'Compound V3', icon: 'compound-comp-logo.svg'}, {title: 'Frax Finance', icon: 'frax-frax-logo.svg'}, {title: 'MakerDAO', icon: 'maker-mkr-logo.svg'}, {title: 'Lido', icon: 'lido-dao-ldo-logo.svg'}]
+                                each item in lendList
+                                    <a class="w-1/6 min-h-53 -mt-0.25 -ml-0.25 pt-14 px-4 pb-4 border-[0.0625rem] border-[#151F25] text-description transition-colors hover:text-white max-xl:w-1/4 max-lg:w-1/3 max-md:min-h-42 max-md:pt-8.5 max-md:px-2" href="#">
+                                        <div class="flex justify-center items-center size-16 mx-auto mb-5 rounded-xl bg-line shadow-3 max-md:mb-4.5">
+                                            img(class="w-7" src=require('Images/' + item.icon) alt="")
+                                        </div>
+                                        <div class="text-center text-title-5 max-md:text-title-3-mobile">#{item.title}</div>
+                                    </a>
+                            </div>
+                        </div>
+                        // Swap tab
+                        <div class="tabs-item hidden">
+                            <div class="flex flex-wrap -mr-1.5">
+                                - var swapList = [{title: 'Uniswap V3', icon: 'uniswap-uni-logo.svg'}, {title: 'Curve Finance', icon: 'curve-dao-token-crv-logo.svg'}, {title: 'Balancer', icon: 'balancer-bal-logo.svg'}, {title: 'Synthetix', icon: 'synthetix-snx-logo.svg'}, {title: 'GMX', icon: 'GMX_idun7tRj-K_0.png'}, {title: 'dYdX', icon: 'dydx logo.svg'}]
+                                each item in swapList
+                                    <a class="w-1/6 min-h-53 -mt-0.25 -ml-0.25 pt-14 px-4 pb-4 border-[0.0625rem] border-[#151F25] text-description transition-colors hover:text-white max-xl:w-1/4 max-lg:w-1/3 max-md:min-h-42 max-md:pt-8.5 max-md:px-2" href="#">
+                                        <div class="flex justify-center items-center size-16 mx-auto mb-5 rounded-xl bg-line shadow-3 max-md:mb-4.5">
+                                            img(class="w-7" src=require('Images/' + item.icon) alt="")
+                                        </div>
+                                        <div class="text-center text-title-5 max-md:text-title-3-mobile">#{item.title}</div>
+                                    </a>
+                            </div>
+                        </div>
+                        // Yield tab
+                        <div class="tabs-item hidden">
+                            <div class="flex flex-wrap -mr-1.5">
+                                - var yieldList = [{title: 'Pendle', icon: 'pendle-pendle-logo.svg'}, {title: 'Rocket Pool', icon: 'rocket-pool-rpl-logo.svg'}, {title: 'Yearn Finance', icon: 'yearn-finance-yfi-logo.svg'}, {title: 'Instadapp', icon: 'instadpp.svg'}, {title: 'Convex', icon: 'convex-finance-cvx-logo.svg'}, {title: 'Fraxlend', icon: 'frax-frax-logo.svg'}]
+                                each item in yieldList
+                                    <a class="w-1/6 min-h-53 -mt-0.25 -ml-0.25 pt-14 px-4 pb-4 border-[0.0625rem] border-[#151F25] text-description transition-colors hover:text-white max-xl:w-1/4 max-lg:w-1/3 max-md:min-h-42 max-md:pt-8.5 max-md:px-2" href="#">
+                                        <div class="flex justify-center items-center size-16 mx-auto mb-5 rounded-xl bg-line shadow-3 max-md:mb-4.5">
+                                            img(class="w-7" src=require('Images/' + item.icon) alt="")
+                                        </div>
+                                        <div class="text-center text-title-5 max-md:text-title-3-mobile">#{item.title}</div>
+                                    </a>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
