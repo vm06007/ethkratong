@@ -207,3 +207,8 @@
 .no-scroll {
   overflow: hidden;
 }
+
+/* Hero sphere: show play button on hover (JS toggles .is-hovered) */
+.hero-sphere.is-hovered .sphere-play-overlay {
+  opacity: 1;
+}

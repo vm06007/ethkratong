@@ -104,6 +104,15 @@ $(document).ready(function () {
   }
 });
 
+// hero sphere: show play button on hover (reliable across browsers)
+(function () {
+  $(".hero-sphere").on("mouseenter", function () {
+    $(this).addClass("is-hovered");
+  }).on("mouseleave", function () {
+    $(this).removeClass("is-hovered");
+  });
+})();
+
 // demo modal
 (function () {
   const modal = $("#demo-modal");
