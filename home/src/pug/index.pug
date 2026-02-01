@@ -156,42 +156,53 @@ block content
             </div>
         </div>
         // atomic execution & sharing (Key Benefits style) — glued to details above
-        <div class="relative pt-0 pb-36 max-xl:pb-26 max-md:pb-15">
+        <div class="relative pt-[15px] pb-36 max-xl:pb-26 max-md:pb-15">
             <div class="center relative z-2">
-                <div class="relative p-7.5 pt-107.5 shadow-2 rounded-[1.25rem] bg-content backdrop-blur-[1.25rem] overflow-hidden after:absolute after:inset-0 after:border after:border-line after:rounded-[1.25rem] after:pointer-events-none max-md:pt-62 max-md:p-5" data-aos="fade">
-                    <div class="absolute top-0 left-1/2 -translate-x-1/2 w-320 max-md:w-180">
-                        img(class="w-full" src=require('Images/benefits-pic.png') alt="")
+                <div class="relative p-7.5 shadow-2 rounded-[1.25rem] bg-content backdrop-blur-[1.25rem] overflow-hidden after:absolute after:inset-0 after:border after:border-line after:rounded-[1.25rem] after:pointer-events-none max-md:p-5" data-aos="fade">
+                    // dynamic display area (fills the top section)
+                    <div class="relative h-110 mb-10 flex items-center justify-center rounded-2xl bg-black/20 border border-line/30 overflow-hidden max-lg:h-90 max-md:h-80 max-md:mb-6">
+                        // Default state (Initial background) - hidden by default now
+                        <div id="benefit-default-ui" class="absolute inset-0 flex items-center justify-center transition-all duration-500 opacity-0">
+                            img(class="w-full h-full object-contain opacity-60" src=require('Images/benefits-pic.png') alt="")
+                            <div class="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
+                        </div>
+                        
+                        // Active content state - Design, Preview, Launch as default
+                        <div id="benefit-rich-display" class="relative z-2 w-full px-12 opacity-1 transition-all duration-500 max-md:px-6">
+                            <div class="flex flex-col items-center text-center max-w-4xl mx-auto">
+                                <div id="benefit-rich-icon-wrap" class="size-20 mb-8 rounded-2xl bg-line flex items-center justify-center shadow-3 max-md:size-16 max-md:mb-6">
+                                    img(id="benefit-rich-icon" class="w-10 max-md:w-8" src=require('Images/clock.svg') alt="")
+                                </div>
+                                <h3 id="benefit-rich-title" class="text-title-1 mb-6 bg-radial-white-2 bg-clip-text text-transparent max-md:text-title-1-mobile max-md:mb-4">Design, Preview, Launch</h3>
+                                <p id="benefit-rich-text" class="text-2xl text-description leading-relaxed max-md:text-lg">Our intuitive visual builder lets you see exactly how tokens move. Preview final balances, slippage, and gas costs before you execute. It's the most transparent way to interact with DeFi protocols.</p>
+                            </div>
+                        </div>
                     </div>
+
                     <div class="flex gap-3.5 max-lg:flex-wrap max-lg:gap-0 max-lg:-mt-3 max-lg:-mx-1.5">
-                        <div class="relative flex items-center flex-1 gap-3.5 h-17 px-3.5 rounded-[0.875rem] bg-black/50 shadow-2 backdrop-blur-[1.25rem] after:absolute after:inset-0 after:border after:border-line after:rounded-[0.875rem] after:pointer-events-none max-lg:w-[calc(50%-0.75rem)] max-lg:flex-auto max-lg:mt-3 max-lg:mx-1.5 max-md:block max-md:h-auto max-md:p-3.5 max-md:pb-3">
+                        <div class="relative flex items-center flex-1 gap-3.5 h-17 px-3.5 rounded-[0.875rem] bg-black/50 shadow-2 backdrop-blur-[1.25rem] after:absolute after:inset-0 after:border after:border-line after:rounded-[0.875rem] after:pointer-events-none max-lg:w-[calc(50%-0.75rem)] max-lg:flex-auto max-lg:mt-3 max-lg:mx-1.5 max-md:block max-md:h-auto max-md:p-3.5 max-md:pb-3 cursor-pointer transition-all hover:bg-white/5 active:scale-95 js-benefit-block" data-title="One Atomic Transaction" data-description="Execute multiple complex operations—swap, lend, stake—in a single atomic flow. We ensure that if any part of your strategy fails, the entire transaction reverts, keeping your assets safe. No partial fills, no stuck funds." data-icon="lightning.svg">
                             <div class="flex justify-center items-center shrink-0 size-10 shadow-3 rounded-xl bg-line max-md:mb-3">
                                 img(class="w-5" src=require('Images/lightning.svg') alt="")
                             </div>
                             <div class="text-title-5 max-xl:text-description-2 max-md:text-title-4-mobile">One Atomic Transaction</div>
                         </div>
-                        <div class="relative flex items-center flex-1 gap-3.5 h-17 px-3.5 rounded-[0.875rem] bg-black/50 shadow-2 backdrop-blur-[1.25rem] after:absolute after:inset-0 after:border after:border-line after:rounded-[0.875rem] after:pointer-events-none max-lg:w-[calc(50%-0.75rem)] max-lg:flex-auto max-lg:mt-3 max-lg:mx-1.5 max-md:block max-md:h-auto max-md:p-3.5 max-md:pb-3">
+                        <div class="relative flex items-center flex-1 gap-3.5 h-17 px-3.5 rounded-[0.875rem] bg-black/50 shadow-2 backdrop-blur-[1.25rem] after:absolute after:inset-0 after:border after:border-line after:rounded-[0.875rem] after:pointer-events-none max-lg:w-[calc(50%-0.75rem)] max-lg:flex-auto max-lg:mt-3 max-lg:mx-1.5 max-md:block max-md:h-auto max-md:p-3.5 max-md:pb-3 cursor-pointer transition-all bg-white/10 shadow-[0.0625rem_0.0625rem_0.0625rem_0_rgba(255,255,255,0.10)_inset] hover:bg-white/5 active:scale-95 js-benefit-block active" data-title="Design, Preview, Launch" data-description="Our intuitive visual builder lets you see exactly how tokens move. Preview final balances, slippage, and gas costs before you execute. It's the most transparent way to interact with DeFi protocols." data-icon="clock.svg">
                             <div class="flex justify-center items-center shrink-0 size-10 shadow-3 rounded-xl bg-line max-md:mb-3">
                                 img(class="w-5" src=require('Images/clock.svg') alt="")
                             </div>
                             <div class="text-title-5 max-xl:text-description-2 max-md:text-title-4-mobile">Design, Preview, Launch</div>
                         </div>
-                        <div class="relative flex items-center flex-1 gap-3.5 h-17 px-3.5 rounded-[0.875rem] bg-black/50 shadow-2 backdrop-blur-[1.25rem] after:absolute after:inset-0 after:border after:border-line after:rounded-[0.875rem] after:pointer-events-none max-lg:w-[calc(50%-0.75rem)] max-lg:flex-auto max-lg:mt-3 max-lg:mx-1.5 max-md:block max-md:h-auto max-md:p-3.5 max-md:pb-3">
+                        <div class="relative flex items-center flex-1 gap-3.5 h-17 px-3.5 rounded-[0.875rem] bg-black/50 shadow-2 backdrop-blur-[1.25rem] after:absolute after:inset-0 after:border after:border-line after:rounded-[0.875rem] after:pointer-events-none max-lg:w-[calc(50%-0.75rem)] max-lg:flex-auto max-lg:mt-3 max-lg:mx-1.5 max-md:block max-md:h-auto max-md:p-3.5 max-md:pb-3 cursor-pointer transition-all hover:bg-white/5 active:scale-95 js-benefit-block" data-title="IPFS Public Sharing" data-description="Built for the community. Export your strategies directly to IPFS and share them with a simple link or QR code. Your strategy logic is permanently accessible through decentralized storage." data-icon="message-arrow-up-right.svg">
                             <div class="flex justify-center items-center shrink-0 size-10 shadow-3 rounded-xl bg-line max-md:mb-3">
                                 img(class="w-5" src=require('Images/message-arrow-up-right.svg') alt="")
                             </div>
                             <div class="text-title-5 max-xl:text-description-2 max-md:text-title-4-mobile">IPFS Public Sharing</div>
                         </div>
-                        <div class="relative flex items-center flex-1 gap-3.5 h-17 px-3.5 rounded-[0.875rem] bg-black/50 shadow-2 backdrop-blur-[1.25rem] after:absolute after:inset-0 after:border after:border-line after:rounded-[0.875rem] after:pointer-events-none max-lg:w-[calc(50%-0.75rem)] max-lg:flex-auto max-lg:mt-3 max-lg:mx-1.5 max-md:block max-md:h-auto max-md:p-3.5 max-md:pb-3">
+                        <div class="relative flex items-center flex-1 gap-3.5 h-17 px-3.5 rounded-[0.875rem] bg-black/50 shadow-2 backdrop-blur-[1.25rem] after:absolute after:inset-0 after:border after:border-line after:rounded-[0.875rem] after:pointer-events-none max-lg:w-[calc(50%-0.75rem)] max-lg:flex-auto max-lg:mt-3 max-lg:mx-1.5 max-md:block max-md:h-auto max-md:p-3.5 max-md:pb-3 cursor-pointer transition-all hover:bg-white/5 active:scale-95 js-benefit-block" data-title="Private Encrypted Flows" data-description="Maintain your edge with client-side AES-GCM encryption. Your strategy keys stay in your URL fragment and never touch our servers. Only those with the link can decrypt and view the flow." data-icon="loy-krathong.svg">
                             <div class="flex justify-center items-center shrink-0 size-10 shadow-3 rounded-xl bg-line max-md:mb-3">
                                 img(class="w-5" src=require('Images/loy-krathong.svg') alt="")
                             </div>
                             <div class="text-title-5 max-xl:text-description-2 max-md:text-title-4-mobile">Private Encrypted Flows</div>
-                        </div>
-                    </div>
-                    <div class="relative flex justify-between items-center min-h-10 mt-3.5 px-3.5 py-2 bg-black/80 rounded-[0.875rem] shadow-[0.0625rem_0.0625rem_0.0625rem_0_rgba(255,255,255,0.05)_inset] after:absolute after:inset-0 after:border after:border-line after:rounded-[0.875rem] after:pointer-events-none">
-                        <div class="text-description-2 text-description max-md:text-description-mobile">Execute multi-step DeFi strategies in one atomic transaction using EIP-7702, and share your flows on IPFS—publicly via link or QR code, or privately with end-to-end encryption so only you and your recipients control access.</div>
-                        <div class="shrink-0 ml-6 max-md:ml-3">
-                            img(class="w-5 opacity-100" src=require('Images/benefit-increase.svg') alt="")
                         </div>
                     </div>
                 </div>

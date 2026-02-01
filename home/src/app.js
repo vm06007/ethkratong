@@ -328,6 +328,46 @@ $(document).ready(function () {
   });
 })();
 
+// benefit inline section
+(function () {
+  const blocks = $(".js-benefit-block");
+  const defaultUI = $("#benefit-default-ui");
+  const richDisplay = $("#benefit-rich-display");
+  const richTitle = $("#benefit-rich-title");
+  const richText = $("#benefit-rich-text");
+  const richIcon = $("#benefit-rich-icon");
+
+  blocks.on("click", function () {
+    const $this = $(this);
+    const title = $this.data("title");
+    const description = $this.data("description");
+    const iconSrc = $this.find("img").attr("src");
+
+    // UI Feedback: Highlighting buttons
+    blocks.removeClass("active bg-white/10 shadow-[0.0625rem_0.0625rem_0.0625rem_0_rgba(255,255,255,0.10)_inset]");
+    $this.addClass("active bg-white/10 shadow-[0.0625rem_0.0625rem_0.0625rem_0_rgba(255,255,255,0.10)_inset]");
+
+    // Update Content with animation
+    defaultUI.css("opacity", "0");
+    
+    richDisplay.removeClass("pointer-events-none").css({
+      "opacity": "0",
+      "transform": "translateY(1rem)"
+    });
+
+    setTimeout(() => {
+      richTitle.text(title);
+      richText.text(description);
+      richIcon.attr("src", iconSrc);
+      
+      richDisplay.css({
+        "opacity": "1",
+        "transform": "translateY(0)"
+      });
+    }, 300);
+  });
+})();
+
 // aos
 AOS.init({
   offset: 120,
