@@ -113,24 +113,25 @@ $(document).ready(function () {
   });
 })();
 
-// demo modal
+// demo modal - Vimeo embed
 (function () {
+  const VIMEO_EMBED_URL = "https://player.vimeo.com/video/1160843143";
   const modal = $("#demo-modal");
-  const video = modal.find(".demo-modal-video")[0];
+  const iframe = modal.find(".demo-modal-video")[0];
   const openBtn = $(".js-play-demo");
   const closeBtn = modal.find(".demo-modal-close");
 
   function openModal() {
     modal.css("display", "flex").attr("aria-hidden", "false");
-    if (video) {
-      video.play().catch(function () {});
+    if (iframe) {
+      iframe.src = VIMEO_EMBED_URL + "?autoplay=1";
     }
   }
 
   function closeModal() {
     modal.css("display", "none").attr("aria-hidden", "true");
-    if (video) {
-      video.pause();
+    if (iframe) {
+      iframe.src = "";
     }
   }
 
