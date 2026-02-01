@@ -145,6 +145,64 @@ $(document).ready(function () {
   });
 })();
 
+// feature modal
+(function () {
+  const modal = $("#feature-modal");
+  const openBtn = $(".js-feature-block");
+  const closeBtn = modal.find(".feature-modal-close");
+  const title = modal.find(".feature-modal-title");
+  const description = modal.find(".feature-modal-description");
+  const icon = modal.find(".feature-modal-icon");
+
+  function openModal(data) {
+    title.text(data.title);
+    description.text(data.description);
+    // Handle icon path - assuming webpack require or just static path
+    // Since we're in JS, we might need to handle the path carefully if it's processed by webpack
+    // For now, let's assume the icon path is correctly provided in the data attribute
+    // and if it's using require in pug, it will be a processed URL.
+    // However, in our pug we used data-icon="clock.svg".
+    // We might need to get the src from the image inside the clicked block instead.
+    
+    if (data.iconSrc) {
+      icon.attr("src", data.iconSrc);
+    }
+
+    modal.css("display", "flex").attr("aria-hidden", "false");
+    $("body").addClass("no-scroll");
+  }
+
+  function closeModal() {
+    modal.css("display", "none").attr("aria-hidden", "true");
+    $("body").removeClass("no-scroll");
+  }
+
+  openBtn.on("click", function (e) {
+    e.preventDefault();
+    const $this = $(this);
+    const data = {
+      title: $this.data("title"),
+      description: $this.data("description"),
+      iconSrc: $this.find("img").attr("src")
+    };
+    openModal(data);
+  });
+
+  closeBtn.on("click", closeModal);
+
+  modal.on("click", function (e) {
+    if (e.target === modal[0]) {
+      closeModal();
+    }
+  });
+
+  $(document).on("keydown", function (e) {
+    if (e.key === "Escape" && modal.attr("aria-hidden") === "false") {
+      closeModal();
+    }
+  });
+})();
+
 // aos
 AOS.init({
   offset: 120,
