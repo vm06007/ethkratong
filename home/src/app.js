@@ -156,7 +156,7 @@ $(document).ready(function () {
 
   function openModal(data) {
     title.text(data.title);
-    description.text(data.description);
+    description.html(data.description);
     // Handle icon path - assuming webpack require or just static path
     // Since we're in JS, we might need to handle the path carefully if it's processed by webpack
     // For now, let's assume the icon path is correctly provided in the data attribute
