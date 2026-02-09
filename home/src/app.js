@@ -115,7 +115,7 @@ $(document).ready(function () {
 
 // demo modal - Vimeo embed
 (function () {
-  const VIMEO_EMBED_URL = "https://player.vimeo.com/video/1160843143";
+  const VIMEO_EMBED_URL = "https://player.vimeo.com/video/1163158214";
   const modal = $("#demo-modal");
   const iframe = modal.find(".demo-modal-video")[0];
   const openBtn = $(".js-play-demo");
